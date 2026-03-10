@@ -22,9 +22,13 @@
 
 import fs from 'fs';
 import path from 'path';
+import { config } from 'dotenv';
 import { PDFParse } from 'pdf-parse';
 import { extractLessonFromText } from '../src/lib/llm-extract';
 import type { GuitarLesson, BackingTrack, Database } from '../src/types';
+
+// Load .env.local so GEMINI_API_KEY is available
+config({ path: path.resolve(__dirname, '..', '.env.local') });
 
 const ROOT = path.resolve(__dirname, '..');
 const IMPORT_DIR = path.join(ROOT, 'import');

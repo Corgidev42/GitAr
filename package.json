@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "chokidar": "^5.0.0",
+    "dotenv": "^17.3.1",
     "next": "16.1.6",
     "pdf-parse": "^2.4.5",
     "react": "19.2.3",
