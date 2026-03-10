@@ -1,0 +1,86 @@
+{
+  "lessons": [
+    {
+      "id": "D100",
+      "title": "D100",
+      "level": "debutant",
+      "status": "lock",
+      "knowledge": {
+        "chords": [],
+        "techniques": [],
+        "rhythms": []
+      },
+      "assets": {
+        "backingTracks": [],
+        "tabPath": "/assets/tabs/D100.pdf"
+      },
+      "checklist": [
+        {
+          "label": "Compléter la leçon",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "D101",
+      "title": "Les 4 accords magiques",
+      "level": "debutant",
+      "status": "completed",
+      "knowledge": {
+        "chords": [
+          "G",
+          "D",
+          "Em",
+          "C",
+          "Dsus2",
+          "Dsus4"
+        ],
+        "techniques": [],
+        "rhythms": [
+          "croche"
+        ]
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 55,
+            "path": "/assets/audio/D101/55bpm.mp3"
+          },
+          {
+            "bpm": 65,
+            "path": "/assets/audio/D101/65bpm.mp3"
+          }
+        ],
+        "tabPath": "/assets/tabs/D101.pdf"
+      },
+      "checklist": [
+        {
+          "label": "Maîtriser les accords",
+          "done": true
+        },
+        {
+          "label": "Travailler les rythmes",
+          "done": true
+        },
+        {
+          "label": "Jouer avec le backing track",
+          "done": true
+        }
+      ]
+    }
+  ],
+  "globalKnowledge": {
+    "chords": [
+      "G",
+      "D",
+      "Em",
+      "C",
+      "Dsus2",
+      "Dsus4"
+    ],
+    "techniques": [],
+    "rhythms": [
+      "croche"
+    ]
+  }
+}
