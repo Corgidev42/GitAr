@@ -104,6 +104,16 @@ GitAr/
   - Dépose tes fichiers dans `/import`, lance `make ingest`
   - Les leçons sont ajoutées avec checklist et statut initial
 
+## Fonctionnalités à venir
+
+- **Déploiement Docker** :
+  - Fournir un Dockerfile et une image pour exécuter GitAr partout
+  - Configuration simple via variables d'environnement
+
+- **Surveillance automatique du dossier /import** :
+  - Le service surveille en temps réel le dossier /import
+  - Dès qu'un fichier est ajouté, il est analysé et ingéré automatiquement
+
 ## Mise à jour
 
 - Pour tester :
