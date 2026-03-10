@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎸 GitAr
 
-## Getting Started
+Système local de gestion d'apprentissage guitare (LMS). Automatise l'ingestion de ressources pédagogiques (PDF, MP3) et offre une interface de pratique interactive.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + TypeScript + Tailwind CSS
+- **Stockage** : `database.json` local + système de fichiers
+- **IA** : Google Gemini (optionnel) pour l'extraction structurée des leçons
+
+## Démarrage rapide
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Installation
+make setup
+
+# Configurer Gemini (optionnel)
+# Renseigner GEMINI_API_KEY dans .env.local
+
+# Importer des fichiers
+# Déposer PDF/MP3 dans ./import/ puis :
+make ingest
+
+# Lancer le serveur
+make dev
+# → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Convention de nommage des fichiers
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Déposer les fichiers dans `./import/` avec ce format :
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Type | Format | Exemple |
+|------|--------|---------|
+| Guide / Synthèse | `PAC_D101 - Guide - Titre.pdf` | `PAC_D101 - Guide - Les 4 accords magiques.pdf` |
+| Fiche synthèse | `PAC_D101 - Fiche synthese - Titre.pdf` | `PAC_D101 - Fiche synthese - Les 4 accords magiques.pdf` |
+| Tablature | `PAC_D101 - Titre.pdf` | `PAC_D101 - Les 4 accords magiques.pdf` |
+| Backing track | `PAC_D101 - Titre - 65bpm.mp3` | `PAC_D101 - Les 4 accords magiques - 65bpm.mp3` |
 
-## Learn More
+> L'ID suit le format `[D|I][numéro]` — **D** = Débutant, **I** = Intermédiaire.
 
-To learn more about Next.js, take a look at the following resources:
+## Commandes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+make help
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Commande | Description |
+|----------|-------------|
+| `make dev` | Serveur de développement |
+| `make build` | Build production |
+| `make ingest` | Importer les fichiers de `/import` |
+| `make ingest-watch` | Surveiller `/import` en continu |
+| `make setup` | Installation complète |
+| `make clean` | Nettoyer les caches |
 
-## Deploy on Vercel
+## Structure du projet
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+GitAr/
+├── import/                    ← Dépôt des fichiers à importer
+├── database.json              ← Base de données locale
+├── scripts/ingest.ts          ← Script d'auto-ingestion
+├── public/assets/
+│   ├── tabs/                  ← Tablatures PDF
+│   └── audio/                 ← Backing tracks MP3
+└── src/
+    ├── types/index.ts         ← Schéma TypeScript
+    ├── lib/
+    │   ├── database.ts        ← Helpers DB
+    │   └── llm-extract.ts     ← Extraction Gemini / fallback regex
+    ├── components/
+    └── app/
+        ├── page.tsx           ← Dashboard Skill Tree
+        ├── knowledge/         ← Knowledge Base
+        ├── lesson/[id]/       ← Cockpit de pratique
+        └── api/               ← Routes API
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Interface
+
+- **Skill Tree** — Vue en grille de toutes les leçons avec statut et progression
+- **Knowledge Base** — Dictionnaire visuel des accords (avec schémas), techniques et rythmes acquis
+- **Cockpit de pratique** — Page par leçon : lecteur audio avec sélecteur BPM, viewer PDF, checklist
+
+## Licence
+
+Projet personnel — usage privé.

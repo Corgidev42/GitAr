@@ -112,13 +112,35 @@ async function processGuide(file: ClassifiedFile): Promise<Omit<GuitarLesson, 's
   return lesson;
 }
 
-function processTab(file: ClassifiedFile): string {
+async function processTab(file: ClassifiedFile): Promise<{ tabPath: string; extraChords: string[] }> {
   const destDir = TABS_DIR;
   fs.mkdirSync(destDir, { recursive: true });
   const destPath = path.join(destDir, `${file.lessonId}.pdf`);
   fs.copyFileSync(file.filePath, destPath);
   console.log(`📑 Tab moved → ${path.relative(ROOT, destPath)}`);
-  return `/assets/tabs/${file.lessonId}.pdf`;
+
+  // Extract text from tab PDF to detect chords mentioned in it
+  const extraChords: string[] = [];
+  try {
+    const buffer = fs.readFileSync(file.filePath);
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    const text = result.text;
+    await parser.destroy();
+
+    if (text.trim()) {
+      const chordRegex = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|add)?[2-9]?(?:\/[A-G][#b]?)?)\b/g;
+      const found = [...new Set(text.match(chordRegex) || [])];
+      extraChords.push(...found);
+      if (found.length > 0) {
+        console.log(`  🎵 Chords found in tab: ${found.join(', ')}`);
+      }
+    }
+  } catch {
+    console.log(`  ⚠ Could not extract text from tab PDF (may be image-based)`);
+  }
+
+  return { tabPath: `/assets/tabs/${file.lessonId}.pdf`, extraChords };
 }
 
 function processAudio(file: ClassifiedFile): BackingTrack {
@@ -210,7 +232,12 @@ async function ingest(): Promise<void> {
           break;
         }
         case 'tab': {
-          lesson.assets.tabPath = processTab(file);
+          const { tabPath, extraChords } = await processTab(file);
+          lesson.assets.tabPath = tabPath;
+          // Merge chords found in tablature
+          for (const c of extraChords) {
+            if (!lesson.knowledge.chords.includes(c)) lesson.knowledge.chords.push(c);
+          }
           processedFiles.push(file.filePath);
           break;
         }

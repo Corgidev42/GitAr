@@ -8,14 +8,21 @@ const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; posit
   'C': { frets: [0, 3, 2, 0, 1, 0] },
   'D': { frets: [-1, 0, 0, 2, 3, 2] },
   'Dm': { frets: [-1, 0, 0, 2, 3, 1] },
+  'D7': { frets: [-1, 0, 0, 2, 1, 2] },
+  'Dsus2': { frets: [-1, 0, 0, 2, 3, 0] },
+  'Dsus4': { frets: [-1, 0, 0, 2, 3, 3] },
   'E': { frets: [0, 2, 2, 1, 0, 0] },
   'Em': { frets: [0, 2, 2, 0, 0, 0] },
+  'E7': { frets: [0, 2, 0, 1, 0, 0] },
   'F': { frets: [1, 1, 2, 3, 3, 1], barres: [1] },
   'G': { frets: [3, 2, 0, 0, 0, 3] },
+  'G7': { frets: [3, 2, 0, 0, 0, 1] },
   'A': { frets: [0, 0, 2, 2, 2, 0] },
   'Am': { frets: [0, 0, 2, 2, 1, 0] },
   'Am7': { frets: [0, 0, 2, 0, 1, 0] },
+  'A7': { frets: [0, 0, 2, 0, 2, 0] },
   'B7': { frets: [-1, 2, 1, 2, 0, 2] },
+  'Cadd9': { frets: [0, 3, 2, 0, 3, 0] },
 };
 
 function ChordDiagram({ name }: { name: string }) {

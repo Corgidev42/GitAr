@@ -16,8 +16,7 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold">
           <span className="text-2xl">🎸</span>
-          <span className="text-[var(--accent-light)]">Git</span>
-          <span className="text-[var(--foreground)]">Ar</span>
+          <span><span className="text-[var(--accent-light)]">Git</span><span className="text-[var(--foreground)]">Ar</span></span>
         </Link>
         <div className="flex gap-1">
           {navItems.map((item) => {
