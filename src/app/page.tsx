@@ -18,7 +18,7 @@ function StatusBadge({ status }: { status: GuitarLesson['status'] }) {
   );
 }
 
-function LessonNode({ lesson }: { lesson: GuitarLesson }) {
+function LessonNode({ lesson, editMode, onDelete }: { lesson: GuitarLesson; editMode?: boolean; onDelete?: () => void }) {
   const stateClass =
     lesson.status === 'lock'
       ? 'node-lock'
@@ -38,10 +38,19 @@ function LessonNode({ lesson }: { lesson: GuitarLesson }) {
   const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
 
   return (
-    <Link href={`/lesson/${lesson.id}`}>
+    <Link href={editMode ? '#' : `/lesson/${lesson.id}`} onClick={editMode ? (e) => e.preventDefault() : undefined}>
       <div
-        className={`${stateClass} ${borderColor} border-2 rounded-xl p-4 bg-[var(--surface)] hover:bg-[var(--surface-light)] transition-all cursor-pointer group`}
+        className={`${stateClass} ${borderColor} border-2 rounded-xl p-4 bg-[var(--surface)] hover:bg-[var(--surface-light)] transition-all cursor-pointer group relative`}
       >
+        {editMode && onDelete && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }}
+            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-sm flex items-center justify-center hover:bg-red-400 shadow-lg z-10"
+            title={`Supprimer ${lesson.id}`}
+          >
+            ×
+          </button>
+        )}
         <div className="flex items-start justify-between mb-2">
           <span className="text-xs font-mono text-[var(--accent-light)]">
             {lesson.id}
@@ -84,10 +93,14 @@ function LevelSection({
   title,
   lessons,
   icon,
+  editMode,
+  onDelete,
 }: {
   title: string;
   lessons: GuitarLesson[];
   icon: string;
+  editMode?: boolean;
+  onDelete?: (id: string) => void;
 }) {
   if (lessons.length === 0) return null;
 
@@ -104,7 +117,7 @@ function LevelSection({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {lessons.map((lesson) => (
-          <LessonNode key={lesson.id} lesson={lesson} />
+          <LessonNode key={lesson.id} lesson={lesson} editMode={editMode} onDelete={() => onDelete?.(lesson.id)} />
         ))}
       </div>
     </section>
@@ -114,6 +127,27 @@ function LevelSection({
 export default function Dashboard() {
   const [db, setDb] = useState<Database | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+
+  const reload = () => fetch('/api/database').then((r) => r.json()).then(setDb);
+
+  const deleteLesson = async (id: string) => {
+    const res = await fetch('/api/database', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'lesson', id }),
+    });
+    if (res.ok) reload();
+  };
+
+  const resetDb = async () => {
+    const res = await fetch('/api/database', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'reset' }),
+    });
+    if (res.ok) reload();
+  };
 
   useEffect(() => {
     fetch('/api/database')
@@ -182,10 +216,30 @@ export default function Dashboard() {
             <span className="text-[var(--muted)]">total</span>
           </div>
         </div>
+        <div className="ml-auto flex gap-2">
+          {editMode && (
+            <button
+              onClick={resetDb}
+              className="px-3 py-1.5 text-sm rounded-lg bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 transition-all"
+            >
+              🗑 Reset DB
+            </button>
+          )}
+          <button
+            onClick={() => setEditMode(!editMode)}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
+              editMode
+                ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                : 'bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] border border-transparent'
+            }`}
+          >
+            {editMode ? '✓ Terminé' : '✏️ Éditer'}
+          </button>
+        </div>
       </div>
 
-      <LevelSection title="Débutant" lessons={debutant} icon="🌱" />
-      <LevelSection title="Intermédiaire" lessons={intermediaire} icon="🔥" />
+      <LevelSection title="Débutant" lessons={debutant} icon="🌱" editMode={editMode} onDelete={deleteLesson} />
+      <LevelSection title="Intermédiaire" lessons={intermediaire} icon="🔥" editMode={editMode} onDelete={deleteLesson} />
     </div>
   );
 }

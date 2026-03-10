@@ -17,7 +17,17 @@ export async function extractLessonFromText(
   const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
   if (apiKey) {
-    return extractWithGemini(text, apiKey, model, fileName);
+    try {
+      return await extractWithGemini(text, apiKey, model, fileName);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+        console.log('⚠ Gemini quota exceeded — falling back to regex parser.');
+      } else {
+        console.log(`⚠ Gemini error: ${msg} — falling back to regex parser.`);
+      }
+      return fallbackParser(text, fileName);
+    }
   }
 
   console.log('⚠ No GEMINI_API_KEY set — using fallback parser.');
@@ -31,18 +41,23 @@ async function extractWithGemini(
   fileName: string
 ): Promise<Omit<GuitarLesson, 'status' | 'assets' | 'checklist'>> {
   const prompt = `Tu es un assistant spécialisé en pédagogie musicale pour la guitare.
-À partir du texte d'un guide/synthèse/tablature de leçon, extrais les informations suivantes au format JSON strict :
+À partir du texte d'un guide/synthèse de leçon, extrais les informations suivantes au format JSON strict :
 {
   "id": "string (ex: D101 — D=Débutant/I=Intermédiaire, 101=numéro)",
   "title": "string (titre de la leçon)",
   "level": "debutant | intermediaire",
   "knowledge": {
-    "chords": ["string (TOUS les accords mentionnés, y compris dans les tablatures/diagrammes, ex: Em, G, Am7, Dsus2)"],
-    "techniques": ["string (TOUTES les techniques mentionnées, y compris embellissements, transitions, ex: arpège, hammer-on, embellissement autour du D majeur)"],
-    "rhythms": ["string (patterns rythmiques, ex: 4/4, shuffle, croche)"]
+    "chords": ["string (TOUS les accords mentionnés, ex: Em, G, Am7, Dsus2)"],
+    "techniques": ["string (UNIQUEMENT les vraies techniques guitaristiques nommées)"],
+    "rhythms": ["string (UNIQUEMENT les valeurs de notes : noire, blanche, croche, double croche, ronde, etc.)"]
   }
 }
-IMPORTANT: Sois exhaustif. Si tu vois des noms d'accords dans des diagrammes ou des tablatures, inclus-les. Si tu vois des descriptions de techniques même informelles ("embellissement", "transition", "enchaînement"), inclus-les.
+
+RÈGLES STRICTES :
+- "chords" : liste TOUS les accords en notation anglo-saxonne COURTE (Em, G, Cadd9, Dsus2…). JAMAIS écrire "D majeur" ou "ré mineur" — utilise "D" et "Dm". Un accord sans précision (D, C, G…) est TOUJOURS majeur. Sois exhaustif.
+- "techniques" : UNIQUEMENT les techniques guitaristiques réelles et nommées comme concept (ex: "arpège", "hammer-on", "pull-off", "bend", "slide", "embellissement autour du D", "palm mute", "fingerpicking"). Utilise la notation courte pour les accords dans les noms de technique ("embellissement autour du D", PAS "embellissement autour du D majeur"). NE PAS inclure les descriptions d'exercices ("Jouer les accords", "Taper les temps avec le pied", "Mouvement aller"), ni les objectifs pédagogiques ("Dextérité-Coordination-Vitesse"), ni les consignes ("enchaîner les accords", "jouer la rythmique"). Une technique a un NOM propre, ce n'est pas une phrase d'action.
+- "rhythms" : UNIQUEMENT les valeurs de notes musicales (noire, blanche, croche, double croche, ronde, triolet, etc.) et les signatures rythmiques (4/4, 3/4, 6/8). NE PAS inclure "rythmique", "temps", ni de descriptions vagues.
+
 Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.
 
 Texte du document (fichier: ${fileName}):
@@ -60,6 +75,27 @@ ${text.slice(0, 15000)}`;
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      // Retry once after the delay suggested by the API
+      const retryDelay = 5000;
+      console.log(`  ⏳ Rate limited — retrying in ${retryDelay / 1000}s...`);
+      await new Promise((r) => setTimeout(r, retryDelay));
+      const retry = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 },
+        }),
+      });
+      if (!retry.ok) {
+        throw new Error(`Gemini API error: ${retry.status} — RESOURCE_EXHAUSTED after retry`);
+      }
+      const retryData = await retry.json();
+      let retryContent: string = retryData.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      retryContent = retryContent.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      return normalizeKnowledge(JSON.parse(retryContent));
+    }
     const errText = await response.text();
     throw new Error(`Gemini API error: ${response.status} — ${errText}`);
   }
@@ -70,7 +106,54 @@ ${text.slice(0, 15000)}`;
   // Strip markdown fences if Gemini wraps the response
   content = content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
 
-  return JSON.parse(content);
+  return normalizeKnowledge(JSON.parse(content));
+}
+
+/** Normalize chord names and deduplicate knowledge entries */
+function normalizeKnowledge(
+  data: Omit<GuitarLesson, 'status' | 'assets' | 'checklist'>
+): Omit<GuitarLesson, 'status' | 'assets' | 'checklist'> {
+  // Map of French/verbose names → short notation
+  const chordNormMap: Record<string, string> = {
+    'do': 'C', 'ré': 'D', 're': 'D', 'mi': 'E', 'fa': 'F', 'sol': 'G', 'la': 'A', 'si': 'B',
+  };
+
+  function normalizeChord(raw: string): string {
+    let s = raw.trim();
+    // "D majeur" → "D", "D mineur" → "Dm", "Ré mineur" → "Dm"
+    s = s.replace(/\s*(majeur|major)$/i, '');
+    s = s.replace(/\s*(mineur|minor)$/i, 'm');
+    // French note names
+    const lower = s.toLowerCase();
+    for (const [fr, en] of Object.entries(chordNormMap)) {
+      if (lower === fr) return en;
+      if (lower.startsWith(fr + ' ') || lower.startsWith(fr + 'm')) {
+        return en + s.slice(fr.length);
+      }
+    }
+    return s;
+  }
+
+  function normalizeTechnique(raw: string): string {
+    let s = raw.trim();
+    // Normalize chord names inside technique descriptions
+    s = s.replace(/\b([A-G][#b]?)\s*(majeur|major)\b/gi, '$1');
+    s = s.replace(/\b([A-G][#b]?)\s*(mineur|minor)\b/gi, '$1m');
+    // Fix common typos
+    s = s.replace(/embellisements?/gi, 'embellissement');
+    return s;
+  }
+
+  const chords = [...new Set(data.knowledge.chords.map(normalizeChord))];
+  const techniques = [...new Set(data.knowledge.techniques.map(normalizeTechnique))];
+  const rhythms = [...new Set(data.knowledge.rhythms.map((r) => {
+    let s = r.trim().toLowerCase();
+    // Normalize plurals → singular (croches→croche, noires→noire, blanches→blanche, etc.)
+    s = s.replace(/s$/, '');
+    return s;
+  }))];
+
+  return { ...data, knowledge: { chords, techniques, rhythms } };
 }
 
 function fallbackParser(
@@ -125,5 +208,5 @@ function fallbackParser(
     if (text.toLowerCase().includes(rp.toLowerCase())) rhythms.push(rp);
   }
 
-  return { id, title, level, knowledge: { chords, techniques, rhythms } };
+  return normalizeKnowledge({ id, title, level, knowledge: { chords, techniques, rhythms } });
 }

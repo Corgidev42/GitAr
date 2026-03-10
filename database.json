@@ -4,9 +4,20 @@
       "id": "D100",
       "title": "D100",
       "level": "debutant",
-      "status": "lock",
+      "status": "completed",
       "knowledge": {
-        "chords": [],
+        "chords": [
+          "D",
+          "C",
+          "E",
+          "G",
+          "A",
+          "Dm",
+          "Em",
+          "Am",
+          "Cadd2",
+          "Dsus4"
+        ],
         "techniques": [],
         "rhythms": []
       },
@@ -16,8 +27,8 @@
       },
       "checklist": [
         {
-          "label": "Compléter la leçon",
-          "done": false
+          "label": "Maîtriser les accords",
+          "done": true
         }
       ]
     },
@@ -35,22 +46,16 @@
           "Dsus2",
           "Dsus4"
         ],
-        "techniques": [],
+        "techniques": [
+          "embellissement autour du D"
+        ],
         "rhythms": [
-          "croche"
+          "croche",
+          "noire"
         ]
       },
       "assets": {
-        "backingTracks": [
-          {
-            "bpm": 55,
-            "path": "/assets/audio/D101/55bpm.mp3"
-          },
-          {
-            "bpm": 65,
-            "path": "/assets/audio/D101/65bpm.mp3"
-          }
-        ],
+        "backingTracks": [],
         "tabPath": "/assets/tabs/D101.pdf"
       },
       "checklist": [
@@ -59,11 +64,11 @@
           "done": true
         },
         {
-          "label": "Travailler les rythmes",
+          "label": "Pratiquer les techniques",
           "done": true
         },
         {
-          "label": "Jouer avec le backing track",
+          "label": "Travailler les rythmes",
           "done": true
         }
       ]
@@ -71,16 +76,24 @@
   ],
   "globalKnowledge": {
     "chords": [
-      "G",
       "D",
-      "Em",
       "C",
-      "Dsus2",
-      "Dsus4"
+      "E",
+      "G",
+      "A",
+      "Dm",
+      "Em",
+      "Am",
+      "Cadd2",
+      "Dsus4",
+      "Dsus2"
     ],
-    "techniques": [],
+    "techniques": [
+      "embellissement autour du D"
+    ],
     "rhythms": [
-      "croche"
+      "croche",
+      "noire"
     ]
   }
 }

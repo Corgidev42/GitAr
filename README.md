@@ -83,6 +83,42 @@ GitAr/
 - **Knowledge Base** — Dictionnaire visuel des accords (avec schémas), techniques et rythmes acquis
 - **Cockpit de pratique** — Page par leçon : lecteur audio avec sélecteur BPM, viewer PDF, checklist
 
+## Fonctionnalités principales
+
+- **Statut automatique des leçons** :
+  - 🔒 Verrouillé : aucune case checklist cochée
+  - 🎯 En cours : au moins une case cochée
+  - ✅ Complété : toutes les cases cochées
+  - Le statut se met à jour tout seul, pas de bouton manuel
+
+- **Edition interactive** :
+  - Knowledge Base : suppression d'accords, techniques, rythmes via bouton ✏️/×
+  - Dashboard : suppression de leçons via bouton ✏️/×
+  - `make reset` : réinitialise la base
+
+- **Extraction IA intelligente** :
+  - D/D majeur, Dm/D mineur, croches/croche, etc. sont normalisés automatiquement
+  - Prompt Gemini strict : notation anglo-saxonne, techniques nommées, valeurs rythmiques uniquement
+
+- **Ingestion automatique** :
+  - Dépose tes fichiers dans `/import`, lance `make ingest`
+  - Les leçons sont ajoutées avec checklist et statut initial
+
+## Mise à jour
+
+- Pour tester :
+  - `make reset` pour vider la base
+  - `make ingest` pour réimporter
+  - Utilise les boutons ✏️ pour éditer/supprimer
+
+## Historique des versions
+
+- Statut des leçons désormais automatique
+- Edition/suppression interactive
+- Normalisation IA améliorée
+- Prompt Gemini renforcé
+- Commande `make reset` ajoutée
+
 ## Licence
 
 Projet personnel — usage privé.

@@ -14,10 +14,12 @@ function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks
 
   const currentTrack = tracks[selectedIdx];
 
-  useEffect(() => {
+  const selectTrack = (idx: number) => {
+    if (audioRef.current) audioRef.current.pause();
+    setSelectedIdx(idx);
     setIsPlaying(false);
     setCurrentTime(0);
-  }, [selectedIdx]);
+  };
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -75,7 +77,7 @@ function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks
         {tracks.map((track, idx) => (
           <button
             key={track.bpm}
-            onClick={() => setSelectedIdx(idx)}
+            onClick={() => selectTrack(idx)}
             className={`px-3 py-1.5 rounded-lg text-sm font-mono transition-colors ${
               idx === selectedIdx
                 ? 'bg-[var(--accent)] text-white'
@@ -224,19 +226,6 @@ export default function LessonPage() {
       .catch(() => setLoading(false));
   }, [lessonId]);
 
-  const handleStatusChange = async (newStatus: GuitarLesson['status']) => {
-    if (!lesson) return;
-    const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setLesson(updated);
-    }
-  };
-
   const handleChecklistToggle = async (idx: number) => {
     if (!lesson) return;
     const newChecklist = lesson.checklist.map((item, i) =>
@@ -276,11 +265,12 @@ export default function LessonPage() {
     );
   }
 
-  const statusOptions: { value: GuitarLesson['status']; label: string; color: string }[] = [
-    { value: 'lock', label: '🔒 Verrouillé', color: 'bg-gray-600' },
-    { value: 'in-progress', label: '🎯 En cours', color: 'bg-amber-600' },
-    { value: 'completed', label: '✅ Complété', color: 'bg-green-600' },
-  ];
+  const statusConfig = {
+    lock: { label: '🔒 Verrouillé', color: 'bg-gray-600 text-gray-200' },
+    'in-progress': { label: '🎯 En cours', color: 'bg-amber-600 text-amber-100' },
+    completed: { label: '✅ Complété', color: 'bg-green-600 text-green-100' },
+  };
+  const st = statusConfig[lesson.status];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -301,22 +291,10 @@ export default function LessonPage() {
           </div>
         </div>
 
-        {/* Status selector */}
-        <div className="flex gap-2">
-          {statusOptions.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => handleStatusChange(opt.value)}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-                lesson.status === opt.value
-                  ? `${opt.color} text-white`
-                  : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        {/* Status badge (auto-computed) */}
+        <span className={`px-3 py-1.5 rounded-lg text-xs ${st.color}`}>
+          {st.label}
+        </span>
       </div>
 
       {/* Knowledge tags */}

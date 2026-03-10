@@ -27,12 +27,18 @@ export async function PATCH(
 
   const updates = await req.json();
 
-  // Only allow updating status and checklist
-  if (updates.status) {
-    db.lessons[idx].status = updates.status;
-  }
   if (updates.checklist) {
     db.lessons[idx].checklist = updates.checklist;
+    // Auto-compute status from checklist
+    const checked = updates.checklist.filter((c: { done: boolean }) => c.done).length;
+    const total = updates.checklist.length;
+    if (total === 0 || checked === 0) {
+      db.lessons[idx].status = 'lock';
+    } else if (checked === total) {
+      db.lessons[idx].status = 'completed';
+    } else {
+      db.lessons[idx].status = 'in-progress';
+    }
   }
 
   writeDatabase(db);
