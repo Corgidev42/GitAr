@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database } from '@/types';
-import { IconCheck, IconGuitar, IconLink, IconMusic, IconPencil, IconRefresh, IconRhythm, IconTarget, IconTrash } from '@/components/Icons';
+import { IconCheck, IconGuitar, IconLink, IconMusic, IconPause, IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget, IconTrash } from '@/components/Icons';
 
 // Comprehensive guitar chord dictionary
 // frets: [E2, A, D, G, B, E4] — 0=open, -1=muted, n=fret number
@@ -345,6 +345,28 @@ function Section({
   );
 }
 
+function getStrumSteps(label: string): Array<'Bas' | 'Haut'> {
+  const lower = label.toLowerCase();
+  const matches = label.match(/\b(Bas|Haut)\b/gi) || [];
+  if (matches.length >= 2) {
+    return matches.map((m) => (m.toLowerCase() === 'bas' ? 'Bas' : 'Haut')) as Array<'Bas' | 'Haut'>;
+  }
+  if (lower.includes('feu de camp')) {
+    return ['Bas', 'Bas', 'Haut', 'Haut', 'Bas'];
+  }
+  return [];
+}
+
+function normalizeForKey(raw: string): string {
+  return raw
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 export default function KnowledgePage() {
   const [db, setDb] = useState<Database | null>(null);
   const [loading, setLoading] = useState(true);
@@ -352,6 +374,8 @@ export default function KnowledgePage() {
   const [expandedRhythm, setExpandedRhythm] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
+  const [playingStrumKey, setPlayingStrumKey] = useState<string | null>(null);
+  const [playingStrumStep, setPlayingStrumStep] = useState<number>(-1);
   const [editProgression, setEditProgression] = useState<{
     lessonId: string;
     progressionIndex: number;
@@ -366,6 +390,9 @@ export default function KnowledgePage() {
   } | null>(null);
   const [editLessonTitle, setEditLessonTitle] = useState<{ id: string; title: string } | null>(null);
   const lastReloadAt = useRef(0);
+  const strumTimerRef = useRef<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const playingStepsRef = useRef<Array<'Bas' | 'Haut'>>([]);
 
   const reload = useCallback(() => fetch('/api/database', { cache: 'no-store' }).then((r) => r.json()).then(setDb), []);
   const safeReload = useCallback(() => {
@@ -374,6 +401,69 @@ export default function KnowledgePage() {
     lastReloadAt.current = now;
     reload();
   }, [reload]);
+
+  const stopStrum = useCallback(() => {
+    if (strumTimerRef.current) {
+      window.clearInterval(strumTimerRef.current);
+      strumTimerRef.current = null;
+    }
+    playingStepsRef.current = [];
+    setPlayingStrumKey(null);
+    setPlayingStrumStep(-1);
+  }, []);
+
+  const playStrum = useCallback(
+    async (label: string) => {
+      const key = normalizeForKey(label);
+      if (playingStrumKey === key) {
+        stopStrum();
+        return;
+      }
+
+      const steps = getStrumSteps(label);
+      if (steps.length === 0) return;
+
+      const bpm = 92;
+      const intervalMs = Math.round(60000 / bpm / 2);
+
+      stopStrum();
+      setPlayingStrumKey(key);
+      playingStepsRef.current = steps;
+
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        await audioCtxRef.current.resume();
+      }
+
+      let idx = -1;
+      strumTimerRef.current = window.setInterval(() => {
+        const current = playingStepsRef.current;
+        if (current.length === 0) return;
+        idx = (idx + 1) % current.length;
+        setPlayingStrumStep(idx);
+
+        const ctx = audioCtxRef.current;
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        const step = current[idx];
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(step === 'Bas' ? 220 : 330, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }, intervalMs);
+    },
+    [playingStrumKey, stopStrum]
+  );
 
   const deleteItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', value: string) => {
     const res = await fetch('/api/database', {
@@ -480,6 +570,8 @@ export default function KnowledgePage() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [safeReload]);
+
+  useEffect(() => () => stopStrum(), [stopStrum]);
 
   if (loading) {
     return (
@@ -613,8 +705,53 @@ export default function KnowledgePage() {
             onDelete={(v) => deleteItem('strums', v)}
             onEdit={(v) => setEditKnowledge({ category: 'strums', from: v, to: v })}
             renderItem={(strum) => (
-              <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors">
-                <span className="text-sm font-medium capitalize">{strum}</span>
+              <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[240px]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium capitalize">{strum}</span>
+                  {(() => {
+                    const key = normalizeForKey(strum);
+                    const steps = getStrumSteps(strum);
+                    const isPlaying = playingStrumKey === key;
+                    const disabled = steps.length === 0;
+                    return (
+                      <button
+                        onClick={() => playStrum(strum)}
+                        disabled={disabled}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${
+                          disabled
+                            ? 'opacity-40 cursor-not-allowed border-[var(--surface-light)] text-[var(--muted)]'
+                            : isPlaying
+                              ? 'bg-[var(--accent)] border-transparent text-white'
+                              : 'bg-[var(--surface-light)] border-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]'
+                        }`}
+                        title={disabled ? 'Motif indisponible' : isPlaying ? 'Stop' : 'Jouer'}
+                      >
+                        {isPlaying ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4" />}
+                      </button>
+                    );
+                  })()}
+                </div>
+                {(() => {
+                  const steps = getStrumSteps(strum);
+                  if (steps.length === 0) return null;
+                  const isPlaying = playingStrumKey === normalizeForKey(strum);
+                  return (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {steps.map((s, i) => (
+                        <span
+                          key={`${s}-${i}`}
+                          className={`text-xs px-2 py-1 rounded-md border ${
+                            isPlaying && i === playingStrumStep
+                              ? 'bg-[var(--accent)] text-white border-transparent'
+                              : 'bg-[var(--surface-light)] text-[var(--muted)] border-[var(--surface-light)]'
+                          }`}
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           />

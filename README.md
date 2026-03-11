@@ -92,8 +92,9 @@ GitAr/
   - Le statut se met à jour tout seul, pas de bouton manuel
 
 - **Edition interactive** :
-  - Knowledge Base : suppression d'accords, techniques, rythmes via bouton ✏️/×
-  - Dashboard : suppression de leçons via bouton ✏️/×
+  - Knowledge Base : renommer/supprimer accords, techniques, rythmes, rythmiques
+  - Knowledge Base : éditer/supprimer les suites d’accords détectées
+  - Pages Leçon : mode édition (titre, tags, checklist, suites d’accords)
   - `make reset` : réinitialise la base
 
 - **Extraction IA intelligente** :
@@ -103,6 +104,9 @@ GitAr/
 - **Ingestion automatique** :
   - Dépose tes fichiers dans `/import`, lance `make ingest`
   - Les leçons sont ajoutées avec checklist et statut initial
+
+- **Rythmiques : lecteur de motif** :
+  - Dans Knowledge Base → Rythmiques, bouton ▶︎ pour jouer le motif (Bas/Haut) quand disponible
 
 ## Mise à jour
 
