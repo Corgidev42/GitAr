@@ -209,6 +209,7 @@ async function ingest(): Promise<void> {
         knowledge: { chords: [], techniques: [], rhythms: [] },
         assets: { backingTracks: [], tabPath: '' },
         checklist: [],
+        progressions: [],
       };
       db.lessons.push(lesson);
     }

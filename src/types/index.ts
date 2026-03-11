@@ -9,6 +9,12 @@ export interface Knowledge {
   rhythms: string[];
 }
 
+export interface ChordProgression {
+  name: string;
+  chords: string[];
+  notes?: string;
+}
+
 export interface GuitarLesson {
   id: string; // ex: D1L05
   title: string;
@@ -20,6 +26,7 @@ export interface GuitarLesson {
     tabPath: string;
   };
   checklist: ChecklistItem[];
+  progressions?: ChordProgression[];
 }
 
 export interface ChecklistItem {

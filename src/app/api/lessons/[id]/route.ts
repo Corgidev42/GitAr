@@ -41,6 +41,10 @@ export async function PATCH(
     }
   }
 
+  if (updates.progressions) {
+    db.lessons[idx].progressions = updates.progressions;
+  }
+
   writeDatabase(db);
   return NextResponse.json(db.lessons[idx]);
 }

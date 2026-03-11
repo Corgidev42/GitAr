@@ -169,6 +169,20 @@ const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: str
   'ternaire':       { label: 'Ternaire', beats: 1, symbol: '♫³', description: 'Division du temps en 3 parts égales' },
 };
 
+const TECHNIQUE_DETAILS: Record<string, { title: string; summary: string; steps?: string[] }> = {
+  'hammer-on': { title: 'Hammer-on', summary: 'Appuyer une note sans regratter, en frappant la corde avec le doigt.' },
+  'pull-off': { title: 'Pull-off', summary: 'Relâcher une note vers une autre inférieure en tirant la corde.' },
+  'embellissement autour du d': {
+    title: 'Embellissement autour du D',
+    summary: 'Variations courtes autour de l’accord de D, ajoutant des notes de passage et suspensions.',
+    steps: [
+      'Basculer entre D, Dsus2 et Dsus4',
+      'Ajouter la basse A (D/A) pour varier la couleur',
+      'Utiliser des hammer-on sur la corde de mi aigu (2→3) et pull-off (3→2)',
+    ],
+  },
+};
+
 function RhythmCard({ name, expanded, onToggle }: { name: string; expanded: boolean; onToggle: () => void }) {
   const rhythm = RHYTHM_VISUALS[name.toLowerCase()];
 
@@ -317,6 +331,7 @@ export default function KnowledgePage() {
   const [tab, setTab] = useState<'chords' | 'techniques' | 'rhythms'>('chords');
   const [expandedRhythm, setExpandedRhythm] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [techInfo, setTechInfo] = useState<string | null>(null);
 
   const deleteItem = async (category: 'chords' | 'techniques' | 'rhythms', value: string) => {
     const res = await fetch('/api/database', {
@@ -421,9 +436,12 @@ export default function KnowledgePage() {
           editMode={editMode}
           onDelete={(v) => deleteItem('techniques', v)}
           renderItem={(tech) => (
-            <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors">
+            <button
+              onClick={() => setTechInfo(tech)}
+              className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors text-left"
+            >
               <span className="text-sm font-medium capitalize">{tech}</span>
-            </div>
+            </button>
           )}
         />
       )}
@@ -443,6 +461,31 @@ export default function KnowledgePage() {
             />
           )}
         />
+      )}
+
+      {techInfo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setTechInfo(null)}>
+          <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-md border border-[var(--surface-light)]" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const key = techInfo.toLowerCase();
+              const info = TECHNIQUE_DETAILS[key] || { title: techInfo, summary: 'Pas de détail disponible pour cette technique.' };
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">{info.title}</h3>
+                    <button onClick={() => setTechInfo(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
+                  </div>
+                  <p className="text-sm">{info.summary}</p>
+                  {info.steps && info.steps.length > 0 && (
+                    <ul className="text-sm mt-3 space-y-1 list-disc pl-5">
+                      {info.steps.map((s, i) => (<li key={i}>{s}</li>))}
+                    </ul>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
       )}
 
       {k.chords.length === 0 && k.techniques.length === 0 && k.rhythms.length === 0 && (
