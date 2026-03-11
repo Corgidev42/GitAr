@@ -56,30 +56,7 @@ make help
 | `make ingest-watch` | Surveiller `/import` en continu |
 | `make setup` | Installation complète |
 | `make clean` | Nettoyer les caches |
-| `make docker-build` | Build l'image Docker |
-| `make docker-run` | Lancer GitAr en Docker |
-| `make docker-stop` | Arrêter le container Docker |
-| `make docker-up` | Lancer GitAr via docker compose (volumes) |
-| `make docker-down` | Stopper docker compose |
-| `make docker-up-ingest-watch` | Lancer l’ingestion auto en Docker |
-| `make docker-stop-ingest-watch` | Stopper l’ingestion auto en Docker |
-
-## Docker : éviter rebuild à chaque ingest
-
-Si tu utilises `make docker-run`, l'image embarque `database.json` et `public/assets` au moment du build. Du coup, après un `make ingest` sur ta machine, le container ne verra pas les nouveaux fichiers tant que tu n'as pas rebuild.
-
-Solution : utilise `docker compose` avec des volumes (recommandé) :
-
-```bash
-make docker-up
-
-# optionnel : ingestion auto dans un container séparé
-make docker-up-ingest-watch
-```
-
-Dans ce mode :
-- Tu rebuild/restart uniquement quand tu changes le code.
-- Pour un ingest, il suffit d'actualiser la page (bouton “Actualiser” ou refresh navigateur).
+| `make reset` | Réinitialiser la base de données |
 
 ## Structure du projet
 
@@ -144,7 +121,6 @@ GitAr/
 
 ## Historique des versions
 
-- **Déploiement Docker** ajouté
 - **Surveillance automatique du dossier /import** ajoutée
 - Statut des leçons désormais automatique
 - Edition/suppression interactive
