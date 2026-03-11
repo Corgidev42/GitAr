@@ -243,7 +243,7 @@ function ChordDiagram({ name }: { name: string }) {
       <span className="text-sm font-bold text-[var(--accent-light)] mb-2">{name}</span>
       <svg viewBox="0 0 50 60" className="w-16 h-20">
         {/* Nut */}
-        <rect x="5" y="5" width="40" height="2" fill="var(--foreground)" />
+        <rect x="5" y="5" width="40" height="3" fill="var(--foreground)" />
         {/* Strings */}
         {[0, 1, 2, 3, 4, 5].map((s) => (
           <line key={`s${s}`} x1={5 + s * 8} y1="5" x2={5 + s * 8} y2="55" stroke="var(--muted)" strokeWidth="0.5" />
@@ -256,7 +256,9 @@ function ChordDiagram({ name }: { name: string }) {
         {chord?.frets.map((fret, string) => {
           if (fret === 0) {
             return (
-              <circle key={string} cx={5 + string * 8} cy="2" r="1.5" fill="none" stroke="var(--foreground)" strokeWidth="0.5" />
+              <text key={string} x={5 + string * 8} y="3" textAnchor="middle" fontSize="4" fill="var(--foreground)">
+                O
+              </text>
             );
           }
           if (fret === -1) {
@@ -267,7 +269,7 @@ function ChordDiagram({ name }: { name: string }) {
             );
           }
           return (
-            <circle key={string} cx={5 + string * 8} cy={fret * 12.5 - 1.25} r="3" fill="var(--accent)" />
+            <circle key={string} cx={5 + string * 8} cy={fret * 12.5 - 1.25} r="3.5" fill="var(--foreground)" stroke="var(--accent)" strokeWidth="0.7" />
           );
         })}
         {/* If no chord diagram available */}
