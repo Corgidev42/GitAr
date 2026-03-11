@@ -313,7 +313,7 @@ export default function LessonPage() {
     const now = Date.now();
     if (now - lastReloadAt.current < 800) return;
     lastReloadAt.current = now;
-    fetch(`/api/lessons/${encodeURIComponent(lessonId)}`)
+    fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error('Not found');
         return r.json();

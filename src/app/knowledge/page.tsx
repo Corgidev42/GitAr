@@ -339,7 +339,7 @@ export default function KnowledgePage() {
   const [techInfo, setTechInfo] = useState<string | null>(null);
   const lastReloadAt = useRef(0);
 
-  const reload = useCallback(() => fetch('/api/database').then((r) => r.json()).then(setDb), []);
+  const reload = useCallback(() => fetch('/api/database', { cache: 'no-store' }).then((r) => r.json()).then(setDb), []);
   const safeReload = useCallback(() => {
     const now = Date.now();
     if (now - lastReloadAt.current < 800) return;

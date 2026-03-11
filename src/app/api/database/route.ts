@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readDatabase, writeDatabase } from '@/lib/database';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const db = readDatabase();
   return NextResponse.json(db);
