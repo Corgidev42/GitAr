@@ -293,6 +293,7 @@ function Section({
   renderItem,
   editMode,
   onDelete,
+  onEdit,
 }: {
   title: string;
   icon?: ReactNode;
@@ -300,6 +301,7 @@ function Section({
   renderItem: (item: string) => React.ReactNode;
   editMode?: boolean;
   onDelete?: (item: string) => void;
+  onEdit?: (item: string) => void;
 }) {
   if (items.length === 0) return null;
 
@@ -314,14 +316,27 @@ function Section({
         {items.map((item) => (
           <div key={item} className="relative group">
             {renderItem(item)}
-            {editMode && onDelete && (
-              <button
-                onClick={() => onDelete(item)}
-                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg"
-                title={`Supprimer ${item}`}
-              >
-                ×
-              </button>
+            {editMode && (onDelete || onEdit) && (
+              <div className="absolute -top-2 -right-2 flex gap-1">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(item)}
+                    className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--foreground)] shadow-lg"
+                    title={`Renommer ${item}`}
+                  >
+                    <IconPencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(item)}
+                    className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg"
+                    title={`Supprimer ${item}`}
+                  >
+                    <IconTrash className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ))}
@@ -344,6 +359,12 @@ export default function KnowledgePage() {
     chordsLine: string;
     notes: string;
   } | null>(null);
+  const [editKnowledge, setEditKnowledge] = useState<{
+    category: 'chords' | 'techniques' | 'rhythms' | 'strums';
+    from: string;
+    to: string;
+  } | null>(null);
+  const [editLessonTitle, setEditLessonTitle] = useState<{ id: string; title: string } | null>(null);
   const lastReloadAt = useRef(0);
 
   const reload = useCallback(() => fetch('/api/database', { cache: 'no-store' }).then((r) => r.json()).then(setDb), []);
@@ -363,6 +384,37 @@ export default function KnowledgePage() {
     if (res.ok) {
       const updated = await fetch('/api/database').then((r) => r.json());
       setDb(updated);
+    }
+  };
+
+  const renameItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', from: string, to: string) => {
+    const res = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'knowledge_rename', category, from, to }),
+    });
+    if (res.ok) safeReload();
+  };
+
+  const deleteLesson = async (id: string) => {
+    const res = await fetch('/api/database', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'lesson', id }),
+    });
+    if (res.ok) safeReload();
+  };
+
+  const saveLessonTitle = async () => {
+    if (!editLessonTitle) return;
+    const res = await fetch(`/api/lessons/${encodeURIComponent(editLessonTitle.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: editLessonTitle.title }),
+    });
+    if (res.ok) {
+      setEditLessonTitle(null);
+      safeReload();
     }
   };
 
@@ -527,6 +579,7 @@ export default function KnowledgePage() {
           items={k.chords}
           editMode={editMode}
           onDelete={(v) => deleteItem('chords', v)}
+          onEdit={(v) => setEditKnowledge({ category: 'chords', from: v, to: v })}
           renderItem={(chord) => <ChordDiagram name={chord} />}
         />
       )}
@@ -538,6 +591,7 @@ export default function KnowledgePage() {
           items={k.techniques}
           editMode={editMode}
           onDelete={(v) => deleteItem('techniques', v)}
+          onEdit={(v) => setEditKnowledge({ category: 'techniques', from: v, to: v })}
           renderItem={(tech) => (
             <button
               onClick={() => setTechInfo(tech)}
@@ -557,6 +611,7 @@ export default function KnowledgePage() {
             items={k.strums || []}
             editMode={editMode}
             onDelete={(v) => deleteItem('strums', v)}
+            onEdit={(v) => setEditKnowledge({ category: 'strums', from: v, to: v })}
             renderItem={(strum) => (
               <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors">
                 <span className="text-sm font-medium capitalize">{strum}</span>
@@ -569,6 +624,7 @@ export default function KnowledgePage() {
             items={k.rhythms}
             editMode={editMode}
             onDelete={(v) => deleteItem('rhythms', v)}
+            onEdit={(v) => setEditKnowledge({ category: 'rhythms', from: v, to: v })}
             renderItem={(rhythm) => (
               <RhythmCard
                 name={rhythm}
@@ -611,15 +667,15 @@ export default function KnowledgePage() {
                                 notes: p.notes || '',
                               })
                             }
-                            className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]"
                           >
-                            <IconPencil className="w-4 h-4" />
+                            <IconPencil className="w-4 h-4" /> Modifier
                           </button>
                           <button
                             onClick={() => deleteProgression(p.lessonId, p.progressionIndex)}
-                            className="text-xs text-red-400 hover:text-red-300"
+                            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-500/20 text-red-300 hover:text-red-200"
                           >
-                            <IconTrash className="w-4 h-4" />
+                            <IconTrash className="w-4 h-4" /> Supprimer
                           </button>
                         </>
                       )}
@@ -655,19 +711,46 @@ export default function KnowledgePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {songs.map((s) => (
-                <Link
+                <div
                   key={s.id}
-                  href={`/#lesson-${encodeURIComponent(s.id)}`}
                   className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors"
                 >
-                  <div className="text-xs text-[var(--muted)] font-mono">{s.id}</div>
-                  <div className="text-sm font-semibold mt-1">{s.title}</div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs text-[var(--muted)] font-mono">{s.id}</div>
+                      <div className="text-sm font-semibold mt-1">{s.title}</div>
+                    </div>
+                    {editMode && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditLessonTitle({ id: s.id, title: s.title })}
+                          className="text-[var(--muted)] hover:text-[var(--foreground)]"
+                          title="Renommer"
+                        >
+                          <IconPencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteLesson(s.id)}
+                          className="text-red-400 hover:text-red-300"
+                          title="Supprimer"
+                        >
+                          <IconTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <Link
+                    href={`/#lesson-${encodeURIComponent(s.id)}`}
+                    className="inline-block text-xs text-[var(--accent-light)] hover:text-[var(--foreground)] mt-2"
+                  >
+                    Ouvrir
+                  </Link>
                   {s.progressions && s.progressions.length > 0 && (
                     <div className="text-xs text-[var(--muted)] mt-2">
                       {s.progressions[0].chords.join(' → ')}
                     </div>
                   )}
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -741,6 +824,84 @@ export default function KnowledgePage() {
               </button>
               <button
                 onClick={saveProgression}
+                className="px-3 py-1.5 text-sm rounded-lg bg-[var(--accent)] text-white"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editKnowledge && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditKnowledge(null)}>
+          <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-lg border border-[var(--surface-light)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Renommer</h3>
+              <button onClick={() => setEditKnowledge(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Ancien</div>
+                <input
+                  value={editKnowledge.from}
+                  disabled
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm opacity-70"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Nouveau</div>
+                <input
+                  value={editKnowledge.to}
+                  onChange={(e) => setEditKnowledge({ ...editKnowledge, to: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setEditKnowledge(null)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => renameItem(editKnowledge.category, editKnowledge.from, editKnowledge.to)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-[var(--accent)] text-white"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editLessonTitle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditLessonTitle(null)}>
+          <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-lg border border-[var(--surface-light)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Renommer le morceau</h3>
+              <button onClick={() => setEditLessonTitle(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Titre</div>
+                <input
+                  value={editLessonTitle.title}
+                  onChange={(e) => setEditLessonTitle({ ...editLessonTitle, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setEditLessonTitle(null)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveLessonTitle}
                 className="px-3 py-1.5 text-sm rounded-lg bg-[var(--accent)] text-white"
               >
                 Enregistrer

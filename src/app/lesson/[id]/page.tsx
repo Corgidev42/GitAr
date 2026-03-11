@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, ChecklistItem } from '@/types';
-import { IconCheck, IconDocument, IconLink, IconMusic, IconPause, IconPlay, IconRefresh, IconRhythm, IconTarget } from '@/components/Icons';
+import { IconCheck, IconDocument, IconLink, IconMusic, IconPause, IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget, IconTrash } from '@/components/Icons';
 
 // ---- Audio Player Component ----
 function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks'] }) {
@@ -216,15 +216,20 @@ function Checklist({
 function Progressions({
   progressions,
   onAdd,
+  onEdit,
   onDelete,
+  editMode,
 }: {
   progressions: NonNullable<GuitarLesson['progressions']>;
   onAdd: (name: string, chordsLine: string, notes?: string) => void;
+  onEdit: (idx: number, name: string, chordsLine: string, notes?: string) => void;
   onDelete: (idx: number) => void;
+  editMode?: boolean;
 }) {
   const [name, setName] = useState('');
   const [line, setLine] = useState('');
   const [notes, setNotes] = useState('');
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
   return (
     <div className="bg-[var(--surface)] rounded-xl p-4">
@@ -243,13 +248,29 @@ function Progressions({
             <div key={i} className="p-2 rounded-lg border border-[var(--surface-light)]">
               <div className="flex items-start justify-between gap-3">
                 <div className="text-sm font-medium">{p.name}</div>
-                <button
-                  onClick={() => onDelete(i)}
-                  className="text-[var(--muted)] hover:text-red-400 text-sm leading-none"
-                  title="Supprimer"
-                >
-                  ×
-                </button>
+                {editMode && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingIdx(i);
+                        setName(p.name || '');
+                        setLine((p.chords || []).join(' → '));
+                        setNotes(p.notes || '');
+                      }}
+                      className="text-[var(--muted)] hover:text-[var(--foreground)]"
+                      title="Modifier"
+                    >
+                      <IconPencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(i)}
+                      className="text-[var(--muted)] hover:text-red-400"
+                      title="Supprimer"
+                    >
+                      <IconTrash className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="text-xs mt-1">
                 {p.chords.join(' → ')}
@@ -284,15 +305,33 @@ function Progressions({
           <button
             onClick={() => {
               if (!name || !line) return;
-              onAdd(name, line, notes || undefined);
+              if (editingIdx !== null) {
+                onEdit(editingIdx, name, line, notes || undefined);
+                setEditingIdx(null);
+              } else {
+                onAdd(name, line, notes || undefined);
+              }
               setName('');
               setLine('');
               setNotes('');
             }}
             className="w-full md:w-auto px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm"
           >
-            Ajouter
+            {editingIdx !== null ? 'Enregistrer' : 'Ajouter'}
           </button>
+          {editingIdx !== null && (
+            <button
+              onClick={() => {
+                setEditingIdx(null);
+                setName('');
+                setLine('');
+                setNotes('');
+              }}
+              className="w-full md:w-auto px-4 py-2 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] text-sm"
+            >
+              Annuler
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -307,6 +346,12 @@ export default function LessonPage() {
 
   const [lesson, setLesson] = useState<GuitarLesson | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftKnowledge, setDraftKnowledge] = useState<GuitarLesson['knowledge'] | null>(null);
+  const [draftChecklist, setDraftChecklist] = useState<ChecklistItem[] | null>(null);
+  const [addCat, setAddCat] = useState<'chords' | 'techniques' | 'rhythms' | 'strums'>('chords');
+  const [addValue, setAddValue] = useState('');
   const lastReloadAt = useRef(0);
 
   const loadLesson = useCallback(() => {
@@ -320,6 +365,9 @@ export default function LessonPage() {
       })
       .then((data: GuitarLesson) => {
         setLesson(data);
+        setDraftTitle(data.title);
+        setDraftKnowledge(data.knowledge);
+        setDraftChecklist(data.checklist);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -355,6 +403,23 @@ export default function LessonPage() {
     if (res.ok) {
       const updated = await res.json();
       setLesson(updated);
+    }
+  };
+
+  const saveEdits = async () => {
+    if (!lesson || !draftKnowledge || !draftChecklist) return;
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: draftTitle, knowledge: draftKnowledge, checklist: draftChecklist }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setLesson(updated);
+      setDraftTitle(updated.title);
+      setDraftKnowledge(updated.knowledge);
+      setDraftChecklist(updated.checklist);
+      setEditMode(false);
     }
   };
 
@@ -403,7 +468,15 @@ export default function LessonPage() {
             <span className="text-sm font-mono text-[var(--accent)] bg-[var(--surface)] px-2 py-1 rounded">
               {lesson.id}
             </span>
-            <h1 className="text-2xl font-bold">{lesson.title}</h1>
+            {editMode ? (
+              <input
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                className="text-2xl font-bold bg-transparent border-b border-[var(--surface-light)] focus:outline-none focus:border-[var(--accent)]"
+              />
+            ) : (
+              <h1 className="text-2xl font-bold">{lesson.title}</h1>
+            )}
           </div>
         </div>
 
@@ -438,6 +511,34 @@ export default function LessonPage() {
           >
             Morceau
           </button>
+          <button
+            onClick={() => {
+              if (!editMode) {
+                setDraftTitle(lesson.title);
+                setDraftKnowledge(lesson.knowledge);
+                setDraftChecklist(lesson.checklist);
+              }
+              setEditMode(!editMode);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+              editMode
+                ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                : 'bg-[var(--surface)] text-[var(--muted)] border-[var(--surface-light)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
+              {editMode ? <IconCheck className="w-4 h-4" /> : <IconPencil className="w-4 h-4" />}
+              {editMode ? 'Terminé' : 'Éditer'}
+            </span>
+          </button>
+          {editMode && (
+            <button
+              onClick={saveEdits}
+              className="px-3 py-1.5 rounded-lg text-xs border bg-[var(--accent)] text-white border-transparent hover:bg-[var(--accent-light)] transition-colors"
+            >
+              Sauvegarder
+            </button>
+          )}
           <span className={`px-3 py-1.5 rounded-lg text-xs ${st.color}`}>
             {st.label}
           </span>
@@ -446,31 +547,110 @@ export default function LessonPage() {
 
       {/* Knowledge tags */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {lesson.knowledge.chords.map((c) => (
-          <span key={c} className="text-xs px-2 py-1 rounded-lg bg-violet-900/50 text-violet-300">
+        {(editMode ? draftKnowledge?.chords || [] : lesson.knowledge.chords).map((c) => (
+          <span key={`chord-${c}`} className="text-xs px-2 py-1 rounded-lg bg-violet-900/50 text-violet-300">
             <span className="inline-flex items-center gap-1.5">
               <IconMusic className="w-3.5 h-3.5" />
               {c}
             </span>
+            {editMode && draftKnowledge && (
+              <button
+                onClick={() => setDraftKnowledge({ ...draftKnowledge, chords: draftKnowledge.chords.filter((x) => x !== c) })}
+                className="ml-2 text-violet-200/70 hover:text-white"
+                title="Retirer"
+              >
+                ×
+              </button>
+            )}
           </span>
         ))}
-        {lesson.knowledge.techniques.map((t) => (
-          <span key={t} className="text-xs px-2 py-1 rounded-lg bg-blue-900/50 text-blue-300">
+        {(editMode ? draftKnowledge?.techniques || [] : lesson.knowledge.techniques).map((t) => (
+          <span key={`tech-${t}`} className="text-xs px-2 py-1 rounded-lg bg-blue-900/50 text-blue-300">
             <span className="inline-flex items-center gap-1.5">
               <IconTarget className="w-3.5 h-3.5" />
               {t}
             </span>
+            {editMode && draftKnowledge && (
+              <button
+                onClick={() => setDraftKnowledge({ ...draftKnowledge, techniques: draftKnowledge.techniques.filter((x) => x !== t) })}
+                className="ml-2 text-blue-200/70 hover:text-white"
+                title="Retirer"
+              >
+                ×
+              </button>
+            )}
           </span>
         ))}
-        {lesson.knowledge.rhythms.map((r) => (
-          <span key={r} className="text-xs px-2 py-1 rounded-lg bg-amber-900/50 text-amber-300">
+        {(editMode ? draftKnowledge?.rhythms || [] : lesson.knowledge.rhythms).map((r) => (
+          <span key={`rhythm-${r}`} className="text-xs px-2 py-1 rounded-lg bg-amber-900/50 text-amber-300">
             <span className="inline-flex items-center gap-1.5">
               <IconRhythm className="w-3.5 h-3.5" />
               {r}
             </span>
+            {editMode && draftKnowledge && (
+              <button
+                onClick={() => setDraftKnowledge({ ...draftKnowledge, rhythms: draftKnowledge.rhythms.filter((x) => x !== r) })}
+                className="ml-2 text-amber-200/70 hover:text-white"
+                title="Retirer"
+              >
+                ×
+              </button>
+            )}
+          </span>
+        ))}
+        {(editMode ? draftKnowledge?.strums || [] : lesson.knowledge.strums || []).map((s) => (
+          <span key={`strum-${s}`} className="text-xs px-2 py-1 rounded-lg bg-teal-900/50 text-teal-300">
+            <span className="inline-flex items-center gap-1.5">
+              <IconRhythm className="w-3.5 h-3.5" />
+              {s}
+            </span>
+            {editMode && draftKnowledge && (
+              <button
+                onClick={() => setDraftKnowledge({ ...draftKnowledge, strums: (draftKnowledge.strums || []).filter((x) => x !== s) })}
+                className="ml-2 text-teal-200/70 hover:text-white"
+                title="Retirer"
+              >
+                ×
+              </button>
+            )}
           </span>
         ))}
       </div>
+
+      {editMode && draftKnowledge && (
+        <div className="flex flex-col md:flex-row gap-2 mb-6">
+          <select
+            value={addCat}
+            onChange={(e) => setAddCat(e.target.value as typeof addCat)}
+            className="px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--surface-light)] text-sm"
+          >
+            <option value="chords">Accord</option>
+            <option value="techniques">Technique</option>
+            <option value="rhythms">Rythme</option>
+            <option value="strums">Rythmique</option>
+          </select>
+          <input
+            value={addValue}
+            onChange={(e) => setAddValue(e.target.value)}
+            placeholder="Ajouter…"
+            className="flex-1 px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--surface-light)] text-sm"
+          />
+          <button
+            onClick={() => {
+              const v = addValue.trim();
+              if (!v) return;
+              const current = draftKnowledge[addCat] || [];
+              if (!current.includes(v)) {
+                setDraftKnowledge({ ...draftKnowledge, [addCat]: [...current, v] } as GuitarLesson['knowledge']);
+              }
+              setAddValue('');
+            }}
+            className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm"
+          >
+            Ajouter
+          </button>
+        </div>
+      )}
 
       {/* Main grid: PDF + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -482,9 +662,55 @@ export default function LessonPage() {
         {/* Sidebar - takes 1/3 */}
         <div className="space-y-6">
           <AudioPlayer tracks={lesson.assets.backingTracks} />
-          <Checklist items={lesson.checklist} onToggle={handleChecklistToggle} />
+          {editMode && draftChecklist ? (
+            <div className="bg-[var(--surface)] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-[var(--accent-light)] inline-flex items-center gap-2">
+                  <IconCheck className="w-4 h-4" />
+                  Checklist
+                </h3>
+                <button
+                  onClick={() => setDraftChecklist([...(draftChecklist || []), { label: 'Nouvelle tâche', done: false }])}
+                  className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                >
+                  Ajouter
+                </button>
+              </div>
+              <div className="space-y-2">
+                {draftChecklist.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={() =>
+                        setDraftChecklist(draftChecklist.map((it, i) => (i === idx ? { ...it, done: !it.done } : it)))
+                      }
+                      className="w-4 h-4 rounded border-[var(--surface-light)] accent-[var(--accent)]"
+                    />
+                    <input
+                      value={item.label}
+                      onChange={(e) =>
+                        setDraftChecklist(draftChecklist.map((it, i) => (i === idx ? { ...it, label: e.target.value } : it)))
+                      }
+                      className="flex-1 px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm"
+                    />
+                    <button
+                      onClick={() => setDraftChecklist(draftChecklist.filter((_, i) => i !== idx))}
+                      className="text-[var(--muted)] hover:text-red-400"
+                      title="Supprimer"
+                    >
+                      <IconTrash className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Checklist items={lesson.checklist} onToggle={handleChecklistToggle} />
+          )}
           <Progressions
             progressions={lesson.progressions || []}
+            editMode={editMode}
             onAdd={async (name, chordsLine, notes) => {
               if (!lesson) return;
               const chords = chordsLine
@@ -493,6 +719,26 @@ export default function LessonPage() {
                 .filter(Boolean);
               if (chords.length < 3) return;
               const next = [...(lesson.progressions || []), { name, chords, notes }];
+              const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ progressions: next }),
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                setLesson(updated);
+              }
+            }}
+            onEdit={async (idx, name, chordsLine, notes) => {
+              if (!lesson) return;
+              const chords = chordsLine
+                .split(/[-–→>|,]/)
+                .map((s) => s.trim())
+                .filter(Boolean);
+              if (chords.length < 3) return;
+              const next = (lesson.progressions || []).map((p, i) =>
+                i === idx ? { ...p, name, chords, notes } : p
+              );
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },

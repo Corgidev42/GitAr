@@ -49,6 +49,8 @@ export function readDatabase(): Database {
     const tokens = rest.split(/\s+/).filter(Boolean);
     if (tokens.length === 0) return false;
     if (tokens.length > 4) return false;
+    const last = tokens[tokens.length - 1];
+    if (last === 'de' || last === 'du' || last === 'des' || last === 'd') return false;
     const stop = new Set(['est', 'objectifs', 'objectif', 'technique', 'qui', 'dans', 'et', 'ca', 'ça', 'permet', 'module']);
     if (stop.has(tokens[0])) return false;
     return true;

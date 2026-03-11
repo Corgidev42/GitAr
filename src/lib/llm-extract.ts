@@ -233,6 +233,8 @@ function normalizeKnowledge(
     const tokens = rest.split(/\s+/).filter(Boolean);
     if (tokens.length === 0) return false;
     if (tokens.length > 4) return false;
+    const last = tokens[tokens.length - 1];
+    if (last === 'de' || last === 'du' || last === 'des' || last === 'd') return false;
     const stop = new Set(['est', 'objectifs', 'objectif', 'technique', 'qui', 'dans', 'et', 'ca', 'ça', 'permet', 'module']);
     if (stop.has(tokens[0])) return false;
     return true;
@@ -458,6 +460,8 @@ function extractStrums(text: string): string[] {
     const restTokens = rest.split(/\s+/).filter(Boolean);
     if (restTokens.length === 0) continue;
     if (stop.has(restTokens[0])) continue;
+    const last = restTokens[Math.min(restTokens.length, 4) - 1];
+    if (last === 'de' || last === 'du' || last === 'des' || last === 'd') continue;
     const limited = restTokens.slice(0, 4).join(' ');
     if (limited.length < 3) continue;
     out.push(`${restTokens.length > 0 ? lowerLine.startsWith('rythmique ') ? 'rythmique ' : 'rythme ' : ''}${limited}`);
