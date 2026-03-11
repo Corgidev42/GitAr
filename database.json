@@ -106,6 +106,139 @@
         }
       ],
       "isSong": false
+    },
+    {
+      "id": "D102",
+      "title": "Le rythme feu de camp",
+      "level": "debutant",
+      "status": "completed",
+      "knowledge": {
+        "chords": [
+          "Em7",
+          "G",
+          "Cadd2",
+          "D",
+          "A",
+          "B",
+          "C"
+        ],
+        "techniques": [
+          "s'accompagner en chantant"
+        ],
+        "rhythms": [
+          "syncope",
+          "croche"
+        ],
+        "strums": [
+          "rythme feu de camp",
+          "Bas Bas Haut Haut Bas"
+        ]
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 60,
+            "path": "/assets/audio/D102/60bpm.mp3"
+          },
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D102/80bpm.mp3"
+          },
+          {
+            "bpm": 100,
+            "path": "/assets/audio/D102/100bpm.mp3"
+          }
+        ],
+        "tabPath": "/assets/tabs/D102.pdf"
+      },
+      "checklist": [
+        {
+          "label": "Maîtriser les accords",
+          "done": true
+        },
+        {
+          "label": "Pratiquer les techniques",
+          "done": true
+        },
+        {
+          "label": "Travailler les rythmes",
+          "done": true
+        },
+        {
+          "label": "Jouer avec le backing track",
+          "done": true
+        }
+      ],
+      "progressions": [
+        {
+          "name": "Suite #1",
+          "chords": [
+            "G",
+            "Cadd2",
+            "D",
+            "Em7"
+          ],
+          "notes": "Révision des accords G, Cadd2 et D et un nouvel accord : Em7"
+        }
+      ],
+      "isSong": false
+    },
+    {
+      "id": "D102S",
+      "title": "With or without you",
+      "level": "debutant",
+      "status": "completed",
+      "knowledge": {
+        "chords": [
+          "G",
+          "D",
+          "Em7",
+          "Cadd2"
+        ],
+        "techniques": [],
+        "rhythms": [],
+        "strums": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D102S/80bpm.mp3"
+          },
+          {
+            "bpm": 90,
+            "path": "/assets/audio/D102S/90bpm.mp3"
+          },
+          {
+            "bpm": 109,
+            "path": "/assets/audio/D102S/109bpm.mp3"
+          }
+        ],
+        "tabPath": "/assets/tabs/D102S.pdf"
+      },
+      "checklist": [
+        {
+          "label": "Maîtriser les accords",
+          "done": true
+        },
+        {
+          "label": "Jouer avec le backing track",
+          "done": true
+        }
+      ],
+      "progressions": [
+        {
+          "name": "Progression principale",
+          "chords": [
+            "G",
+            "D",
+            "Em7",
+            "Cadd2"
+          ],
+          "notes": "Utilisée pour l'intro, les couplets, les refrains, l'instrumental, le pont et l'interlude."
+        }
+      ],
+      "isSong": true
     }
   ],
   "globalKnowledge": {
@@ -120,16 +253,23 @@
       "Am",
       "Cadd2",
       "Dsus4",
-      "Dsus2"
+      "Dsus2",
+      "Em7",
+      "B"
     ],
     "techniques": [
-      "embellissement autour du D"
+      "embellissement autour du D",
+      "s'accompagner en chantant"
     ],
     "rhythms": [
       "croche",
-      "noire"
+      "noire",
+      "syncope"
     ],
-    "strums": []
+    "strums": [
+      "rythme feu de camp",
+      "Bas Bas Haut Haut Bas"
+    ]
   },
   "techniqueDetails": {
     "capo": {
