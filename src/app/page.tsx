@@ -81,6 +81,11 @@ function LessonNode({
               {c}
             </span>
           ))}
+          {lesson.knowledge.chords.length > 4 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-light)] text-[var(--muted)]">
+              +{lesson.knowledge.chords.length - 4}
+            </span>
+          )}
           {lesson.knowledge.techniques.slice(0, 2).map((t) => (
             <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-300">
               {t}

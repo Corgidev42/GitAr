@@ -74,7 +74,26 @@
           "done": true
         }
       ],
-      "progressions": [],
+      "progressions": [
+        {
+          "name": "4 accords magiques",
+          "chords": [
+            "G",
+            "D",
+            "Em",
+            "C"
+          ]
+        },
+        {
+          "name": "4 accords magiques bis",
+          "chords": [
+            "D",
+            "Em",
+            "C",
+            "G"
+          ]
+        }
+      ],
       "isSong": false
     }
   ],
