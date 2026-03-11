@@ -46,10 +46,12 @@ async function extractWithGemini(
   "id": "string (ex: D101 — D=Débutant/I=Intermédiaire, 101=numéro)",
   "title": "string (titre de la leçon)",
   "level": "debutant | intermediaire",
+  "isSong": "boolean (true si le document est principalement une chanson/paroles + grille d'accords)",
   "knowledge": {
     "chords": ["string (TOUS les accords mentionnés, ex: Em, G, Am7, Dsus2)"],
     "techniques": ["string (UNIQUEMENT les vraies techniques guitaristiques nommées)"],
-    "rhythms": ["string (UNIQUEMENT les valeurs de notes : noire, blanche, croche, double croche, ronde, etc.)"]
+    "rhythms": ["string (UNIQUEMENT les valeurs de notes et signatures : noire, croche, syncope, 4/4, 6/8...)"],
+    "strums": ["string (UNIQUEMENT les rythmiques/rythmes de guitare nommés ou formules, ex: \"rythme feu de camp\", \"Bas Bas Haut Haut Bas\")"]
   },
   "progressions": [
     {
@@ -69,7 +71,9 @@ async function extractWithGemini(
 RÈGLES STRICTES :
 - "chords" : liste TOUS les accords en notation anglo-saxonne COURTE (Em, G, Cadd9, Dsus2…). JAMAIS écrire "D majeur" ou "ré mineur" — utilise "D" et "Dm". Un accord sans précision (D, C, G…) est TOUJOURS majeur. Sois exhaustif.
 - "techniques" : UNIQUEMENT les techniques guitaristiques réelles et nommées comme concept (ex: "arpège", "hammer-on", "pull-off", "bend", "slide", "embellissement autour du D", "palm mute", "fingerpicking"). Utilise la notation courte pour les accords dans les noms de technique ("embellissement autour du D", PAS "embellissement autour du D majeur"). NE PAS inclure les descriptions d'exercices ("Jouer les accords", "Taper les temps avec le pied", "Mouvement aller"), ni les objectifs pédagogiques ("Dextérité-Coordination-Vitesse"), ni les consignes ("enchaîner les accords", "jouer la rythmique"). Une technique a un NOM propre, ce n'est pas une phrase d'action.
-- "rhythms" : UNIQUEMENT les valeurs de notes musicales (noire, blanche, croche, double croche, ronde, triolet, etc.) et les signatures rythmiques (4/4, 3/4, 6/8). NE PAS inclure "rythmique", "temps", ni de descriptions vagues.
+- "techniques" : EXCLURE absolument : "capo", "chant", "paroles", "s'accompagner en chantant", les noms de rythmiques ("rythme feu de camp"), et les formules bas/haut. Ces éléments vont dans "strums" ou nulle part.
+- "rhythms" : UNIQUEMENT les concepts rythmiques et valeurs/signatures (noire, croche, syncope, contretemps, 4/4...). NE PAS inclure les formules bas/haut, ni les noms de rythmiques de guitare.
+- "strums" : UNIQUEMENT les rythmiques/strums de guitare (noms + formules) (ex: "rythme feu de camp", "Bas Bas Haut Haut Bas"). Pas de "syncope" ici.
 - "progressions" : propose 0 à 5 suites d'accords trouvées dans le document. Si aucune suite claire n'est écrite, propose 0.
 - "techniqueDetails" : inclure 0 à N entrées. Les clés DOIVENT être exactement les chaînes présentes dans "knowledge.techniques" quand c'est possible. Si tu n'es pas sûr, ne crée pas d'entrée.
 
@@ -159,8 +163,54 @@ function normalizeKnowledge(
     return s;
   }
 
+  function normalizeStrum(raw: string): string {
+    let s = raw.trim();
+    s = s.replace(/\s+/g, ' ');
+    return s;
+  }
+
+  function isStrumFormula(s: string): boolean {
+    const lower = s.toLowerCase();
+    if (lower.includes('bas') || lower.includes('haut')) {
+      const tokens = lower.split(/\s+/).filter(Boolean);
+      const bhCount = tokens.filter((t) => t === 'bas' || t === 'haut').length;
+      return bhCount >= 4;
+    }
+    return false;
+  }
+
+  function isStrumName(s: string): boolean {
+    const lower = s.toLowerCase();
+    return lower.startsWith('rythme ') || lower.startsWith('rythmique ') || lower.includes('feu de camp');
+  }
+
   const chords = [...new Set(data.knowledge.chords.map(normalizeChord))];
-  const techniques = [...new Set(data.knowledge.techniques.map(normalizeTechnique))];
+  const rawTechniques = data.knowledge.techniques.map(normalizeTechnique);
+  const rawStrums = (data.knowledge.strums || []).map(normalizeStrum);
+
+  const techniques: string[] = [];
+  const strums: string[] = [];
+
+  for (const t of rawTechniques) {
+    const lower = t.toLowerCase();
+    if (lower.includes('capo') || lower.includes('chant') || lower.includes('paroles') || lower.includes('s\'accompagner')) {
+      continue;
+    }
+    if (isStrumFormula(t) || isStrumName(t)) {
+      strums.push(t);
+      continue;
+    }
+    techniques.push(t);
+  }
+
+  for (const s of rawStrums) {
+    if (!s) continue;
+    strums.push(s);
+  }
+
+  const techniquesUniq = [...new Set(techniques)];
+  const strumsUniq = [...new Set(strums)];
+
   const rhythms = [...new Set(data.knowledge.rhythms.map((r) => {
     let s = r.trim().toLowerCase();
     // Normalize plurals → singular (croches→croche, noires→noire, blanches→blanche, etc.)
@@ -187,7 +237,9 @@ function normalizeKnowledge(
       )
     : undefined;
 
-  return { ...data, knowledge: { chords, techniques, rhythms }, progressions, techniqueDetails };
+  const isSong = typeof (data as { isSong?: unknown }).isSong === 'boolean' ? (data as { isSong?: boolean }).isSong : undefined;
+
+  return { ...data, isSong, knowledge: { chords, techniques: techniquesUniq, rhythms, strums: strumsUniq }, progressions, techniqueDetails };
 }
 
 function fallbackParser(
@@ -232,6 +284,8 @@ function fallbackParser(
     if (!techniques.includes(desc)) techniques.push(desc);
   }
 
+  const strums = extractStrums(text);
+
   // Simple rhythm detection
   const rhythms: string[] = [];
   const rhythmPatterns = [
@@ -244,8 +298,9 @@ function fallbackParser(
 
   const progressions = extractProgressions(text);
   const techniqueDetails = buildTechniqueDetails(techniques);
+  const isSong = inferIsSong(text);
 
-  return normalizeKnowledge({ id, title, level, knowledge: { chords, techniques, rhythms }, progressions, techniqueDetails });
+  return normalizeKnowledge({ id, title, level, isSong, knowledge: { chords, techniques, rhythms, strums }, progressions, techniqueDetails });
 }
 
 function extractProgressions(text: string): ChordProgression[] {
@@ -276,6 +331,41 @@ function extractProgressions(text: string): ChordProgression[] {
     if (out.length >= 5) break;
   }
   return out;
+}
+
+function extractStrums(text: string): string[] {
+  const out: string[] = [];
+  const lower = text.toLowerCase();
+
+  const nameRegex = /\b(?:rythme|rythmique)\s+([a-zà-ÿ0-9'’ -]{3,40})/gi;
+  let m: RegExpExecArray | null;
+  while ((m = nameRegex.exec(text)) !== null) {
+    const name = m[0].trim();
+    if (name.toLowerCase().includes('feu de camp')) out.push('rythme feu de camp');
+    else out.push(name);
+  }
+
+  const formulaRegex = /\b(?:bas|haut)(?:\s+(?:bas|haut)){3,}\b/gi;
+  const formulas = text.match(formulaRegex) || [];
+  for (const f of formulas) {
+    const cleaned = f.trim().replace(/\s+/g, ' ');
+    const title = cleaned
+      .split(' ')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+    out.push(title);
+  }
+
+  if (lower.includes('feu de camp')) out.push('rythme feu de camp');
+
+  return [...new Set(out)];
+}
+
+function inferIsSong(text: string): boolean {
+  const lower = text.toLowerCase();
+  const hasSections = /(?:\b(refrain|couplet|pont|intro|outro)\b)/i.test(lower);
+  const hasManyLyricsLines = text.split(/\r?\n/).filter((l) => l.trim().length > 0 && l.trim().length < 60).length > 25;
+  return hasSections && hasManyLyricsLines;
 }
 
 function buildTechniqueDetails(techniques: string[]): Record<string, TechniqueDetail> {

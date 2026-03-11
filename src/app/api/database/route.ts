@@ -8,7 +8,7 @@ export async function GET() {
 
 /**
  * DELETE /api/database
- * Body: { type: 'knowledge', category: 'chords'|'techniques'|'rhythms', value: string }
+ * Body: { type: 'knowledge', category: 'chords'|'techniques'|'rhythms'|'strums', value: string }
  *    or { type: 'lesson', id: string }
  *    or { type: 'reset' }
  */
@@ -17,16 +17,16 @@ export async function DELETE(req: NextRequest) {
   const db = readDatabase();
 
   if (body.type === 'knowledge') {
-    const cat = body.category as 'chords' | 'techniques' | 'rhythms';
+    const cat = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums';
     const val = body.value as string;
     if (!cat || !val) {
       return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
     }
     // Remove from globalKnowledge
-    db.globalKnowledge[cat] = db.globalKnowledge[cat].filter((v) => v !== val);
+    db.globalKnowledge[cat] = (db.globalKnowledge[cat] || []).filter((v) => v !== val);
     // Remove from each lesson's knowledge too
     for (const lesson of db.lessons) {
-      lesson.knowledge[cat] = lesson.knowledge[cat].filter((v) => v !== val);
+      lesson.knowledge[cat] = (lesson.knowledge[cat] || []).filter((v) => v !== val);
     }
     writeDatabase(db);
     return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });
@@ -39,7 +39,7 @@ export async function DELETE(req: NextRequest) {
     }
     db.lessons = db.lessons.filter((l) => l.id !== id);
     // Rebuild globalKnowledge from remaining lessons
-    db.globalKnowledge = { chords: [], techniques: [], rhythms: [] };
+    db.globalKnowledge = { chords: [], techniques: [], rhythms: [], strums: [] };
     for (const lesson of db.lessons) {
       for (const chord of lesson.knowledge.chords) {
         if (!db.globalKnowledge.chords.includes(chord)) db.globalKnowledge.chords.push(chord);
@@ -50,13 +50,17 @@ export async function DELETE(req: NextRequest) {
       for (const rhythm of lesson.knowledge.rhythms) {
         if (!db.globalKnowledge.rhythms.includes(rhythm)) db.globalKnowledge.rhythms.push(rhythm);
       }
+      const acc = db.globalKnowledge.strums || (db.globalKnowledge.strums = []);
+      for (const strum of lesson.knowledge.strums || []) {
+        if (!acc.includes(strum)) acc.push(strum);
+      }
     }
     writeDatabase(db);
     return NextResponse.json({ ok: true });
   }
 
   if (body.type === 'reset') {
-    const empty = { lessons: [], globalKnowledge: { chords: [], techniques: [], rhythms: [] }, techniqueDetails: {} };
+    const empty = { lessons: [], globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [] }, techniqueDetails: {} };
     writeDatabase(empty);
     return NextResponse.json({ ok: true });
   }

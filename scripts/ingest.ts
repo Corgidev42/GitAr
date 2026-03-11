@@ -53,6 +53,7 @@ interface ClassifiedFile {
   filePath: string;
   fileName: string;
   lessonId: string;
+  baseLessonId: string;
   type: 'guide' | 'tab' | 'audio';
   bpm?: number;
 }
@@ -69,27 +70,42 @@ function classifyFile(filePath: string): ClassifiedFile | null {
     console.log(`⚠ Skipping "${fileName}" — cannot determine lesson ID.`);
     return null;
   }
-  const lessonId = idMatch[1].toUpperCase();
+  const baseLessonId = idMatch[1].toUpperCase();
+
+  const lowerName = fileName.toLowerCase();
+  const isSongPart =
+    lowerName.includes('paroles') ||
+    lowerName.includes('chanson') ||
+    lowerName.includes('morceau') ||
+    lowerName.includes('song');
+  const lessonId = isSongPart ? `${baseLessonId}S` : baseLessonId;
 
   if (ext === '.mp3') {
     const bpmMatch = fileName.match(/(\d+)\s*bpm/i);
     return {
-      filePath, fileName, lessonId,
+      filePath, fileName, lessonId, baseLessonId,
       type: 'audio',
       bpm: bpmMatch ? parseInt(bpmMatch[1], 10) : 120,
     };
   }
 
   if (ext === '.pdf') {
-    const lower = fileName.toLowerCase();
-    if (lower.includes('tab')) {
-      return { filePath, fileName, lessonId, type: 'tab' };
+    if (lowerName.includes('tab')) {
+      return { filePath, fileName, lessonId, baseLessonId, type: 'tab' };
     }
-    if (lower.includes('guide') || lower.includes('synth') || lower.includes('fiche')) {
-      return { filePath, fileName, lessonId, type: 'guide' };
+    if (
+      lowerName.includes('guide') ||
+      lowerName.includes('synth') ||
+      lowerName.includes('fiche') ||
+      lowerName.includes('paroles') ||
+      lowerName.includes('chanson') ||
+      lowerName.includes('morceau') ||
+      lowerName.includes('song')
+    ) {
+      return { filePath, fileName, lessonId, baseLessonId, type: 'guide' };
     }
     // PDF without guide/synth/tab keyword → treat as tablature
-    return { filePath, fileName, lessonId, type: 'tab' };
+    return { filePath, fileName, lessonId, baseLessonId, type: 'tab' };
   }
 
   return null;
@@ -223,7 +239,7 @@ async function ingest(): Promise<void> {
         title: lessonId,
         level: lessonId.startsWith('I') ? 'intermediaire' : 'debutant',
         status: 'lock',
-        knowledge: { chords: [], techniques: [], rhythms: [] },
+        knowledge: { chords: [], techniques: [], rhythms: [], strums: [] },
         assets: { backingTracks: [], tabPath: '' },
         checklist: [],
         progressions: [],
@@ -238,6 +254,9 @@ async function ingest(): Promise<void> {
           if (extracted) {
             lesson.title = extracted.title;
             lesson.level = extracted.level;
+            if (typeof extracted.isSong === 'boolean') {
+              lesson.isSong = extracted.isSong;
+            }
             // Merge knowledge
             for (const c of extracted.knowledge.chords) {
               if (!lesson.knowledge.chords.includes(c)) lesson.knowledge.chords.push(c);
@@ -247,6 +266,10 @@ async function ingest(): Promise<void> {
             }
             for (const r of extracted.knowledge.rhythms) {
               if (!lesson.knowledge.rhythms.includes(r)) lesson.knowledge.rhythms.push(r);
+            }
+            for (const s of extracted.knowledge.strums || []) {
+              if (!lesson.knowledge.strums) lesson.knowledge.strums = [];
+              if (!lesson.knowledge.strums.includes(s)) lesson.knowledge.strums.push(s);
             }
 
             if (extracted.progressions && extracted.progressions.length > 0) {
@@ -313,6 +336,10 @@ async function ingest(): Promise<void> {
     }
     for (const r of lesson.knowledge.rhythms) {
       if (!db.globalKnowledge.rhythms.includes(r)) db.globalKnowledge.rhythms.push(r);
+    }
+    for (const s of lesson.knowledge.strums || []) {
+      if (!db.globalKnowledge.strums) db.globalKnowledge.strums = [];
+      if (!db.globalKnowledge.strums.includes(s)) db.globalKnowledge.strums.push(s);
     }
 
     // Generate default checklist if empty

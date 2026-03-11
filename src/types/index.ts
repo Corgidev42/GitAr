@@ -7,6 +7,7 @@ export interface Knowledge {
   chords: string[];
   techniques: string[];
   rhythms: string[];
+  strums?: string[];
 }
 
 export interface TechniqueDetail {

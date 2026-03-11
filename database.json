@@ -104,6 +104,88 @@
         }
       ],
       "isSong": false
+    },
+    {
+      "id": "D102",
+      "title": "Le rythme feu de camp",
+      "level": "debutant",
+      "status": "lock",
+      "knowledge": {
+        "chords": [
+          "G",
+          "D",
+          "Em7",
+          "Cadd2",
+          "C"
+        ],
+        "techniques": [
+          "Capo",
+          "rythme feu de camp",
+          "syncopes",
+          "Bas Bas Haut Haut Bas",
+          "syncope",
+          "s'accompagner en chantant"
+        ],
+        "rhythms": [
+          "croche",
+          "4/4"
+        ]
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 60,
+            "path": "/assets/audio/D102/60bpm.mp3"
+          },
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D102/80bpm.mp3"
+          },
+          {
+            "bpm": 90,
+            "path": "/assets/audio/D102/90bpm.mp3"
+          },
+          {
+            "bpm": 100,
+            "path": "/assets/audio/D102/100bpm.mp3"
+          },
+          {
+            "bpm": 109,
+            "path": "/assets/audio/D102/109bpm.mp3"
+          }
+        ],
+        "tabPath": "/assets/tabs/D102.pdf"
+      },
+      "checklist": [
+        {
+          "label": "Maîtriser les accords",
+          "done": false
+        },
+        {
+          "label": "Pratiquer les techniques",
+          "done": false
+        },
+        {
+          "label": "Travailler les rythmes",
+          "done": false
+        },
+        {
+          "label": "Jouer avec le backing track",
+          "done": false
+        }
+      ],
+      "progressions": [
+        {
+          "name": "Main Progression",
+          "chords": [
+            "G",
+            "D",
+            "Em7",
+            "Cadd2"
+          ],
+          "notes": "Cette suite d'accords est utilisée pour l'intro, les couplets, les refrains, l'interlude, l'instrumental et le pont."
+        }
+      ]
     }
   ],
   "globalKnowledge": {
@@ -118,15 +200,63 @@
       "Am",
       "Cadd2",
       "Dsus4",
-      "Dsus2"
+      "Dsus2",
+      "Em7"
     ],
     "techniques": [
-      "embellissement autour du D"
+      "embellissement autour du D",
+      "Capo",
+      "rythme feu de camp",
+      "syncopes",
+      "Bas Bas Haut Haut Bas",
+      "syncope",
+      "s'accompagner en chantant"
     ],
     "rhythms": [
       "croche",
-      "noire"
+      "noire",
+      "4/4"
     ]
   },
-  "techniqueDetails": {}
+  "techniqueDetails": {
+    "capo": {
+      "summary": "L'utilisation d'un capo est requise pour jouer la chanson dans la tonalité originale.",
+      "steps": [
+        "Placer le capo à la 7ème case."
+      ]
+    },
+    "rythme feu de camp": {
+      "summary": "Rythmique polyvalente, souvent qualifiée de 'couteau-suisse du guitariste', utilisable pour accompagner la plupart des chansons en croches.",
+      "steps": [
+        "Ne pas se fier à la formule 'Bas Bas Haut Haut Bas'.",
+        "Comprendre le rythme pour savoir quand effectuer un mouvement 'bas' (aller) et 'haut' (retour)."
+      ]
+    },
+    "syncopes": {
+      "summary": "Technique rythmique qui implique de marquer virtuellement le 3ème temps.",
+      "steps": []
+    },
+    "bas bas haut haut bas": {
+      "summary": "Formule de rythmique souvent enseignée sur internet, mais considérée comme un piège car elle rend dépendant d'un tuto ou d'un professeur pour chaque chanson.",
+      "steps": [
+        "Ne pas céder à la facilité et à la tentation de cette formule.",
+        "Comprendre le rythme pour savoir quand faire un mouvement 'bas' (aller) et 'haut' (retour) plutôt que de mémoriser cette séquence."
+      ]
+    },
+    "syncope": {
+      "summary": "Motif rythmique qui permet de mettre l’accent autre part que sur un temps, en avançant le moment où on marque le temps. On joue l'accord plus tôt et on ne joue pas le temps d'après.",
+      "steps": [
+        "Sur une mesure à 4 temps, l'impact du 3 n'est pas joué mais intégré au temps d'avant (le 2)",
+        "On marque le « et », et pas le temps",
+        "A la guitare, cela revient à faire un aller dans le vide."
+      ]
+    },
+    "s'accompagner en chantant": {
+      "summary": "Apprendre à mieux se synchroniser quand on chante en jouant. Cela devient possible quand jouer de la guitare est automatique et ne demande plus de concentration.",
+      "steps": [
+        "Chanter « Au clair de la lune » en jouant",
+        "Choisir une tonalité (C, G, D) adaptée à sa voix pour faciliter l'exercice."
+      ]
+    }
+  }
 }

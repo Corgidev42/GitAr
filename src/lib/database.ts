@@ -13,6 +13,10 @@ export function readDatabase(): Database {
     db.globalKnowledge = { chords: [], techniques: [], rhythms: [] };
     changed = true;
   }
+  if (!db.globalKnowledge.strums) {
+    db.globalKnowledge.strums = [];
+    changed = true;
+  }
 
   if (!db.lessons) {
     db.lessons = [];
@@ -43,6 +47,10 @@ export function readDatabase(): Database {
     }
     if (lesson.id === 'D100' && lesson.title === 'D100') {
       lesson.title = 'Rappels des bases pour bien démarrer';
+      changed = true;
+    }
+    if (!lesson.knowledge.strums) {
+      lesson.knowledge.strums = [];
       changed = true;
     }
 
@@ -103,6 +111,12 @@ function mergeGlobalKnowledge(db: Database, k: Knowledge): void {
   for (const rhythm of k.rhythms) {
     if (!db.globalKnowledge.rhythms.includes(rhythm)) {
       db.globalKnowledge.rhythms.push(rhythm);
+    }
+  }
+  for (const strum of k.strums || []) {
+    if (!db.globalKnowledge.strums) db.globalKnowledge.strums = [];
+    if (!db.globalKnowledge.strums.includes(strum)) {
+      db.globalKnowledge.strums.push(strum);
     }
   }
 }

@@ -21,7 +21,7 @@ const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; posit
   'Csus2':  { frets: [-1, 3, 3, 0, 1, -1] },
   'Csus4':  { frets: [-1, 3, 3, 0, 1, 1] },
   'Cadd9':  { frets: [0, 3, 2, 0, 3, 0] },
-  'Cadd2':  { frets: [0, 3, 2, 0, 3, 0] },
+  'Cadd2':  { frets: [0, 3, 2, 0, 3, 3] },
   'C6':     { frets: [0, 3, 2, 2, 1, 0] },
   'C9':     { frets: [-1, 3, 2, 3, 3, 0] },
   'C/G':    { frets: [3, 3, 2, 0, 1, 0] },
@@ -47,7 +47,7 @@ const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; posit
   'Em':     { frets: [0, 2, 2, 0, 0, 0] },
   'E7':     { frets: [0, 2, 0, 1, 0, 0] },
   'Emaj7':  { frets: [0, 2, 1, 1, 0, 0] },
-  'Em7':    { frets: [0, 2, 0, 0, 0, 0] },
+  'Em7':    { frets: [0, 2, 2, 0, 3, 3] },
   'Edim':   { frets: [0, 1, 2, 0, -1, -1] },
   'Eaug':   { frets: [0, 3, 2, 1, 1, 0] },
   'Esus2':  { frets: [0, 2, 4, 4, 0, 0] },
@@ -338,7 +338,7 @@ export default function KnowledgePage() {
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
 
-  const deleteItem = async (category: 'chords' | 'techniques' | 'rhythms', value: string) => {
+  const deleteItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', value: string) => {
     const res = await fetch('/api/database', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -470,20 +470,34 @@ export default function KnowledgePage() {
       )}
 
       {tab === 'rhythms' && (
-        <Section
-          title="Rythmes"
-          icon={<IconRhythm className="w-5 h-5" />}
-          items={k.rhythms}
-          editMode={editMode}
-          onDelete={(v) => deleteItem('rhythms', v)}
-          renderItem={(rhythm) => (
-            <RhythmCard
-              name={rhythm}
-              expanded={expandedRhythm === rhythm}
-              onToggle={() => setExpandedRhythm(expandedRhythm === rhythm ? null : rhythm)}
-            />
-          )}
-        />
+        <>
+          <Section
+            title="Rythmiques"
+            icon={<IconRhythm className="w-5 h-5" />}
+            items={k.strums || []}
+            editMode={editMode}
+            onDelete={(v) => deleteItem('strums', v)}
+            renderItem={(strum) => (
+              <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors">
+                <span className="text-sm font-medium capitalize">{strum}</span>
+              </div>
+            )}
+          />
+          <Section
+            title="Rythmes"
+            icon={<IconRhythm className="w-5 h-5" />}
+            items={k.rhythms}
+            editMode={editMode}
+            onDelete={(v) => deleteItem('rhythms', v)}
+            renderItem={(rhythm) => (
+              <RhythmCard
+                name={rhythm}
+                expanded={expandedRhythm === rhythm}
+                onToggle={() => setExpandedRhythm(expandedRhythm === rhythm ? null : rhythm)}
+              />
+            )}
+          />
+        </>
       )}
 
       {tab === 'progressions' && (
