@@ -9,6 +9,48 @@ export function readDatabase(): Database {
   const db = JSON.parse(raw) as Database;
   let changed = false;
 
+  const normalizeForKey = (raw: string): string =>
+    raw
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .replace(/[’]/g, "'")
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+  const normalizeStrum = (raw: string): string => {
+    let s = raw.trim().replace(/[’]/g, "'");
+    s = s.replace(/[-–—]+/g, ' ').replace(/\s+/g, ' ');
+    const tokens = s
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => {
+        const lower = t.toLowerCase();
+        if (lower === 'b') return 'bas';
+        if (lower === 'h') return 'haut';
+        return lower;
+      });
+    const isFormula = tokens.every((t) => t === 'bas' || t === 'haut') && tokens.length >= 4;
+    if (isFormula) return tokens.map((t) => (t === 'bas' ? 'Bas' : 'Haut')).join(' ');
+    const lower = s.toLowerCase();
+    if (lower.includes('feu de camp')) return 'rythme feu de camp';
+    if (lower.startsWith('rythmique ')) return lower;
+    if (lower.startsWith('rythme ')) return lower;
+    return s;
+  };
+
+  const dedupeStrings = (arr: string[], normalizer?: (s: string) => string): string[] => {
+    const map = new Map<string, string>();
+    for (const v of arr) {
+      const cleaned = v?.trim();
+      if (!cleaned) continue;
+      const key = normalizer ? normalizer(cleaned) : normalizeForKey(cleaned);
+      if (!map.has(key)) map.set(key, cleaned);
+    }
+    return [...map.values()];
+  };
+
   if (!db.globalKnowledge) {
     db.globalKnowledge = { chords: [], techniques: [], rhythms: [] };
     changed = true;
@@ -54,6 +96,48 @@ export function readDatabase(): Database {
       changed = true;
     }
 
+    const nextChords = dedupeStrings(lesson.knowledge.chords);
+    const nextTechs = dedupeStrings(lesson.knowledge.techniques);
+    const nextRhythms = dedupeStrings(lesson.knowledge.rhythms, (s) => normalizeForKey(s).replace(/s$/, ''));
+    const currentStrums = lesson.knowledge.strums || [];
+    const nextStrumsRaw = dedupeStrings(currentStrums, (s) => normalizeForKey(normalizeStrum(s)));
+    const nextStrums = (() => {
+      const formulas: string[] = [];
+      const names: string[] = [];
+      for (const s of nextStrumsRaw.map(normalizeStrum)) {
+        const key = normalizeForKey(s);
+        const tokens = key.split(/\s+/).filter(Boolean);
+        const isFormula = tokens.length >= 4 && tokens.every((t) => t === 'bas' || t === 'haut');
+        if (isFormula) formulas.push(s);
+        else names.push(s);
+      }
+      const formulaKeys = formulas.map((f) => normalizeForKey(f));
+      const keepFormulas = formulas.filter((f, i) => {
+        const k = formulaKeys[i];
+        for (let j = 0; j < formulaKeys.length; j++) {
+          if (i === j) continue;
+          const other = formulaKeys[j];
+          if (other.length > k.length && other.includes(k)) return false;
+        }
+        return true;
+      });
+      return [...names, ...keepFormulas];
+    })();
+
+    if (
+      nextChords.length !== lesson.knowledge.chords.length ||
+      nextTechs.length !== lesson.knowledge.techniques.length ||
+      nextRhythms.length !== lesson.knowledge.rhythms.length ||
+      nextStrums.length !== currentStrums.length ||
+      nextStrums.some((v, i) => v !== currentStrums[i])
+    ) {
+      lesson.knowledge.chords = nextChords;
+      lesson.knowledge.techniques = nextTechs;
+      lesson.knowledge.rhythms = nextRhythms;
+      lesson.knowledge.strums = nextStrums;
+      changed = true;
+    }
+
     if (lesson.assets.backingTracks.length === 0) {
       const audioDir = path.join(process.cwd(), 'public', 'assets', 'audio', lesson.id);
       if (fs.existsSync(audioDir) && fs.statSync(audioDir).isDirectory()) {
@@ -75,6 +159,10 @@ export function readDatabase(): Database {
   }
 
   if (changed) {
+    db.globalKnowledge.chords = dedupeStrings(db.globalKnowledge.chords);
+    db.globalKnowledge.techniques = dedupeStrings(db.globalKnowledge.techniques);
+    db.globalKnowledge.rhythms = dedupeStrings(db.globalKnowledge.rhythms, (s) => normalizeForKey(s).replace(/s$/, ''));
+    db.globalKnowledge.strums = dedupeStrings(db.globalKnowledge.strums || [], (s) => normalizeForKey(normalizeStrum(s))).map(normalizeStrum);
     writeDatabase(db);
   }
 

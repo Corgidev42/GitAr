@@ -127,6 +127,47 @@ function inferTitleFromFilename(fileName: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+function normalizeForMatch(raw: string): string {
+  return raw
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function normalizeStrum(raw: string): string {
+  let s = raw.trim().replace(/[’]/g, "'");
+  s = s.replace(/[-–—]+/g, ' ').replace(/\s+/g, ' ');
+  const tokens = s
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => {
+      const lower = t.toLowerCase();
+      if (lower === 'b') return 'bas';
+      if (lower === 'h') return 'haut';
+      return lower;
+    });
+  const isFormula = tokens.every((t) => t === 'bas' || t === 'haut') && tokens.length >= 4;
+  if (isFormula) return tokens.map((t) => (t === 'bas' ? 'Bas' : 'Haut')).join(' ');
+  const lower = s.toLowerCase();
+  if (lower.includes('feu de camp')) return 'rythme feu de camp';
+  if (lower.startsWith('rythmique ')) return lower;
+  if (lower.startsWith('rythme ')) return lower;
+  return s;
+}
+
+function dedupeByKey<T>(arr: T[], keyFn: (v: T) => string): T[] {
+  const map = new Map<string, T>();
+  for (const v of arr) {
+    const k = keyFn(v);
+    if (!map.has(k)) map.set(k, v);
+  }
+  return [...map.values()];
+}
+
 function applyTitleDefaults(lesson: { id: string; title: string }, fileName: string): void {
   if (lesson.title === lesson.id) {
     const inferred = inferTitleFromFilename(fileName);
@@ -226,6 +267,48 @@ async function ingest(): Promise<void> {
     if (c) classified.push(c);
   }
 
+  const db = readDB();
+
+  const songCandidatesByBase = new Map<string, { id: string; titleKey: string }[]>();
+  for (const lesson of db.lessons) {
+    if (!lesson.isSong) continue;
+    const base = lesson.id.replace(/S$/, '');
+    const titleKey = normalizeForMatch(lesson.title || '');
+    if (!titleKey) continue;
+    const arr = songCandidatesByBase.get(base) || [];
+    arr.push({ id: lesson.id, titleKey });
+    songCandidatesByBase.set(base, arr);
+  }
+
+  for (const c of classified) {
+    if (!c.lessonId.endsWith('S')) continue;
+    const inferredTitle = inferTitleFromFilename(c.fileName);
+    if (!inferredTitle) continue;
+    const titleKey = normalizeForMatch(inferredTitle);
+    if (!titleKey) continue;
+    const arr = songCandidatesByBase.get(c.baseLessonId) || [];
+    arr.push({ id: c.lessonId, titleKey });
+    songCandidatesByBase.set(c.baseLessonId, arr);
+  }
+
+  for (const [base, arr] of songCandidatesByBase) {
+    songCandidatesByBase.set(base, dedupeByKey(arr, (v) => `${v.id}:${v.titleKey}`));
+  }
+
+  for (const c of classified) {
+    if (c.lessonId !== c.baseLessonId) continue;
+    if (c.type !== 'audio' && c.type !== 'tab') continue;
+    const candidates = songCandidatesByBase.get(c.baseLessonId);
+    if (!candidates || candidates.length === 0) continue;
+    const fileKey = normalizeForMatch(c.fileName);
+    for (const cand of candidates) {
+      if (cand.titleKey.length >= 4 && fileKey.includes(cand.titleKey)) {
+        c.lessonId = cand.id;
+        break;
+      }
+    }
+  }
+
   // Group by lesson ID
   const byLesson = new Map<string, ClassifiedFile[]>();
   for (const c of classified) {
@@ -233,8 +316,6 @@ async function ingest(): Promise<void> {
     arr.push(c);
     byLesson.set(c.lessonId, arr);
   }
-
-  const db = readDB();
   const processedFiles: string[] = [];
 
   for (const [lessonId, lessonFiles] of byLesson) {
@@ -336,6 +417,35 @@ async function ingest(): Promise<void> {
       }
     }
 
+    lesson.knowledge.chords = dedupeByKey(lesson.knowledge.chords, (v) => normalizeForMatch(v));
+    lesson.knowledge.techniques = dedupeByKey(lesson.knowledge.techniques, (v) => normalizeForMatch(v));
+    lesson.knowledge.rhythms = dedupeByKey(lesson.knowledge.rhythms, (v) => normalizeForMatch(v).replace(/s$/, ''));
+
+    const rawStrums = lesson.knowledge.strums || [];
+    const normalizedStrums = dedupeByKey(rawStrums.map(normalizeStrum), (v) => normalizeForMatch(v));
+    const formulas: string[] = [];
+    const names: string[] = [];
+    for (const s of normalizedStrums) {
+      const k = normalizeForMatch(s);
+      const toks = k.split(/\s+/).filter(Boolean);
+      const isFormula = toks.length >= 4 && toks.every((t) => t === 'bas' || t === 'haut');
+      if (isFormula) formulas.push(s);
+      else names.push(s);
+    }
+    const formulaKeys = formulas.map((f) => normalizeForMatch(f));
+    const keptFormulas = formulas.filter((f, i) => {
+      const k = formulaKeys[i];
+      for (let j = 0; j < formulaKeys.length; j++) {
+        if (i === j) continue;
+        const other = formulaKeys[j];
+        if (other.length > k.length && other.includes(k)) return false;
+      }
+      return true;
+    });
+    lesson.knowledge.strums = [...names, ...keptFormulas];
+
+    lesson.assets.backingTracks = dedupeByKey(lesson.assets.backingTracks, (bt) => String(bt.bpm)).sort((a, b) => a.bpm - b.bpm);
+
     // Merge into global knowledge
     for (const c of lesson.knowledge.chords) {
       if (!db.globalKnowledge.chords.includes(c)) db.globalKnowledge.chords.push(c);
@@ -365,6 +475,11 @@ async function ingest(): Promise<void> {
 
   // Sort lessons by ID
   db.lessons.sort((a, b) => a.id.localeCompare(b.id));
+
+  db.globalKnowledge.chords = dedupeByKey(db.globalKnowledge.chords, (v) => normalizeForMatch(v));
+  db.globalKnowledge.techniques = dedupeByKey(db.globalKnowledge.techniques, (v) => normalizeForMatch(v));
+  db.globalKnowledge.rhythms = dedupeByKey(db.globalKnowledge.rhythms, (v) => normalizeForMatch(v).replace(/s$/, ''));
+  db.globalKnowledge.strums = dedupeByKey((db.globalKnowledge.strums || []).map(normalizeStrum), (v) => normalizeForMatch(v));
 
   // Write updated database
   writeDB(db);
