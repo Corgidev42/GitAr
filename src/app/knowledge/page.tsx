@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database } from '@/types';
-import { IconCheck, IconPencil } from '@/components/Icons';
+import { IconCheck, IconGuitar, IconLink, IconMusic, IconPencil, IconRhythm, IconTarget } from '@/components/Icons';
 
 // Comprehensive guitar chord dictionary
 // frets: [E2, A, D, G, B, E4] — 0=open, -1=muted, n=fret number
@@ -287,12 +288,14 @@ function ChordDiagram({ name }: { name: string }) {
 
 function Section({
   title,
+  icon,
   items,
   renderItem,
   editMode,
   onDelete,
 }: {
   title: string;
+  icon?: ReactNode;
   items: string[];
   renderItem: (item: string) => React.ReactNode;
   editMode?: boolean;
@@ -303,6 +306,7 @@ function Section({
   return (
     <section className="mb-10">
       <div className="flex items-center gap-2 mb-4">
+        {icon && <span className="text-[var(--accent-light)]">{icon}</span>}
         <h2 className="text-lg font-bold">{title}</h2>
         <span className="text-sm text-[var(--muted)]">({items.length})</span>
       </div>
@@ -379,11 +383,11 @@ export default function KnowledgePage() {
   const songs = db.lessons.filter((l) => l.isSong);
 
   const tabs = [
-    { key: 'chords' as const, label: 'Accords', count: k.chords.length },
-    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length },
-    { key: 'rhythms' as const, label: 'Rythmes', count: k.rhythms.length },
-    { key: 'progressions' as const, label: 'Suites', count: progressions.length },
-    { key: 'songs' as const, label: 'Morceaux', count: songs.length },
+    { key: 'chords' as const, label: 'Accords', count: k.chords.length, icon: <IconMusic className="w-5 h-5" /> },
+    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length, icon: <IconTarget className="w-5 h-5" /> },
+    { key: 'rhythms' as const, label: 'Rythmes', count: k.rhythms.length, icon: <IconRhythm className="w-5 h-5" /> },
+    { key: 'progressions' as const, label: 'Suites', count: progressions.length, icon: <IconLink className="w-5 h-5" /> },
+    { key: 'songs' as const, label: 'Morceaux', count: songs.length, icon: <IconGuitar className="w-5 h-5" /> },
   ];
 
   return (
@@ -422,6 +426,11 @@ export default function KnowledgePage() {
                 : 'bg-[var(--surface)] hover:bg-[var(--surface-light)]'
             }`}
           >
+            <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg ${
+              tab === t.key ? 'bg-white/15' : 'bg-[var(--surface-light)] text-[var(--accent-light)]'
+            }`}>
+              {t.icon}
+            </div>
             <div className="mt-2 text-2xl font-bold">{t.count}</div>
             <div className={`text-sm ${tab === t.key ? 'text-white/80' : 'text-[var(--muted)]'}`}>
               {t.label}
@@ -434,6 +443,7 @@ export default function KnowledgePage() {
       {tab === 'chords' && (
         <Section
           title="Accords"
+          icon={<IconMusic className="w-5 h-5" />}
           items={k.chords}
           editMode={editMode}
           onDelete={(v) => deleteItem('chords', v)}
@@ -444,6 +454,7 @@ export default function KnowledgePage() {
       {tab === 'techniques' && (
         <Section
           title="Techniques"
+          icon={<IconTarget className="w-5 h-5" />}
           items={k.techniques}
           editMode={editMode}
           onDelete={(v) => deleteItem('techniques', v)}
@@ -461,6 +472,7 @@ export default function KnowledgePage() {
       {tab === 'rhythms' && (
         <Section
           title="Rythmes"
+          icon={<IconRhythm className="w-5 h-5" />}
           items={k.rhythms}
           editMode={editMode}
           onDelete={(v) => deleteItem('rhythms', v)}
@@ -477,6 +489,7 @@ export default function KnowledgePage() {
       {tab === 'progressions' && (
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-4">
+            <span className="text-[var(--accent-light)]"><IconLink className="w-5 h-5" /></span>
             <h2 className="text-lg font-bold">Suites d’accords</h2>
             <span className="text-sm text-[var(--muted)]">({progressions.length})</span>
           </div>
@@ -513,6 +526,7 @@ export default function KnowledgePage() {
       {tab === 'songs' && (
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-4">
+            <span className="text-[var(--accent-light)]"><IconGuitar className="w-5 h-5" /></span>
             <h2 className="text-lg font-bold">Morceaux</h2>
             <span className="text-sm text-[var(--muted)]">({songs.length})</span>
           </div>

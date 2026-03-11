@@ -57,7 +57,16 @@
         ]
       },
       "assets": {
-        "backingTracks": [],
+        "backingTracks": [
+          {
+            "bpm": 55,
+            "path": "/assets/audio/D101/55bpm.mp3"
+          },
+          {
+            "bpm": 65,
+            "path": "/assets/audio/D101/65bpm.mp3"
+          }
+        ],
         "tabPath": "/assets/tabs/D101.pdf"
       },
       "checklist": [
