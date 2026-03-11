@@ -20,6 +20,9 @@ make setup
 # Importer des fichiers
 # Déposer PDF/MP3 dans ./import/ puis :
 make ingest
+#
+# Ou pour ingérer automatiquement dès qu’un fichier est ajouté :
+# make ingest-watch
 
 # Lancer le serveur
 make dev
@@ -53,6 +56,9 @@ make help
 | `make ingest-watch` | Surveiller `/import` en continu |
 | `make setup` | Installation complète |
 | `make clean` | Nettoyer les caches |
+| `make docker-build` | Build l'image Docker |
+| `make docker-run` | Lancer GitAr en Docker |
+| `make docker-stop` | Arrêter le container Docker |
 
 ## Structure du projet
 
@@ -104,14 +110,8 @@ GitAr/
   - Dépose tes fichiers dans `/import`, lance `make ingest`
   - Les leçons sont ajoutées avec checklist et statut initial
 
-## Fonctionnalités à venir
-
-- **Déploiement Docker** :
-  - Fournir un Dockerfile et une image pour exécuter GitAr partout
-  - Configuration simple via variables d'environnement
-
 - **Surveillance automatique du dossier /import** :
-  - Le service surveille en temps réel le dossier /import
+  - Lance `make ingest-watch` pour surveiller `/import` en continu
   - Dès qu'un fichier est ajouté, il est analysé et ingéré automatiquement
 
 ## Mise à jour
@@ -123,6 +123,8 @@ GitAr/
 
 ## Historique des versions
 
+- **Déploiement Docker** ajouté
+- **Surveillance automatique du dossier /import** ajoutée
 - Statut des leçons désormais automatique
 - Edition/suppression interactive
 - Normalisation IA améliorée

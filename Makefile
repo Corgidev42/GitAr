@@ -1,4 +1,4 @@
-.PHONY: dev build start lint ingest ingest-watch setup clean reset
+.PHONY: dev build start lint ingest ingest-watch setup clean reset docker-build docker-run docker-stop docker-logs
 
 # ── Développement ──────────────────────────────
 dev:                   ## Lancer le serveur de dev
@@ -19,6 +19,19 @@ ingest:                ## Importer les fichiers de /import dans la base
 
 ingest-watch:          ## Surveiller /import en continu
 	npx tsx scripts/ingest.ts --watch
+
+# ── Docker ─────────────────────────────────────
+docker-build:          ## Build l'image Docker
+	docker build -t gitar .
+
+docker-run:            ## Lancer GitAr en Docker
+	docker run -d --name gitar -p 3000:3000 gitar
+
+docker-stop:           ## Arrêter le container Docker
+	docker stop gitar && docker rm gitar
+
+docker-logs:           ## Voir les logs Docker
+	docker logs -f gitar
 
 # ── Setup ──────────────────────────────────────
 setup:                 ## Installation complète du projet

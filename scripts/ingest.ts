@@ -308,20 +308,31 @@ async function ingest(): Promise<void> {
 async function watchMode(): Promise<void> {
   const chokidar = await import('chokidar');
 
+  if (!fs.existsSync(IMPORT_DIR)) {
+    fs.mkdirSync(IMPORT_DIR, { recursive: true });
+  }
+
+  await ingest().catch(console.error);
+
   console.log('👁 Watching /import for new files... (Ctrl+C to stop)\n');
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const watcher = chokidar.watch(IMPORT_DIR, {
-    ignoreInitial: false,
+    ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 300 },
   });
 
-  watcher.on('add', () => {
+  watcher.on('add', (filePath: string) => {
+    console.log(`➕ New file: ${path.basename(filePath)}`);
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       ingest().catch(console.error);
     }, 1000);
+  });
+
+  watcher.on('error', (err: unknown) => {
+    console.error(err);
   });
 }
 
