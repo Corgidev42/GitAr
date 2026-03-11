@@ -1,27 +1,7 @@
-.PHONY: dev build start lint ingest ingest-watch setup clean reset docker-up docker-down docker-logs docker-ingest-watch docker-stop-ingest
-
-# ── Développement ──────────────────────────────
-dev:                   ## Lancer le serveur de dev
-	npm run dev
-
-build:                 ## Build production
-	npm run build
-
-start:                 ## Démarrer en production
-	npm run start
-
-lint:                  ## Linter
-	npm run lint
-
-# ── Ingestion ──────────────────────────────────
-ingest:                ## Importer les fichiers de /import dans la base
-	npx tsx scripts/ingest.ts
-
-ingest-watch:          ## Surveiller /import en continu
-	npx tsx scripts/ingest.ts --watch
+.PHONY: docker-up docker-down docker-logs docker-ingest-watch docker-stop-ingest reset help
 
 # ── Docker (via Compose) ───────────────────────
-docker-up:             ## Lancer l'app GitAr (avec volumes pour dev)
+docker-up:             ## Lancer l'app GitAr
 	docker compose up -d --build app
 
 docker-down:           ## Stopper tous les containers
@@ -35,15 +15,6 @@ docker-ingest-watch:   ## Lancer l'ingestion automatique en background
 
 docker-stop-ingest:    ## Stopper l'ingestion automatique
 	docker compose stop ingest-watch
-
-# ── Setup ──────────────────────────────────────
-setup:                 ## Installation complète du projet
-	npm install
-	mkdir -p import public/assets/tabs public/assets/audio
-	@echo "✅ Projet prêt. Place tes fichiers dans /import puis: make ingest"
-
-clean:                 ## Nettoyer les caches
-	rm -rf .next node_modules/.cache
 
 reset:                 ## Réinitialiser la base de données
 	@echo '{"lessons":[],"globalKnowledge":{"chords":[],"techniques":[],"rhythms":[],"strums":[]},"techniqueDetails":{}}' > database.json
