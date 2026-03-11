@@ -20,9 +20,6 @@ make setup
 # Importer des fichiers
 # Déposer PDF/MP3 dans ./import/ puis :
 make ingest
-#
-# Ou pour ingérer automatiquement dès qu’un fichier est ajouté :
-# make ingest-watch
 
 # Lancer le serveur
 make dev
@@ -53,7 +50,6 @@ make help
 | `make dev` | Serveur de développement |
 | `make build` | Build production |
 | `make ingest` | Importer les fichiers de `/import` |
-| `make ingest-watch` | Surveiller `/import` en continu |
 | `make setup` | Installation complète |
 | `make clean` | Nettoyer les caches |
 | `make reset` | Réinitialiser la base de données |
@@ -108,10 +104,6 @@ GitAr/
   - Dépose tes fichiers dans `/import`, lance `make ingest`
   - Les leçons sont ajoutées avec checklist et statut initial
 
-- **Surveillance automatique du dossier /import** :
-  - Lance `make ingest-watch` pour surveiller `/import` en continu
-  - Dès qu'un fichier est ajouté, il est analysé et ingéré automatiquement
-
 ## Mise à jour
 
 - Pour tester :
@@ -121,7 +113,6 @@ GitAr/
 
 ## Historique des versions
 
-- **Surveillance automatique du dossier /import** ajoutée
 - Statut des leçons désormais automatique
 - Edition/suppression interactive
 - Normalisation IA améliorée

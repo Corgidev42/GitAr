@@ -1,7 +1,7 @@
 /**
  * GitAr Auto-Ingest Script
  *
- * Watches the /import folder for new files and processes them:
+ * Processes files dropped into /import:
  *  - PDF "Guide" / "Synthèse" → parsed with pdf-parse, structured via LLM
  *  - PDF Tablature → moved to /public/assets/tabs/[ID].pdf
  *  - MP3 Backing Tracks → moved to /public/assets/audio/[ID]/
@@ -9,7 +9,6 @@
  *
  * Usage:
  *   npx tsx scripts/ingest.ts              # one-shot processing
- *   npx tsx scripts/ingest.ts --watch      # watch mode
  *
  * File naming convention in /import:
  *   [ID] - Guide - Titre.pdf        → Text document to parse
@@ -380,44 +379,5 @@ async function ingest(): Promise<void> {
   console.log('\n🎉 Ingest complete!\n');
 }
 
-// ---- Watch mode ----
-
-async function watchMode(): Promise<void> {
-  const chokidar = await import('chokidar');
-
-  if (!fs.existsSync(IMPORT_DIR)) {
-    fs.mkdirSync(IMPORT_DIR, { recursive: true });
-  }
-
-  await ingest().catch(console.error);
-
-  console.log('👁 Watching /import for new files... (Ctrl+C to stop)\n');
-
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const watcher = chokidar.watch(IMPORT_DIR, {
-    ignoreInitial: true,
-    awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 300 },
-  });
-
-  watcher.on('add', (filePath: string) => {
-    console.log(`➕ New file: ${path.basename(filePath)}`);
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      ingest().catch(console.error);
-    }, 1000);
-  });
-
-  watcher.on('error', (err: unknown) => {
-    console.error(err);
-  });
-}
-
 // ---- Entry point ----
-
-const args = process.argv.slice(2);
-if (args.includes('--watch')) {
-  watchMode();
-} else {
-  ingest().catch(console.error);
-}
+ingest().catch(console.error);

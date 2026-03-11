@@ -19,7 +19,8 @@
           "Dsus4"
         ],
         "techniques": [],
-        "rhythms": []
+        "rhythms": [],
+        "strums": []
       },
       "assets": {
         "backingTracks": [],
@@ -54,7 +55,8 @@
         "rhythms": [
           "croche",
           "noire"
-        ]
+        ],
+        "strums": []
       },
       "assets": {
         "backingTracks": [
@@ -104,136 +106,6 @@
         }
       ],
       "isSong": false
-    },
-    {
-      "id": "D102",
-      "title": "Le rythme feu de camp",
-      "level": "debutant",
-      "status": "lock",
-      "knowledge": {
-        "chords": [
-          "G",
-          "D",
-          "Em7",
-          "Cadd2",
-          "C"
-        ],
-        "techniques": [
-          "Capo",
-          "rythme feu de camp",
-          "syncopes",
-          "Bas Bas Haut Haut Bas",
-          "syncope",
-          "s'accompagner en chantant"
-        ],
-        "rhythms": [
-          "croche",
-          "4/4",
-          "syncope"
-        ],
-        "strums": [
-          "rythme feu de camp",
-          "Bas Bas Haut Haut Bas",
-          "Bas Haut Haut Bas",
-          "B - B - H - H - B"
-        ]
-      },
-      "assets": {
-        "backingTracks": [
-          {
-            "bpm": 60,
-            "path": "/assets/audio/D102/60bpm.mp3"
-          },
-          {
-            "bpm": 80,
-            "path": "/assets/audio/D102/80bpm.mp3"
-          },
-          {
-            "bpm": 90,
-            "path": "/assets/audio/D102/90bpm.mp3"
-          },
-          {
-            "bpm": 100,
-            "path": "/assets/audio/D102/100bpm.mp3"
-          },
-          {
-            "bpm": 109,
-            "path": "/assets/audio/D102/109bpm.mp3"
-          }
-        ],
-        "tabPath": "/assets/tabs/D102.pdf"
-      },
-      "checklist": [
-        {
-          "label": "Maîtriser les accords",
-          "done": false
-        },
-        {
-          "label": "Pratiquer les techniques",
-          "done": false
-        },
-        {
-          "label": "Travailler les rythmes",
-          "done": false
-        },
-        {
-          "label": "Jouer avec le backing track",
-          "done": false
-        }
-      ],
-      "progressions": [
-        {
-          "name": "Main Progression",
-          "chords": [
-            "G",
-            "D",
-            "Em7",
-            "Cadd2"
-          ],
-          "notes": "Cette suite d'accords est utilisée pour l'intro, les couplets, les refrains, l'interlude, l'instrumental et le pont."
-        }
-      ],
-      "isSong": false
-    },
-    {
-      "id": "D102S",
-      "title": "With or without you",
-      "level": "debutant",
-      "status": "lock",
-      "knowledge": {
-        "chords": [
-          "G",
-          "D",
-          "Em7",
-          "Cadd2"
-        ],
-        "techniques": [],
-        "rhythms": [],
-        "strums": []
-      },
-      "assets": {
-        "backingTracks": [],
-        "tabPath": ""
-      },
-      "checklist": [
-        {
-          "label": "Maîtriser les accords",
-          "done": false
-        }
-      ],
-      "progressions": [
-        {
-          "name": "Main Progression",
-          "chords": [
-            "G",
-            "D",
-            "Em7",
-            "Cadd2"
-          ],
-          "notes": "Progression principale utilisée pour l'intro, les couplets, le refrain, l'interlude et le pont."
-        }
-      ],
-      "isSong": true
     }
   ],
   "globalKnowledge": {
@@ -248,30 +120,16 @@
       "Am",
       "Cadd2",
       "Dsus4",
-      "Dsus2",
-      "Em7"
+      "Dsus2"
     ],
     "techniques": [
-      "embellissement autour du D",
-      "Capo",
-      "rythme feu de camp",
-      "syncopes",
-      "Bas Bas Haut Haut Bas",
-      "syncope",
-      "s'accompagner en chantant"
+      "embellissement autour du D"
     ],
     "rhythms": [
       "croche",
-      "noire",
-      "4/4",
-      "syncope"
+      "noire"
     ],
-    "strums": [
-      "rythme feu de camp",
-      "Bas Bas Haut Haut Bas",
-      "Bas Haut Haut Bas",
-      "B - B - H - H - B"
-    ]
+    "strums": []
   },
   "techniqueDetails": {
     "capo": {

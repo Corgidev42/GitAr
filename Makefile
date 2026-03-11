@@ -1,4 +1,4 @@
-.PHONY: dev build start lint ingest ingest-watch setup clean reset help
+.PHONY: dev build start lint ingest setup clean reset help
 
 # ── Développement ──────────────────────────────
 dev:                   ## Lancer le serveur de dev
@@ -16,9 +16,6 @@ lint:                  ## Linter
 # ── Ingestion ──────────────────────────────────
 ingest:                ## Importer les fichiers de /import dans la base
 	npm run ingest
-
-ingest-watch:          ## Surveiller /import en continu
-	npm run ingest:watch
 
 # ── Setup ──────────────────────────────────────
 setup:                 ## Installation complète du projet
