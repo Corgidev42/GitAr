@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson } from '@/types';
-import { IconCheck, IconFlame, IconGuitar, IconPencil, IconSpark, IconTrash } from '@/components/Icons';
+import { IconCheck, IconFlame, IconGuitar, IconPencil, IconRefresh, IconSpark, IconTrash } from '@/components/Icons';
 
 function StatusBadge({ status }: { status: GuitarLesson['status'] }) {
   const config = {
@@ -155,8 +155,15 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [highlightLessonId, setHighlightLessonId] = useState<string | null>(null);
+  const lastReloadAt = useRef(0);
 
-  const reload = () => fetch('/api/database').then((r) => r.json()).then(setDb);
+  const reload = useCallback(() => fetch('/api/database').then((r) => r.json()).then(setDb), []);
+  const safeReload = useCallback(() => {
+    const now = Date.now();
+    if (now - lastReloadAt.current < 800) return;
+    lastReloadAt.current = now;
+    reload();
+  }, [reload]);
 
   const deleteLesson = async (id: string) => {
     const res = await fetch('/api/database', {
@@ -185,6 +192,19 @@ export default function Dashboard() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const onFocus = () => safeReload();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') safeReload();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [safeReload]);
 
   useEffect(() => {
     if (!db) return;
@@ -261,6 +281,16 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="ml-auto flex gap-2">
+          <button
+            onClick={safeReload}
+            className="px-3 py-1.5 text-sm rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] border border-transparent transition-all"
+            title="Actualiser"
+          >
+            <span className="inline-flex items-center gap-2">
+              <IconRefresh className="w-4 h-4" />
+              Actualiser
+            </span>
+          </button>
           {editMode && (
             <button
               onClick={resetDb}

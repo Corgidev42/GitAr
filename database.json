@@ -128,7 +128,14 @@
         ],
         "rhythms": [
           "croche",
-          "4/4"
+          "4/4",
+          "syncope"
+        ],
+        "strums": [
+          "rythme feu de camp",
+          "Bas Bas Haut Haut Bas",
+          "Bas Haut Haut Bas",
+          "B - B - H - H - B"
         ]
       },
       "assets": {
@@ -185,7 +192,48 @@
           ],
           "notes": "Cette suite d'accords est utilisée pour l'intro, les couplets, les refrains, l'interlude, l'instrumental et le pont."
         }
-      ]
+      ],
+      "isSong": false
+    },
+    {
+      "id": "D102S",
+      "title": "With or without you",
+      "level": "debutant",
+      "status": "lock",
+      "knowledge": {
+        "chords": [
+          "G",
+          "D",
+          "Em7",
+          "Cadd2"
+        ],
+        "techniques": [],
+        "rhythms": [],
+        "strums": []
+      },
+      "assets": {
+        "backingTracks": [],
+        "tabPath": ""
+      },
+      "checklist": [
+        {
+          "label": "Maîtriser les accords",
+          "done": false
+        }
+      ],
+      "progressions": [
+        {
+          "name": "Main Progression",
+          "chords": [
+            "G",
+            "D",
+            "Em7",
+            "Cadd2"
+          ],
+          "notes": "Progression principale utilisée pour l'intro, les couplets, le refrain, l'interlude et le pont."
+        }
+      ],
+      "isSong": true
     }
   ],
   "globalKnowledge": {
@@ -215,7 +263,14 @@
     "rhythms": [
       "croche",
       "noire",
-      "4/4"
+      "4/4",
+      "syncope"
+    ],
+    "strums": [
+      "rythme feu de camp",
+      "Bas Bas Haut Haut Bas",
+      "Bas Haut Haut Bas",
+      "B - B - H - H - B"
     ]
   },
   "techniqueDetails": {
@@ -256,6 +311,15 @@
       "steps": [
         "Chanter « Au clair de la lune » en jouant",
         "Choisir une tonalité (C, G, D) adaptée à sa voix pour faciliter l'exercice."
+      ]
+    },
+    "apprendre à s’accompagner en chantant": {
+      "summary": "Cette technique vise à améliorer la synchronisation entre le chant et le jeu de guitare, plutôt qu'à apprendre à chanter. Elle devient possible lorsque le jeu de guitare est devenu automatique et ne demande plus de concentration.",
+      "steps": [
+        "Pratiquer les rythmiques jusqu'à ce qu'elles soient naturelles et automatiques.",
+        "Se concentrer sur la synchronisation de la voix avec le rythme.",
+        "Ne pas se soucier de la justesse du chant lors de l'exercice.",
+        "Utiliser des chansons simples comme 'Au clair de la lune' en C, G ou D pour s'exercer."
       ]
     }
   }

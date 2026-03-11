@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database } from '@/types';
-import { IconCheck, IconGuitar, IconLink, IconMusic, IconPencil, IconRhythm, IconTarget } from '@/components/Icons';
+import { IconCheck, IconGuitar, IconLink, IconMusic, IconPencil, IconRefresh, IconRhythm, IconTarget } from '@/components/Icons';
 
 // Comprehensive guitar chord dictionary
 // frets: [E2, A, D, G, B, E4] — 0=open, -1=muted, n=fret number
@@ -337,6 +337,15 @@ export default function KnowledgePage() {
   const [expandedRhythm, setExpandedRhythm] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
+  const lastReloadAt = useRef(0);
+
+  const reload = useCallback(() => fetch('/api/database').then((r) => r.json()).then(setDb), []);
+  const safeReload = useCallback(() => {
+    const now = Date.now();
+    if (now - lastReloadAt.current < 800) return;
+    lastReloadAt.current = now;
+    reload();
+  }, [reload]);
 
   const deleteItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', value: string) => {
     const res = await fetch('/api/database', {
@@ -359,6 +368,19 @@ export default function KnowledgePage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const onFocus = () => safeReload();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') safeReload();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [safeReload]);
 
   if (loading) {
     return (
@@ -400,8 +422,18 @@ export default function KnowledgePage() {
           </p>
         </div>
         <button
+          onClick={safeReload}
+          className="ml-auto px-3 py-1.5 text-sm rounded-lg transition-all bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)] border border-[var(--surface-light)]"
+          title="Actualiser"
+        >
+          <span className="inline-flex items-center gap-2">
+            <IconRefresh className="w-4 h-4" />
+            Actualiser
+          </span>
+        </button>
+        <button
           onClick={() => setEditMode(!editMode)}
-          className={`ml-auto px-3 py-1.5 text-sm rounded-lg transition-all ${
+          className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
             editMode
               ? 'bg-red-500/20 text-red-400 border border-red-500/50'
               : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)] border border-[var(--surface-light)]'

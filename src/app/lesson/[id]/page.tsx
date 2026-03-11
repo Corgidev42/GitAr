@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, ChecklistItem } from '@/types';
-import { IconCheck, IconDocument, IconLink, IconMusic, IconPause, IconPlay, IconRhythm, IconTarget } from '@/components/Icons';
+import { IconCheck, IconDocument, IconLink, IconMusic, IconPause, IconPlay, IconRefresh, IconRhythm, IconTarget } from '@/components/Icons';
 
 // ---- Audio Player Component ----
 function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks'] }) {
@@ -307,8 +307,12 @@ export default function LessonPage() {
 
   const [lesson, setLesson] = useState<GuitarLesson | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastReloadAt = useRef(0);
 
-  useEffect(() => {
+  const loadLesson = useCallback(() => {
+    const now = Date.now();
+    if (now - lastReloadAt.current < 800) return;
+    lastReloadAt.current = now;
     fetch(`/api/lessons/${encodeURIComponent(lessonId)}`)
       .then((r) => {
         if (!r.ok) throw new Error('Not found');
@@ -320,6 +324,23 @@ export default function LessonPage() {
       })
       .catch(() => setLoading(false));
   }, [lessonId]);
+
+  useEffect(() => {
+    loadLesson();
+  }, [loadLesson]);
+
+  useEffect(() => {
+    const onFocus = () => loadLesson();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadLesson();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [loadLesson]);
 
   const handleChecklistToggle = async (idx: number) => {
     if (!lesson) return;
@@ -387,6 +408,16 @@ export default function LessonPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={loadLesson}
+            className="px-3 py-1.5 rounded-lg text-xs border bg-[var(--surface)] text-[var(--muted)] border-[var(--surface-light)] hover:text-[var(--foreground)] transition-colors"
+            title="Actualiser"
+          >
+            <span className="inline-flex items-center gap-2">
+              <IconRefresh className="w-4 h-4" />
+              Actualiser
+            </span>
+          </button>
           <button
             onClick={async () => {
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {

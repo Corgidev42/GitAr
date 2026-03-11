@@ -11,6 +11,7 @@ import {
   Pause,
   Pencil,
   Play,
+  RefreshCw,
   Sprout,
   Target,
   Trash2,
@@ -72,4 +73,8 @@ export function IconPlay({ title = 'Play', ...props }: IconProps) {
 
 export function IconPause({ title = 'Pause', ...props }: IconProps) {
   return <Pause aria-label={title} {...props} />;
+}
+
+export function IconRefresh({ title = 'Refresh', ...props }: IconProps) {
+  return <RefreshCw aria-label={title} {...props} />;
 }

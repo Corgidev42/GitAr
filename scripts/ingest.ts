@@ -77,7 +77,12 @@ function classifyFile(filePath: string): ClassifiedFile | null {
     lowerName.includes('paroles') ||
     lowerName.includes('chanson') ||
     lowerName.includes('morceau') ||
-    lowerName.includes('song');
+    lowerName.includes('song') ||
+    lowerName.includes('jam along') ||
+    lowerName.includes('backing track') ||
+    lowerName.includes('cover') ||
+    lowerName.includes('original') ||
+    lowerName.includes('instrumental');
   const lessonId = isSongPart ? `${baseLessonId}S` : baseLessonId;
 
   if (ext === '.mp3') {
@@ -90,7 +95,12 @@ function classifyFile(filePath: string): ClassifiedFile | null {
   }
 
   if (ext === '.pdf') {
-    if (lowerName.includes('tab')) {
+    if (
+      lowerName.includes('tab') ||
+      lowerName.includes('score') ||
+      lowerName.includes('partition') ||
+      lowerName.includes('jam along')
+    ) {
       return { filePath, fileName, lessonId, baseLessonId, type: 'tab' };
     }
     if (
