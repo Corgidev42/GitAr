@@ -40,6 +40,20 @@ export function readDatabase(): Database {
     return s;
   };
 
+  const isValidStrumName = (raw: string): boolean => {
+    const lower = raw.toLowerCase();
+    if (!(lower.startsWith('rythme ') || lower.startsWith('rythmique '))) {
+      return lower.includes('feu de camp');
+    }
+    const rest = normalizeForKey(raw).replace(/^(rythme|rythmique)\s+/, '');
+    const tokens = rest.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return false;
+    if (tokens.length > 4) return false;
+    const stop = new Set(['est', 'objectifs', 'objectif', 'technique', 'qui', 'dans', 'et', 'ca', 'ça', 'permet', 'module']);
+    if (stop.has(tokens[0])) return false;
+    return true;
+  };
+
   const dedupeStrings = (arr: string[], normalizer?: (s: string) => string): string[] => {
     const map = new Map<string, string>();
     for (const v of arr) {
@@ -97,14 +111,23 @@ export function readDatabase(): Database {
     }
 
     const nextChords = dedupeStrings(lesson.knowledge.chords);
-    const nextTechs = dedupeStrings(lesson.knowledge.techniques);
+    const nextTechs = dedupeStrings(lesson.knowledge.techniques).filter((t) => {
+      const k = normalizeForKey(t);
+      return k !== 'gratte' && !k.startsWith('gratt');
+    });
     const nextRhythms = dedupeStrings(lesson.knowledge.rhythms, (s) => normalizeForKey(s).replace(/s$/, ''));
     const currentStrums = lesson.knowledge.strums || [];
-    const nextStrumsRaw = dedupeStrings(currentStrums, (s) => normalizeForKey(normalizeStrum(s)));
+    const nextStrumsRaw = dedupeStrings(currentStrums, (s) => normalizeForKey(normalizeStrum(s)))
+      .map(normalizeStrum)
+      .filter((s) => {
+        const tokens = normalizeForKey(s).split(/\s+/).filter(Boolean);
+        const isFormula = tokens.length >= 4 && tokens.every((t) => t === 'bas' || t === 'haut');
+        return isFormula || isValidStrumName(s);
+      });
     const nextStrums = (() => {
       const formulas: string[] = [];
       const names: string[] = [];
-      for (const s of nextStrumsRaw.map(normalizeStrum)) {
+      for (const s of nextStrumsRaw) {
         const key = normalizeForKey(s);
         const tokens = key.split(/\s+/).filter(Boolean);
         const isFormula = tokens.length >= 4 && tokens.every((t) => t === 'bas' || t === 'haut');
@@ -160,9 +183,18 @@ export function readDatabase(): Database {
 
   if (changed) {
     db.globalKnowledge.chords = dedupeStrings(db.globalKnowledge.chords);
-    db.globalKnowledge.techniques = dedupeStrings(db.globalKnowledge.techniques);
+    db.globalKnowledge.techniques = dedupeStrings(db.globalKnowledge.techniques).filter((t) => {
+      const k = normalizeForKey(t);
+      return k !== 'gratte' && !k.startsWith('gratt');
+    });
     db.globalKnowledge.rhythms = dedupeStrings(db.globalKnowledge.rhythms, (s) => normalizeForKey(s).replace(/s$/, ''));
-    db.globalKnowledge.strums = dedupeStrings(db.globalKnowledge.strums || [], (s) => normalizeForKey(normalizeStrum(s))).map(normalizeStrum);
+    db.globalKnowledge.strums = dedupeStrings(db.globalKnowledge.strums || [], (s) => normalizeForKey(normalizeStrum(s)))
+      .map(normalizeStrum)
+      .filter((s) => {
+        const tokens = normalizeForKey(s).split(/\s+/).filter(Boolean);
+        const isFormula = tokens.length >= 4 && tokens.every((t) => t === 'bas' || t === 'haut');
+        return isFormula || isValidStrumName(s);
+      });
     writeDatabase(db);
   }
 

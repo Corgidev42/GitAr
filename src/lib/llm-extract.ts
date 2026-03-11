@@ -223,6 +223,21 @@ function normalizeKnowledge(
     return lower.startsWith('rythme ') || lower.startsWith('rythmique ') || lower.includes('feu de camp');
   }
 
+  function isValidStrumName(s: string): boolean {
+    const lower = s.toLowerCase();
+    const normalized = normalizeForKey(s);
+    if (!(lower.startsWith('rythme ') || lower.startsWith('rythmique '))) {
+      return lower.includes('feu de camp');
+    }
+    const rest = normalized.replace(/^(rythme|rythmique)\s+/, '');
+    const tokens = rest.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return false;
+    if (tokens.length > 4) return false;
+    const stop = new Set(['est', 'objectifs', 'objectif', 'technique', 'qui', 'dans', 'et', 'ca', 'ça', 'permet', 'module']);
+    if (stop.has(tokens[0])) return false;
+    return true;
+  }
+
   const chords = [...new Set(data.knowledge.chords.map(normalizeChord))];
   const rawTechniques = data.knowledge.techniques.map(normalizeTechnique);
   const rawStrums = (data.knowledge.strums || []).map(normalizeStrum);
@@ -235,8 +250,14 @@ function normalizeKnowledge(
     if (lower.includes('capo') || lower.includes('paroles')) {
       continue;
     }
+    const techKey = normalizeForKey(t);
+    if (techKey === 'gratte' || techKey.startsWith('gratt')) {
+      continue;
+    }
     if (isStrumFormula(t) || isStrumName(t)) {
-      strums.push(t);
+      if (isStrumFormula(t) || isValidStrumName(t)) {
+        strums.push(t);
+      }
       continue;
     }
     techniques.push(t);
@@ -244,7 +265,9 @@ function normalizeKnowledge(
 
   for (const s of rawStrums) {
     if (!s) continue;
-    strums.push(s);
+    if (isStrumFormula(s) || isValidStrumName(s)) {
+      strums.push(s);
+    }
   }
 
   const techniquesUniq = [...new Map(techniques.map((t) => [normalizeForKey(t), t])).values()];
@@ -331,7 +354,7 @@ function fallbackParser(
     'alternate picking', 'sweep', 'tapping', 'harmonique', 'barre',
     'embellissement', 'transition', 'enchaînement', 'enchainement',
     'liaison', 'dead note', 'ghost note', 'mute', 'slap',
-    'finger picking', 'picking', 'gratte', 'battement',
+    'finger picking', 'picking',
   ];
   for (const kw of techKeywords) {
     if (text.toLowerCase().includes(kw)) techniques.push(kw);
@@ -420,14 +443,24 @@ function extractProgressions(text: string): ChordProgression[] {
 
 function extractStrums(text: string): string[] {
   const out: string[] = [];
-  const lower = text.toLowerCase();
-
-  const nameRegex = /\b(?:rythme|rythmique)\s+([a-zà-ÿ0-9'’ -]{3,40})/gi;
-  let m: RegExpExecArray | null;
-  while ((m = nameRegex.exec(text)) !== null) {
-    const name = m[0].trim();
-    if (name.toLowerCase().includes('feu de camp')) out.push('rythme feu de camp');
-    else out.push(name);
+  const lower = text.toLowerCase().replace(/[’]/g, "'");
+  const stop = new Set(['est', 'objectifs', 'objectif', 'technique', 'qui', 'dans', 'et', 'ca', 'ça', 'permet', 'module']);
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const l = line.replace(/[’]/g, "'").trim();
+    const lowerLine = l.toLowerCase();
+    if (!(lowerLine.startsWith('rythme ') || lowerLine.startsWith('rythmique '))) continue;
+    if (lowerLine.includes('feu de camp')) {
+      out.push('rythme feu de camp');
+      continue;
+    }
+    const rest = lowerLine.replace(/^(rythme|rythmique)\s+/, '');
+    const restTokens = rest.split(/\s+/).filter(Boolean);
+    if (restTokens.length === 0) continue;
+    if (stop.has(restTokens[0])) continue;
+    const limited = restTokens.slice(0, 4).join(' ');
+    if (limited.length < 3) continue;
+    out.push(`${restTokens.length > 0 ? lowerLine.startsWith('rythmique ') ? 'rythmique ' : 'rythme ' : ''}${limited}`);
   }
 
   const formulaRegex = /\b(?:bas|haut)(?:\s+(?:bas|haut)){3,}\b/gi;

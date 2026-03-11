@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database } from '@/types';
-import { IconCheck, IconGuitar, IconLink, IconMusic, IconPencil, IconRefresh, IconRhythm, IconTarget } from '@/components/Icons';
+import { IconCheck, IconGuitar, IconLink, IconMusic, IconPencil, IconRefresh, IconRhythm, IconTarget, IconTrash } from '@/components/Icons';
 
 // Comprehensive guitar chord dictionary
 // frets: [E2, A, D, G, B, E4] — 0=open, -1=muted, n=fret number
@@ -337,6 +337,13 @@ export default function KnowledgePage() {
   const [expandedRhythm, setExpandedRhythm] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
+  const [editProgression, setEditProgression] = useState<{
+    lessonId: string;
+    progressionIndex: number;
+    name: string;
+    chordsLine: string;
+    notes: string;
+  } | null>(null);
   const lastReloadAt = useRef(0);
 
   const reload = useCallback(() => fetch('/api/database', { cache: 'no-store' }).then((r) => r.json()).then(setDb), []);
@@ -356,6 +363,46 @@ export default function KnowledgePage() {
     if (res.ok) {
       const updated = await fetch('/api/database').then((r) => r.json());
       setDb(updated);
+    }
+  };
+
+  const deleteProgression = async (lessonId: string, progressionIndex: number) => {
+    if (!db) return;
+    const lesson = db.lessons.find((l) => l.id === lessonId);
+    if (!lesson) return;
+    const next = (lesson.progressions || []).filter((_, i) => i !== progressionIndex);
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progressions: next }),
+    });
+    if (res.ok) safeReload();
+  };
+
+  const saveProgression = async () => {
+    if (!db || !editProgression) return;
+    const { lessonId, progressionIndex, name, chordsLine, notes } = editProgression;
+    const lesson = db.lessons.find((l) => l.id === lessonId);
+    if (!lesson) return;
+    const chords = chordsLine
+      .replace(/[-–→>|,]/g, ' ')
+      .split(/\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (chords.length < 3) return;
+    const next = (lesson.progressions || []).map((p, i) =>
+      i === progressionIndex
+        ? { ...p, name: name.trim() || p.name, chords, notes: notes.trim() || undefined }
+        : p
+    );
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progressions: next }),
+    });
+    if (res.ok) {
+      setEditProgression(null);
+      safeReload();
     }
   };
 
@@ -396,10 +443,11 @@ export default function KnowledgePage() {
   const progressions = db.lessons.flatMap((lesson) =>
     (lesson.progressions || [])
       .filter((p) => (p.chords || []).length >= 3)
-      .map((p) => ({
+      .map((p, progressionIndex) => ({
         ...p,
         lessonId: lesson.id,
         lessonTitle: lesson.title,
+        progressionIndex,
       }))
   );
   const songs = db.lessons.filter((l) => l.isSong);
@@ -550,12 +598,38 @@ export default function KnowledgePage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-sm font-semibold">{p.name}</div>
-                    <Link
-                      href={`/#lesson-${encodeURIComponent(p.lessonId)}`}
-                      className="text-xs text-[var(--accent-light)] hover:text-[var(--foreground)]"
-                    >
-                      Voir
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      {editMode && (
+                        <>
+                          <button
+                            onClick={() =>
+                              setEditProgression({
+                                lessonId: p.lessonId,
+                                progressionIndex: p.progressionIndex,
+                                name: p.name || '',
+                                chordsLine: (p.chords || []).join(' → '),
+                                notes: p.notes || '',
+                              })
+                            }
+                            className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                          >
+                            <IconPencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteProgression(p.lessonId, p.progressionIndex)}
+                            className="text-xs text-red-400 hover:text-red-300"
+                          >
+                            <IconTrash className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                      <Link
+                        href={`/#lesson-${encodeURIComponent(p.lessonId)}`}
+                        className="text-xs text-[var(--accent-light)] hover:text-[var(--foreground)]"
+                      >
+                        Voir
+                      </Link>
+                    </div>
                   </div>
                   <div className="text-sm mt-2">{p.chords.join(' → ')}</div>
                   <div className="text-xs text-[var(--muted)] mt-2">
@@ -621,6 +695,57 @@ export default function KnowledgePage() {
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {editProgression && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditProgression(null)}>
+          <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-lg border border-[var(--surface-light)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Éditer la suite</h3>
+              <button onClick={() => setEditProgression(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Nom</div>
+                <input
+                  value={editProgression.name}
+                  onChange={(e) => setEditProgression({ ...editProgression, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Accords</div>
+                <input
+                  value={editProgression.chordsLine}
+                  onChange={(e) => setEditProgression({ ...editProgression, chordsLine: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
+                />
+              </div>
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Notes</div>
+                <textarea
+                  value={editProgression.notes}
+                  onChange={(e) => setEditProgression({ ...editProgression, notes: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm min-h-20"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setEditProgression(null)}
+                className="px-3 py-1.5 text-sm rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveProgression}
+                className="px-3 py-1.5 text-sm rounded-lg bg-[var(--accent)] text-white"
+              >
+                Enregistrer
+              </button>
+            </div>
           </div>
         </div>
       )}
