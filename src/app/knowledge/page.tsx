@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import type { Database } from '@/types';
+import { IconCheck, IconPencil } from '@/components/Icons';
 
 // Comprehensive guitar chord dictionary
 // frets: [E2, A, D, G, B, E4] — 0=open, -1=muted, n=fret number
@@ -285,14 +287,12 @@ function ChordDiagram({ name }: { name: string }) {
 
 function Section({
   title,
-  icon,
   items,
   renderItem,
   editMode,
   onDelete,
 }: {
   title: string;
-  icon: string;
   items: string[];
   renderItem: (item: string) => React.ReactNode;
   editMode?: boolean;
@@ -303,7 +303,6 @@ function Section({
   return (
     <section className="mb-10">
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-xl">{icon}</span>
         <h2 className="text-lg font-bold">{title}</h2>
         <span className="text-sm text-[var(--muted)]">({items.length})</span>
       </div>
@@ -330,7 +329,7 @@ function Section({
 export default function KnowledgePage() {
   const [db, setDb] = useState<Database | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'chords' | 'techniques' | 'rhythms'>('chords');
+  const [tab, setTab] = useState<'chords' | 'techniques' | 'rhythms' | 'progressions' | 'songs'>('chords');
   const [expandedRhythm, setExpandedRhythm] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
@@ -368,17 +367,28 @@ export default function KnowledgePage() {
   if (!db) return null;
 
   const k = db.globalKnowledge;
+  const progressions = db.lessons.flatMap((lesson) =>
+    (lesson.progressions || [])
+      .filter((p) => (p.chords || []).length >= 3)
+      .map((p) => ({
+        ...p,
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+      }))
+  );
+  const songs = db.lessons.filter((l) => l.isSong);
 
   const tabs = [
-    { key: 'chords' as const, label: 'Accords', icon: '🎵', count: k.chords.length },
-    { key: 'techniques' as const, label: 'Techniques', icon: '🎯', count: k.techniques.length },
-    { key: 'rhythms' as const, label: 'Rythmes', icon: '🥁', count: k.rhythms.length },
+    { key: 'chords' as const, label: 'Accords', count: k.chords.length },
+    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length },
+    { key: 'rhythms' as const, label: 'Rythmes', count: k.rhythms.length },
+    { key: 'progressions' as const, label: 'Suites', count: progressions.length },
+    { key: 'songs' as const, label: 'Morceaux', count: songs.length },
   ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-8">
-        <span className="text-3xl">📚</span>
         <div>
           <h1 className="text-2xl font-bold">Knowledge Base</h1>
           <p className="text-sm text-[var(--muted)]">
@@ -393,12 +403,15 @@ export default function KnowledgePage() {
               : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)] border border-[var(--surface-light)]'
           }`}
         >
-          {editMode ? '✓ Terminé' : '✏️ Éditer'}
+          <span className="inline-flex items-center gap-2">
+            {editMode ? <IconCheck className="w-4 h-4" /> : <IconPencil className="w-4 h-4" />}
+            {editMode ? 'Terminé' : 'Éditer'}
+          </span>
         </button>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -409,7 +422,6 @@ export default function KnowledgePage() {
                 : 'bg-[var(--surface)] hover:bg-[var(--surface-light)]'
             }`}
           >
-            <span className="text-2xl">{t.icon}</span>
             <div className="mt-2 text-2xl font-bold">{t.count}</div>
             <div className={`text-sm ${tab === t.key ? 'text-white/80' : 'text-[var(--muted)]'}`}>
               {t.label}
@@ -422,7 +434,6 @@ export default function KnowledgePage() {
       {tab === 'chords' && (
         <Section
           title="Accords"
-          icon="🎵"
           items={k.chords}
           editMode={editMode}
           onDelete={(v) => deleteItem('chords', v)}
@@ -433,7 +444,6 @@ export default function KnowledgePage() {
       {tab === 'techniques' && (
         <Section
           title="Techniques"
-          icon="🎯"
           items={k.techniques}
           editMode={editMode}
           onDelete={(v) => deleteItem('techniques', v)}
@@ -451,7 +461,6 @@ export default function KnowledgePage() {
       {tab === 'rhythms' && (
         <Section
           title="Rythmes"
-          icon="🥁"
           items={k.rhythms}
           editMode={editMode}
           onDelete={(v) => deleteItem('rhythms', v)}
@@ -463,6 +472,72 @@ export default function KnowledgePage() {
             />
           )}
         />
+      )}
+
+      {tab === 'progressions' && (
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-bold">Suites d’accords</h2>
+            <span className="text-sm text-[var(--muted)]">({progressions.length})</span>
+          </div>
+          {progressions.length === 0 ? (
+            <div className="text-sm text-[var(--muted)]">Aucune suite détectée pour le moment.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {progressions.map((p, idx) => (
+                <div
+                  key={`${p.lessonId}-${idx}`}
+                  className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm font-semibold">{p.name}</div>
+                    <Link
+                      href={`/#lesson-${encodeURIComponent(p.lessonId)}`}
+                      className="text-xs text-[var(--accent-light)] hover:text-[var(--foreground)]"
+                    >
+                      Voir
+                    </Link>
+                  </div>
+                  <div className="text-sm mt-2">{p.chords.join(' → ')}</div>
+                  <div className="text-xs text-[var(--muted)] mt-2">
+                    {p.lessonId} — {p.lessonTitle}
+                  </div>
+                  {p.notes && <div className="text-xs text-[var(--muted)] mt-2">{p.notes}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === 'songs' && (
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-bold">Morceaux</h2>
+            <span className="text-sm text-[var(--muted)]">({songs.length})</span>
+          </div>
+          {songs.length === 0 ? (
+            <div className="text-sm text-[var(--muted)]">Aucun morceau pour le moment.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {songs.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/#lesson-${encodeURIComponent(s.id)}`}
+                  className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors"
+                >
+                  <div className="text-xs text-[var(--muted)] font-mono">{s.id}</div>
+                  <div className="text-sm font-semibold mt-1">{s.title}</div>
+                  {s.progressions && s.progressions.length > 0 && (
+                    <div className="text-xs text-[var(--muted)] mt-2">
+                      {s.progressions[0].chords.join(' → ')}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       {techInfo && (
@@ -492,7 +567,6 @@ export default function KnowledgePage() {
 
       {k.chords.length === 0 && k.techniques.length === 0 && k.rhythms.length === 0 && (
         <div className="text-center py-20 text-[var(--muted)]">
-          <span className="text-4xl block mb-4">📭</span>
           <p>Aucune connaissance enregistrée pour le moment.</p>
           <p className="text-sm mt-2">Importe des leçons pour remplir ta base de connaissances.</p>
         </div>

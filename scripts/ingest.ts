@@ -95,6 +95,23 @@ function classifyFile(filePath: string): ClassifiedFile | null {
   return null;
 }
 
+function inferTitleFromFilename(fileName: string): string | null {
+  const m = fileName.match(
+    /(?:PAC_)?[DI]\d+(?:L\d+)?\s*[-–]\s*(?:(?:Guide|Synthèse|Fiche[^-]*|Tab)\s*[-–]\s*)?(.+?)\.(?:pdf|mp3)$/i
+  );
+  return m ? m[1].trim() : null;
+}
+
+function applyTitleDefaults(lesson: { id: string; title: string }, fileName: string): void {
+  if (lesson.title === lesson.id) {
+    const inferred = inferTitleFromFilename(fileName);
+    if (inferred) lesson.title = inferred;
+  }
+  if (lesson.id === 'D100' && lesson.title === 'D100') {
+    lesson.title = 'Rappels des bases pour bien démarrer';
+  }
+}
+
 // ---- Processing ----
 
 async function processGuide(file: ClassifiedFile): Promise<Omit<GuitarLesson, 'status' | 'assets' | 'checklist'> | null> {
@@ -259,6 +276,7 @@ async function ingest(): Promise<void> {
         case 'tab': {
           const { tabPath, extraChords } = await processTab(file);
           lesson.assets.tabPath = tabPath;
+          applyTitleDefaults(lesson, file.fileName);
           // Merge chords found in tablature
           for (const c of extraChords) {
             if (!lesson.knowledge.chords.includes(c)) lesson.knowledge.chords.push(c);
@@ -279,6 +297,7 @@ async function ingest(): Promise<void> {
           }
           // Sort by BPM
           lesson.assets.backingTracks.sort((a, b) => a.bpm - b.bpm);
+          applyTitleDefaults(lesson, file.fileName);
           processedFiles.push(file.filePath);
           break;
         }

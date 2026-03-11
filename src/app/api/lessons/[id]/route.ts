@@ -45,6 +45,10 @@ export async function PATCH(
     db.lessons[idx].progressions = updates.progressions;
   }
 
+  if (typeof updates.isSong === 'boolean') {
+    db.lessons[idx].isSong = updates.isSong;
+  }
+
   writeDatabase(db);
   return NextResponse.json(db.lessons[idx]);
 }

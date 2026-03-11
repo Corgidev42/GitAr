@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson } from '@/types';
+import { IconCheck, IconFlame, IconGuitar, IconPencil, IconSpark, IconTrash } from '@/components/Icons';
 
 function StatusBadge({ status }: { status: GuitarLesson['status'] }) {
   const config = {
@@ -18,7 +20,17 @@ function StatusBadge({ status }: { status: GuitarLesson['status'] }) {
   );
 }
 
-function LessonNode({ lesson, editMode, onDelete }: { lesson: GuitarLesson; editMode?: boolean; onDelete?: () => void }) {
+function LessonNode({
+  lesson,
+  editMode,
+  onDelete,
+  highlight,
+}: {
+  lesson: GuitarLesson;
+  editMode?: boolean;
+  onDelete?: () => void;
+  highlight?: boolean;
+}) {
   const stateClass =
     lesson.status === 'lock'
       ? 'node-lock'
@@ -40,7 +52,8 @@ function LessonNode({ lesson, editMode, onDelete }: { lesson: GuitarLesson; edit
   return (
     <Link href={editMode ? '#' : `/lesson/${lesson.id}`} onClick={editMode ? (e) => e.preventDefault() : undefined}>
       <div
-        className={`${stateClass} ${borderColor} border-2 rounded-xl p-4 bg-[var(--surface)] hover:bg-[var(--surface-light)] transition-all cursor-pointer group relative`}
+        id={`lesson-${lesson.id}`}
+        className={`${stateClass} ${borderColor} ${highlight ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--background)]' : ''} border-2 rounded-xl p-4 bg-[var(--surface)] hover:bg-[var(--surface-light)] transition-all cursor-pointer group relative`}
       >
         {editMode && onDelete && (
           <button
@@ -95,12 +108,14 @@ function LevelSection({
   icon,
   editMode,
   onDelete,
+  highlightLessonId,
 }: {
   title: string;
   lessons: GuitarLesson[];
-  icon: string;
+  icon: ReactNode;
   editMode?: boolean;
   onDelete?: (id: string) => void;
+  highlightLessonId?: string | null;
 }) {
   if (lessons.length === 0) return null;
 
@@ -109,7 +124,7 @@ function LevelSection({
   return (
     <section className="mb-10">
       <div className="flex items-center gap-3 mb-4">
-        <span className="text-2xl">{icon}</span>
+        <span className="text-2xl text-[var(--accent-light)]">{icon}</span>
         <h2 className="text-xl font-bold">{title}</h2>
         <span className="text-sm text-[var(--muted)]">
           {completed}/{lessons.length} complétées
@@ -117,7 +132,13 @@ function LevelSection({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {lessons.map((lesson) => (
-          <LessonNode key={lesson.id} lesson={lesson} editMode={editMode} onDelete={() => onDelete?.(lesson.id)} />
+          <LessonNode
+            key={lesson.id}
+            lesson={lesson}
+            editMode={editMode}
+            onDelete={() => onDelete?.(lesson.id)}
+            highlight={highlightLessonId === lesson.id}
+          />
         ))}
       </div>
     </section>
@@ -128,6 +149,7 @@ export default function Dashboard() {
   const [db, setDb] = useState<Database | null>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [highlightLessonId, setHighlightLessonId] = useState<string | null>(null);
 
   const reload = () => fetch('/api/database').then((r) => r.json()).then(setDb);
 
@@ -159,6 +181,23 @@ export default function Dashboard() {
       .catch(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!db) return;
+    const scrollToHash = () => {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#lesson-')) return;
+      const lessonId = decodeURIComponent(hash.replace('#lesson-', ''));
+      const el = document.getElementById(`lesson-${lessonId}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightLessonId(lessonId);
+      window.setTimeout(() => setHighlightLessonId(null), 2000);
+    };
+    scrollToHash();
+    window.addEventListener('hashchange', scrollToHash);
+    return () => window.removeEventListener('hashchange', scrollToHash);
+  }, [db]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
@@ -170,7 +209,7 @@ export default function Dashboard() {
   if (!db || db.lessons.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] gap-4">
-        <span className="text-6xl">🎸</span>
+        <IconGuitar className="w-16 h-16 text-[var(--accent-light)]" />
         <h1 className="text-2xl font-bold">Bienvenue sur GitAr</h1>
         <p className="text-[var(--muted)] text-center max-w-md">
           Aucune leçon trouvée. Dépose tes fichiers (PDF, MP3) dans le dossier{' '}
@@ -195,7 +234,7 @@ export default function Dashboard() {
       {/* Stats bar */}
       <div className="flex items-center gap-6 mb-8 p-4 bg-[var(--surface)] rounded-xl">
         <div className="flex items-center gap-2">
-          <span className="text-3xl">🎸</span>
+          <IconGuitar className="w-8 h-8 text-[var(--accent-light)]" />
           <div>
             <h1 className="text-xl font-bold">Skill Tree</h1>
             <p className="text-xs text-[var(--muted)]">Progression guitare</p>
@@ -222,7 +261,10 @@ export default function Dashboard() {
               onClick={resetDb}
               className="px-3 py-1.5 text-sm rounded-lg bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 transition-all"
             >
-              🗑 Reset DB
+              <span className="inline-flex items-center gap-2">
+                <IconTrash className="w-4 h-4" />
+                Reset DB
+              </span>
             </button>
           )}
           <button
@@ -233,13 +275,16 @@ export default function Dashboard() {
                 : 'bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] border border-transparent'
             }`}
           >
-            {editMode ? '✓ Terminé' : '✏️ Éditer'}
+            <span className="inline-flex items-center gap-2">
+              {editMode ? <IconCheck className="w-4 h-4" /> : <IconPencil className="w-4 h-4" />}
+              {editMode ? 'Terminé' : 'Éditer'}
+            </span>
           </button>
         </div>
       </div>
 
-      <LevelSection title="Débutant" lessons={debutant} icon="🌱" editMode={editMode} onDelete={deleteLesson} />
-      <LevelSection title="Intermédiaire" lessons={intermediaire} icon="🔥" editMode={editMode} onDelete={deleteLesson} />
+      <LevelSection title="Débutant" lessons={debutant} icon={<IconSpark className="w-6 h-6" />} editMode={editMode} onDelete={deleteLesson} highlightLessonId={highlightLessonId} />
+      <LevelSection title="Intermédiaire" lessons={intermediaire} icon={<IconFlame className="w-6 h-6" />} editMode={editMode} onDelete={deleteLesson} highlightLessonId={highlightLessonId} />
     </div>
   );
 }

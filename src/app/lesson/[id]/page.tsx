@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, ChecklistItem } from '@/types';
+import { IconCheck, IconDocument, IconLink, IconMusic, IconPause, IconPlay, IconRhythm, IconTarget } from '@/components/Icons';
 
 // ---- Audio Player Component ----
 function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks'] }) {
@@ -68,8 +69,9 @@ function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks
 
   return (
     <div className="bg-[var(--surface)] rounded-xl p-4 audio-player">
-      <h3 className="text-sm font-semibold mb-3 text-[var(--accent-light)]">
-        🎵 Backing Tracks
+      <h3 className="text-sm font-semibold mb-3 text-[var(--accent-light)] inline-flex items-center gap-2">
+        <IconMusic className="w-4 h-4" />
+        Backing Tracks
       </h3>
 
       {/* BPM Selector */}
@@ -104,7 +106,7 @@ function AudioPlayer({ tracks }: { tracks: GuitarLesson['assets']['backingTracks
           onClick={togglePlay}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--accent)] hover:bg-[var(--accent-light)] transition-colors text-white"
         >
-          {isPlaying ? '⏸' : '▶'}
+          {isPlaying ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4" />}
         </button>
         <div className="flex-1">
           <input
@@ -138,7 +140,10 @@ function PDFViewer({ path }: { path: string }) {
   return (
     <div className="bg-[var(--surface)] rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--surface-light)]">
-        <h3 className="text-sm font-semibold text-[var(--accent-light)]">📑 Tablature</h3>
+        <h3 className="text-sm font-semibold text-[var(--accent-light)] inline-flex items-center gap-2">
+          <IconDocument className="w-4 h-4" />
+          Tablature
+        </h3>
         <a
           href={path}
           target="_blank"
@@ -171,7 +176,10 @@ function Checklist({
   return (
     <div className="bg-[var(--surface)] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-[var(--accent-light)]">✅ Checklist</h3>
+        <h3 className="text-sm font-semibold text-[var(--accent-light)] inline-flex items-center gap-2">
+          <IconCheck className="w-4 h-4" />
+          Checklist
+        </h3>
         <span className="text-xs text-[var(--muted)]">
           {completed}/{items.length}
         </span>
@@ -221,7 +229,10 @@ function Progressions({
   return (
     <div className="bg-[var(--surface)] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-[var(--accent-light)]">🔗 Suites d&apos;accords</h3>
+        <h3 className="text-sm font-semibold text-[var(--accent-light)] inline-flex items-center gap-2">
+          <IconLink className="w-4 h-4" />
+          Suites d&apos;accords
+        </h3>
         <span className="text-xs text-[var(--muted)]">{progressions.length}</span>
       </div>
       {progressions.length === 0 ? (
@@ -337,7 +348,7 @@ export default function LessonPage() {
   if (!lesson) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] gap-4">
-        <span className="text-4xl">❌</span>
+        <IconDocument className="w-12 h-12 text-[var(--muted)]" />
         <p className="text-[var(--muted)]">Leçon introuvable</p>
         <button
           onClick={() => router.push('/')}
@@ -350,9 +361,9 @@ export default function LessonPage() {
   }
 
   const statusConfig = {
-    lock: { label: '🔒 Verrouillé', color: 'bg-gray-600 text-gray-200' },
-    'in-progress': { label: '🎯 En cours', color: 'bg-amber-600 text-amber-100' },
-    completed: { label: '✅ Complété', color: 'bg-green-600 text-green-100' },
+    lock: { label: 'Verrouillé', color: 'bg-gray-600 text-gray-200' },
+    'in-progress': { label: 'En cours', color: 'bg-amber-600 text-amber-100' },
+    completed: { label: 'Complété', color: 'bg-green-600 text-green-100' },
   };
   const st = statusConfig[lesson.status];
 
@@ -375,27 +386,57 @@ export default function LessonPage() {
           </div>
         </div>
 
-        {/* Status badge (auto-computed) */}
-        <span className={`px-3 py-1.5 rounded-lg text-xs ${st.color}`}>
-          {st.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isSong: !lesson.isSong }),
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                setLesson(updated);
+              }
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+              lesson.isSong
+                ? 'bg-[var(--accent)] text-white border-transparent'
+                : 'bg-[var(--surface)] text-[var(--muted)] border-[var(--surface-light)] hover:text-[var(--foreground)]'
+            }`}
+          >
+            Morceau
+          </button>
+          <span className={`px-3 py-1.5 rounded-lg text-xs ${st.color}`}>
+            {st.label}
+          </span>
+        </div>
       </div>
 
       {/* Knowledge tags */}
       <div className="flex flex-wrap gap-2 mb-6">
         {lesson.knowledge.chords.map((c) => (
           <span key={c} className="text-xs px-2 py-1 rounded-lg bg-violet-900/50 text-violet-300">
-            🎵 {c}
+            <span className="inline-flex items-center gap-1.5">
+              <IconMusic className="w-3.5 h-3.5" />
+              {c}
+            </span>
           </span>
         ))}
         {lesson.knowledge.techniques.map((t) => (
           <span key={t} className="text-xs px-2 py-1 rounded-lg bg-blue-900/50 text-blue-300">
-            🎯 {t}
+            <span className="inline-flex items-center gap-1.5">
+              <IconTarget className="w-3.5 h-3.5" />
+              {t}
+            </span>
           </span>
         ))}
         {lesson.knowledge.rhythms.map((r) => (
           <span key={r} className="text-xs px-2 py-1 rounded-lg bg-amber-900/50 text-amber-300">
-            🥁 {r}
+            <span className="inline-flex items-center gap-1.5">
+              <IconRhythm className="w-3.5 h-3.5" />
+              {r}
+            </span>
           </span>
         ))}
       </div>

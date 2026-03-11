@@ -2,7 +2,7 @@
   "lessons": [
     {
       "id": "D100",
-      "title": "D100",
+      "title": "Rappels des bases pour bien démarrer",
       "level": "debutant",
       "status": "completed",
       "knowledge": {
@@ -30,7 +30,9 @@
           "label": "Maîtriser les accords",
           "done": true
         }
-      ]
+      ],
+      "progressions": [],
+      "isSong": false
     },
     {
       "id": "D101",
@@ -71,7 +73,9 @@
           "label": "Travailler les rythmes",
           "done": true
         }
-      ]
+      ],
+      "progressions": [],
+      "isSong": false
     }
   ],
   "globalKnowledge": {
@@ -95,5 +99,6 @@
       "croche",
       "noire"
     ]
-  }
+  },
+  "techniqueDetails": {}
 }

@@ -34,6 +34,7 @@ export interface GuitarLesson {
   checklist: ChecklistItem[];
   progressions?: ChordProgression[];
   techniqueDetails?: Record<string, TechniqueDetail>;
+  isSong?: boolean;
 }
 
 export interface ChecklistItem {

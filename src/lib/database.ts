@@ -6,7 +6,44 @@ const DB_PATH = path.join(process.cwd(), 'database.json');
 
 export function readDatabase(): Database {
   const raw = fs.readFileSync(DB_PATH, 'utf-8');
-  return JSON.parse(raw) as Database;
+  const db = JSON.parse(raw) as Database;
+  let changed = false;
+
+  if (!db.globalKnowledge) {
+    db.globalKnowledge = { chords: [], techniques: [], rhythms: [] };
+    changed = true;
+  }
+
+  if (!db.lessons) {
+    db.lessons = [];
+    changed = true;
+  }
+
+  if (!db.techniqueDetails) {
+    db.techniqueDetails = {};
+    changed = true;
+  }
+
+  for (const lesson of db.lessons) {
+    if (!lesson.progressions) {
+      lesson.progressions = [];
+      changed = true;
+    }
+    if (typeof lesson.isSong !== 'boolean') {
+      lesson.isSong = false;
+      changed = true;
+    }
+    if (lesson.id === 'D100' && lesson.title === 'D100') {
+      lesson.title = 'Rappels des bases pour bien démarrer';
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    writeDatabase(db);
+  }
+
+  return db;
 }
 
 export function writeDatabase(db: Database): void {
