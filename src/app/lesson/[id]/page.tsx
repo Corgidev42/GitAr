@@ -208,9 +208,11 @@ function Checklist({
 function Progressions({
   progressions,
   onAdd,
+  onDelete,
 }: {
   progressions: NonNullable<GuitarLesson['progressions']>;
   onAdd: (name: string, chordsLine: string, notes?: string) => void;
+  onDelete: (idx: number) => void;
 }) {
   const [name, setName] = useState('');
   const [line, setLine] = useState('');
@@ -228,7 +230,16 @@ function Progressions({
         <div className="space-y-2 mb-4">
           {progressions.map((p, i) => (
             <div key={i} className="p-2 rounded-lg border border-[var(--surface-light)]">
-              <div className="text-sm font-medium">{p.name}</div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-sm font-medium">{p.name}</div>
+                <button
+                  onClick={() => onDelete(i)}
+                  className="text-[var(--muted)] hover:text-red-400 text-sm leading-none"
+                  title="Supprimer"
+                >
+                  ×
+                </button>
+              </div>
               <div className="text-xs mt-1">
                 {p.chords.join(' → ')}
               </div>
@@ -237,25 +248,27 @@ function Progressions({
           ))}
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nom (ex: 4 accords magiques #1)"
-          className="px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm"
-        />
-        <input
-          value={line}
-          onChange={(e) => setLine(e.target.value)}
-          placeholder="Accords (ex: D - A - Bm - G)"
-          className="px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm"
-        />
-        <div className="flex gap-2">
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nom (ex: 4 accords magiques #1)"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm min-w-0"
+          />
+          <input
+            value={line}
+            onChange={(e) => setLine(e.target.value)}
+            placeholder="Accords (ex: D - A - Bm - G)"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm min-w-0"
+          />
+        </div>
+        <div className="flex flex-col md:flex-row gap-2">
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notes (optionnel)"
-            className="flex-1 px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm"
+            className="w-full flex-1 px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm min-w-0"
           />
           <button
             onClick={() => {
@@ -265,7 +278,7 @@ function Progressions({
               setLine('');
               setNotes('');
             }}
-            className="px-3 py-2 rounded-lg bg-[var(--accent)] text-white text-sm"
+            className="w-full md:w-auto px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm"
           >
             Ajouter
           </button>
@@ -406,7 +419,21 @@ export default function LessonPage() {
                 .split(/[-–→>|,]/)
                 .map((s) => s.trim())
                 .filter(Boolean);
+              if (chords.length < 3) return;
               const next = [...(lesson.progressions || []), { name, chords, notes }];
+              const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ progressions: next }),
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                setLesson(updated);
+              }
+            }}
+            onDelete={async (idx) => {
+              if (!lesson) return;
+              const next = (lesson.progressions || []).filter((_, i) => i !== idx);
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },

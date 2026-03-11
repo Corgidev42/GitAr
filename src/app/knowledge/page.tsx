@@ -169,7 +169,7 @@ const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: str
   'ternaire':       { label: 'Ternaire', beats: 1, symbol: '♫³', description: 'Division du temps en 3 parts égales' },
 };
 
-const TECHNIQUE_DETAILS: Record<string, { title: string; summary: string; steps?: string[] }> = {
+const TECHNIQUE_DETAILS: Record<string, { title?: string; summary: string; steps?: string[] }> = {
   'hammer-on': { title: 'Hammer-on', summary: 'Appuyer une note sans regratter, en frappant la corde avec le doigt.' },
   'pull-off': { title: 'Pull-off', summary: 'Relâcher une note vers une autre inférieure en tirant la corde.' },
   'embellissement autour du d': {
@@ -470,11 +470,11 @@ export default function KnowledgePage() {
           <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-md border border-[var(--surface-light)]" onClick={(e) => e.stopPropagation()}>
             {(() => {
               const key = techInfo.toLowerCase();
-              const info = TECHNIQUE_DETAILS[key] || { title: techInfo, summary: 'Pas de détail disponible pour cette technique.' };
+              const info = db.techniqueDetails?.[key] || TECHNIQUE_DETAILS[key] || { title: techInfo, summary: 'Pas de détail disponible pour cette technique.' };
               return (
                 <>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold">{info.title}</h3>
+                    <h3 className="text-lg font-bold">{info.title || techInfo}</h3>
                     <button onClick={() => setTechInfo(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
                   </div>
                   <p className="text-sm">{info.summary}</p>

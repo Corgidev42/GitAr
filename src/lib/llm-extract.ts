@@ -1,4 +1,4 @@
-import type { GuitarLesson } from '../types';
+import type { GuitarLesson, ChordProgression, TechniqueDetail } from '../types';
 
 /**
  * Sends extracted PDF text to an LLM API and returns structured lesson data.
@@ -50,6 +50,19 @@ async function extractWithGemini(
     "chords": ["string (TOUS les accords mentionnés, ex: Em, G, Am7, Dsus2)"],
     "techniques": ["string (UNIQUEMENT les vraies techniques guitaristiques nommées)"],
     "rhythms": ["string (UNIQUEMENT les valeurs de notes : noire, blanche, croche, double croche, ronde, etc.)"]
+  },
+  "progressions": [
+    {
+      "name": "string (nom court, ex: Suite #1)",
+      "chords": ["string (suite d'accords, ex: D, A, Bm, G)"],
+      "notes": "string (optionnel : contexte / conseil pratique)"
+    }
+  ],
+  "techniqueDetails": {
+    "nom de technique": {
+      "summary": "string (1-3 phrases utiles et concrètes)",
+      "steps": ["string (0-5 étapes / conseils)"]
+    }
   }
 }
 
@@ -57,6 +70,8 @@ RÈGLES STRICTES :
 - "chords" : liste TOUS les accords en notation anglo-saxonne COURTE (Em, G, Cadd9, Dsus2…). JAMAIS écrire "D majeur" ou "ré mineur" — utilise "D" et "Dm". Un accord sans précision (D, C, G…) est TOUJOURS majeur. Sois exhaustif.
 - "techniques" : UNIQUEMENT les techniques guitaristiques réelles et nommées comme concept (ex: "arpège", "hammer-on", "pull-off", "bend", "slide", "embellissement autour du D", "palm mute", "fingerpicking"). Utilise la notation courte pour les accords dans les noms de technique ("embellissement autour du D", PAS "embellissement autour du D majeur"). NE PAS inclure les descriptions d'exercices ("Jouer les accords", "Taper les temps avec le pied", "Mouvement aller"), ni les objectifs pédagogiques ("Dextérité-Coordination-Vitesse"), ni les consignes ("enchaîner les accords", "jouer la rythmique"). Une technique a un NOM propre, ce n'est pas une phrase d'action.
 - "rhythms" : UNIQUEMENT les valeurs de notes musicales (noire, blanche, croche, double croche, ronde, triolet, etc.) et les signatures rythmiques (4/4, 3/4, 6/8). NE PAS inclure "rythmique", "temps", ni de descriptions vagues.
+- "progressions" : propose 0 à 5 suites d'accords trouvées dans le document. Si aucune suite claire n'est écrite, propose 0.
+- "techniqueDetails" : inclure 0 à N entrées. Les clés DOIVENT être exactement les chaînes présentes dans "knowledge.techniques" quand c'est possible. Si tu n'es pas sûr, ne crée pas d'entrée.
 
 Réponds UNIQUEMENT avec le JSON, sans markdown ni explication.
 
@@ -153,7 +168,26 @@ function normalizeKnowledge(
     return s;
   }))];
 
-  return { ...data, knowledge: { chords, techniques, rhythms } };
+  const progressions: ChordProgression[] = (data.progressions || []).map((p) => ({
+    name: p.name?.trim() || 'Suite',
+    chords: [...new Set((p.chords || []).map(normalizeChord))].filter(Boolean),
+    notes: p.notes?.trim() || undefined,
+  })).filter((p) => p.chords.length >= 3);
+
+  const techniqueDetails: Record<string, TechniqueDetail> | undefined = data.techniqueDetails
+    ? Object.fromEntries(
+        Object.entries(data.techniqueDetails).map(([k, v]) => [
+          normalizeTechnique(k).toLowerCase(),
+          {
+            title: v.title?.trim() || undefined,
+            summary: (v.summary || '').trim(),
+            steps: (v.steps || []).map((s) => s.trim()).filter(Boolean),
+          },
+        ])
+      )
+    : undefined;
+
+  return { ...data, knowledge: { chords, techniques, rhythms }, progressions, techniqueDetails };
 }
 
 function fallbackParser(
@@ -208,5 +242,54 @@ function fallbackParser(
     if (text.toLowerCase().includes(rp.toLowerCase())) rhythms.push(rp);
   }
 
-  return normalizeKnowledge({ id, title, level, knowledge: { chords, techniques, rhythms } });
+  const progressions = extractProgressions(text);
+  const techniqueDetails = buildTechniqueDetails(techniques);
+
+  return normalizeKnowledge({ id, title, level, knowledge: { chords, techniques, rhythms }, progressions, techniqueDetails });
+}
+
+function extractProgressions(text: string): ChordProgression[] {
+  const chordRegex = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|add)?[2-9]?(?:\/[A-G][#b]?)?)\b/g;
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+  const candidates: { chords: string[]; notes: string }[] = [];
+  for (const line of lines) {
+    const matches = line.match(chordRegex) || [];
+    const uniq: string[] = [];
+    for (const m of matches) {
+      const last = uniq[uniq.length - 1];
+      if (m !== last) uniq.push(m);
+    }
+    if (uniq.length < 3) continue;
+    const tokens = line.split(/\s+/).filter(Boolean);
+    if (tokens.length > Math.max(uniq.length * 3, 18)) continue;
+    candidates.push({ chords: uniq, notes: line.slice(0, 120) });
+  }
+
+  const out: ChordProgression[] = [];
+  const seen = new Set<string>();
+  for (const c of candidates) {
+    const key = c.chords.join('>');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name: `Suite #${out.length + 1}`, chords: c.chords, notes: c.notes });
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
+function buildTechniqueDetails(techniques: string[]): Record<string, TechniqueDetail> {
+  const out: Record<string, TechniqueDetail> = {};
+  for (const t of techniques) {
+    const key = t.trim().toLowerCase();
+    if (!key) continue;
+    if (key.startsWith('embellissement')) {
+      out[key] = {
+        title: t,
+        summary: 'Petites variations autour d’un accord (sus, notes de passage, hammer-on/pull-off) pour enrichir l’harmonie.',
+        steps: ['Alterner la forme de base et une suspension', 'Ajouter/retirer une note de passage rapidement', 'Rester musical et régulier au tempo'],
+      };
+    }
+  }
+  return out;
 }

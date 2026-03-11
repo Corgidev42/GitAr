@@ -231,6 +231,26 @@ async function ingest(): Promise<void> {
             for (const r of extracted.knowledge.rhythms) {
               if (!lesson.knowledge.rhythms.includes(r)) lesson.knowledge.rhythms.push(r);
             }
+
+            if (extracted.progressions && extracted.progressions.length > 0) {
+              const existing = new Set((lesson.progressions || []).map((p) => p.chords.join('>')));
+              for (const p of extracted.progressions) {
+                const key = p.chords.join('>');
+                if (!existing.has(key)) {
+                  (lesson.progressions ||= []).push(p);
+                  existing.add(key);
+                }
+              }
+            }
+
+            if (extracted.techniqueDetails) {
+              db.techniqueDetails ||= {};
+              for (const [k, v] of Object.entries(extracted.techniqueDetails)) {
+                if (!db.techniqueDetails[k] && v.summary) {
+                  db.techniqueDetails[k] = v;
+                }
+              }
+            }
           }
           // Guide PDFs are deleted after processing
           processedFiles.push(file.filePath);

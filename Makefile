@@ -43,7 +43,7 @@ clean:                 ## Nettoyer les caches
 	rm -rf .next node_modules/.cache
 
 reset:                 ## Réinitialiser la base de données
-	@echo '{"lessons":[],"globalKnowledge":{"chords":[],"techniques":[],"rhythms":[]}}' > database.json
+	@echo '{"lessons":[],"globalKnowledge":{"chords":[],"techniques":[],"rhythms":[]},"techniqueDetails":{}}' > database.json
 	@echo "✅ Base de données réinitialisée"
 
 # ── Aide ───────────────────────────────────────

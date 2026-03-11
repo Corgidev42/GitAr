@@ -56,7 +56,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   if (body.type === 'reset') {
-    const empty = { lessons: [], globalKnowledge: { chords: [], techniques: [], rhythms: [] } };
+    const empty = { lessons: [], globalKnowledge: { chords: [], techniques: [], rhythms: [] }, techniqueDetails: {} };
     writeDatabase(empty);
     return NextResponse.json({ ok: true });
   }

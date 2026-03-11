@@ -9,6 +9,12 @@ export interface Knowledge {
   rhythms: string[];
 }
 
+export interface TechniqueDetail {
+  title?: string;
+  summary: string;
+  steps?: string[];
+}
+
 export interface ChordProgression {
   name: string;
   chords: string[];
@@ -27,6 +33,7 @@ export interface GuitarLesson {
   };
   checklist: ChecklistItem[];
   progressions?: ChordProgression[];
+  techniqueDetails?: Record<string, TechniqueDetail>;
 }
 
 export interface ChecklistItem {
@@ -37,4 +44,5 @@ export interface ChecklistItem {
 export interface Database {
   lessons: GuitarLesson[];
   globalKnowledge: Knowledge;
+  techniqueDetails?: Record<string, TechniqueDetail>;
 }
