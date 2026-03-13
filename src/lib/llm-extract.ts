@@ -5,7 +5,7 @@ import type { GuitarLesson, ChordProgression, TechniqueDetail } from '../types';
  *
  * Configure in .env.local:
  *   GEMINI_API_KEY=AIza...
- *   GEMINI_MODEL=gemini-2.0-flash  (optional, default: gemini-2.0-flash)
+ *   GEMINI_MODEL=gemini-2.5-pro  (optional, default: gemini-2.5-pro)
  *
  * Falls back to a regex-based parser if no GEMINI_API_KEY is configured.
  */
@@ -14,7 +14,7 @@ export async function extractLessonFromText(
   fileName: string
 ): Promise<Omit<GuitarLesson, 'status' | 'assets' | 'checklist'>> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
 
   if (apiKey) {
     try {
