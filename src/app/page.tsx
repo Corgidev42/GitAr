@@ -134,6 +134,7 @@ const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; posit
   'B5':     { frets: [-1, 2, 4, 4, -1, -1], position: 2 },
 };
 
+// Symboles Unicode : 𝅝 ronde | 𝅗𝅥 blanche | ♩ noire | ♪ croche | ♫ croches liées | 𝅘𝅥𝅯 double croche
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; description: string }> = {
   'ronde':          { label: 'Ronde', beats: 4, symbol: '𝅝', description: '4 temps — la note la plus longue courante' },
   'blanche':        { label: 'Blanche', beats: 2, symbol: '𝅗𝅥', description: '2 temps — moitié d\'une ronde' },
@@ -141,9 +142,10 @@ const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: str
   'croche':         { label: 'Croche', beats: 0.5, symbol: '♪', description: '½ temps — 2 par temps' },
   'croches':        { label: 'Croches', beats: 0.5, symbol: '♫', description: '½ temps — croches groupées par 2' },
   'double croche':  { label: 'Double croche', beats: 0.25, symbol: '𝅘𝅥𝅯', description: '¼ de temps — 4 par temps' },
-  'triolet':        { label: 'Triolet', beats: 0.33, symbol: '³', description: '3 notes dans l\'espace de 2' },
+  'triolet':        { label: 'Triolet', beats: 0.33, symbol: '♫³', description: '3 notes dans l\'espace de 2' },
   'pointée':        { label: 'Pointée', beats: 1.5, symbol: '♩·', description: 'Ajoute la moitié de la durée' },
-  'syncope':        { label: 'Syncope', beats: 1, symbol: '𝄾♩', description: 'Accent sur un temps faible' },
+  'syncope':        { label: 'Syncope', beats: 1, symbol: '‿♩', description: 'Accent sur un temps faible — note liée décalée' },
+  'syncopes':       { label: 'Syncopes', beats: 1, symbol: '‿♪', description: 'Syncope en croche' },
   'contretemps':    { label: 'Contretemps', beats: 0.5, symbol: '𝄾♪', description: 'Jouer entre les temps' },
   '4/4':            { label: '4/4', beats: 4, symbol: '𝄴', description: '4 temps par mesure — signature la plus courante' },
   '3/4':            { label: '3/4', beats: 3, symbol: '³⁄₄', description: '3 temps par mesure — valse' },
@@ -185,6 +187,68 @@ function normalizeForKey(raw: string): string {
   return raw.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[']/g, "'").replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+// ─── Visual Rhythm Staff (notation type tablature) ───
+function VisualRhythmStaff({
+  steps,
+  onStepsChange,
+  isPlaying,
+  playingStep,
+}: {
+  steps: Array<'Bas' | 'Haut'>;
+  onStepsChange: (s: Array<'Bas' | 'Haut'>) => void;
+  isPlaying: boolean;
+  playingStep: number;
+}) {
+  const staffY = 24;
+  const stemLen = 8;
+  const noteR = 2.5;
+  const padding = 20;
+  const totalW = 320;
+  const n = Math.max(steps.length, 1);
+  const stepW = (totalW - 2 * padding) / Math.max(n, 8);
+
+  const addStroke = (step: 'Bas' | 'Haut') => onStepsChange([...steps, step]);
+  const removeAt = (i: number) => onStepsChange(steps.filter((_, j) => j !== i));
+
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${totalW} 50`} className="w-full min-w-[280px] max-w-[400px] h-14" style={{ color: 'var(--foreground)' }}>
+        {/* Zone cliquable pour ajouter (en arrière-plan) */}
+        <rect x={padding} y={8} width={totalW - 2 * padding} height={34} fill="transparent" onClick={() => addStroke('Bas')} onContextMenu={(e) => { e.preventDefault(); addStroke('Haut'); }} className="cursor-crosshair" />
+        {/* Ligne de portée */}
+        <line x1={padding} y1={staffY} x2={totalW - padding} y2={staffY} stroke="currentColor" strokeWidth="1" opacity="0.5" />
+        {/* Repères de temps (1, 2, 3, 4) */}
+        {[1, 2, 3, 4].map((b) => {
+          const x = padding + (b - 1) * (totalW - 2 * padding) / 4;
+          return (
+            <line key={b} x1={x} y1={staffY - 4} x2={x} y2={staffY + 4} stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
+          );
+        })}
+        {/* Notes (au-dessus pour intercepter les clics) */}
+        {steps.map((step, i) => {
+          const x = padding + (i + 0.5) * stepW;
+          const isDown = step === 'Bas';
+          const stemY = isDown ? staffY + stemLen : staffY - stemLen;
+          const isActive = isPlaying && i === playingStep;
+          return (
+            <g key={i} className="cursor-pointer" onClick={(e) => { e.stopPropagation(); removeAt(i); }}>
+              {/* Tête de note */}
+              <circle cx={x} cy={staffY} r={noteR} fill={isActive ? 'var(--accent)' : 'currentColor'} stroke={isActive ? 'var(--accent)' : 'currentColor'} strokeWidth="0.5" opacity={isActive ? 1 : 0.9} />
+              {/* Hampe (vers le bas = Bas, vers le haut = Haut) */}
+              <line x1={x + noteR} y1={staffY} x2={x + noteR} y2={stemY} stroke={isActive ? 'var(--accent)' : 'currentColor'} strokeWidth="1" opacity={isActive ? 1 : 0.9} />
+              {/* Liaison (barre) pour paires de croches */}
+              {i < steps.length - 1 && i % 2 === 0 && (
+                <line x1={x + noteR} y1={staffY - 2} x2={padding + (i + 1.5) * stepW + noteR} y2={staffY - 2} stroke="currentColor" strokeWidth="1.5" opacity="0.7" />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <p className="text-[10px] text-[var(--muted)] mt-1">Clic sur la portée = ajouter · Clic sur une note = supprimer · Clic droit = coup vers le haut</p>
+    </div>
+  );
+}
+
 // ─── Rhythm Editor (create & play rythmiques) ───
 function RhythmEditor({
   steps,
@@ -219,14 +283,14 @@ function RhythmEditor({
       <h3 className="text-sm font-bold text-[var(--accent-light)] mb-3 inline-flex items-center gap-2">
         <IconRhythm className="w-4 h-4" />Créer une rythmique
       </h3>
-      <p className="text-xs text-[var(--muted)] mb-4">Clique sur Bas ou Haut pour construire ton motif, puis écoute-le.</p>
+      <p className="text-xs text-[var(--muted)] mb-4">Construis ton motif en cliquant sur la portée. Hampe vers le bas = coup vers le bas, hampe vers le haut = coup vers le haut.</p>
 
       <div className="flex flex-wrap gap-2 mb-4">
         <button onClick={() => addStep('Bas')} className="px-4 py-2 rounded-lg bg-amber-900/40 text-amber-300 border border-amber-600/50 hover:bg-amber-900/60 transition-colors font-medium">
-          ↓ Bas
+          ♩ Coup vers le bas
         </button>
         <button onClick={() => addStep('Haut')} className="px-4 py-2 rounded-lg bg-emerald-900/40 text-emerald-300 border border-emerald-600/50 hover:bg-emerald-900/60 transition-colors font-medium">
-          ↑ Haut
+          ♪ Coup vers le haut
         </button>
         <button onClick={removeLast} disabled={steps.length === 0} className="px-3 py-2 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-40" title="Retirer le dernier">
           ← Retirer
@@ -236,32 +300,27 @@ function RhythmEditor({
         </button>
       </div>
 
+      <div className="mb-4 p-4 rounded-lg bg-[var(--background)]/80 border border-[var(--surface-light)]">
+        <VisualRhythmStaff steps={steps} onStepsChange={onStepsChange} isPlaying={isPlaying} playingStep={playingStep} />
+      </div>
+
       {steps.length > 0 && (
-        <>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {steps.map((s, i) => (
-              <span key={i} className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${isPlaying && i === playingStep ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-[var(--surface-light)] text-[var(--muted)] border-[var(--surface-light)]'}`}>
-                {s}
-              </span>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <button onClick={canPlay ? (isPlaying ? onStop : onPlay) : undefined} disabled={!canPlay}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${canPlay ? (isPlaying ? 'bg-red-500 text-white' : 'bg-[var(--accent)] text-white hover:bg-[var(--accent-light)]') : 'bg-[var(--surface-light)] text-[var(--muted)] opacity-50 cursor-not-allowed'}`}
-              title={canPlay ? (isPlaying ? 'Stop' : 'Jouer') : 'Ajoute au moins 4 temps'}>
-              {isPlaying ? <IconPause className="w-5 h-5" /> : <IconPlay className="w-5 h-5" />}
+        <div className="flex flex-wrap gap-2 items-center">
+          <button onClick={canPlay ? (isPlaying ? onStop : onPlay) : undefined} disabled={!canPlay}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${canPlay ? (isPlaying ? 'bg-red-500 text-white' : 'bg-[var(--accent)] text-white hover:bg-[var(--accent-light)]') : 'bg-[var(--surface-light)] text-[var(--muted)] opacity-50 cursor-not-allowed'}`}
+            title={canPlay ? (isPlaying ? 'Stop' : 'Jouer') : 'Ajoute au moins 4 temps'}>
+            {isPlaying ? <IconPause className="w-5 h-5" /> : <IconPlay className="w-5 h-5" />}
+          </button>
+          <span className="text-xs text-[var(--muted)]">BPM 92</span>
+          <div className="flex gap-2 ml-4">
+            <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="Nom (ex: rythme perso)"
+              className="px-3 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm w-40" />
+            <button onClick={() => { const label = saveName.trim() ? `${saveName} (${steps.join(' ')})` : steps.join(' '); onSave(label); setSaveName(''); clearAll(); }}
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-sm hover:bg-[var(--accent-light)]">
+              Enregistrer
             </button>
-            <span className="text-xs text-[var(--muted)]">BPM 92</span>
-            <div className="flex gap-2 ml-4">
-              <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="Nom (ex: rythme perso)"
-                className="px-3 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm w-40" />
-              <button onClick={() => { const label = saveName.trim() ? `${saveName} (${steps.join(' ')})` : steps.join(' '); onSave(label); setSaveName(''); clearAll(); }}
-                className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-sm hover:bg-[var(--accent-light)]">
-                Enregistrer
-              </button>
-            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -276,7 +335,7 @@ function RhythmCard({ name, expanded, onToggle }: { name: string; expanded: bool
       <span className="text-sm font-medium capitalize">{name}</span>
       {expanded && rhythm && (
         <div className="mt-3 space-y-2">
-          <div className="text-4xl text-center py-2">{rhythm.symbol}</div>
+          <div className="text-5xl text-center py-2 font-serif" style={{ fontVariant: 'normal' }}>{rhythm.symbol}</div>
           <div className="text-xs text-[var(--muted)] text-center">{rhythm.description}</div>
           <div className="flex justify-center">
             <svg viewBox="0 0 120 40" className="w-full max-w-[180px] h-10">
