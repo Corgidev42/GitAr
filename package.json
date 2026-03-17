@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "ingest": "tsx scripts/ingest.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "dotenv": "^17.3.1",

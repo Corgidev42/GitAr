@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readDatabase, writeDatabase } from '@/lib/database';
+import type { TabAsset, BackingTrack } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,9 +51,7 @@ export async function PATCH(
 
   if (typeof updates.title === 'string') {
     const nextTitle = updates.title.trim();
-    if (nextTitle) {
-      db.lessons[idx].title = nextTitle;
-    }
+    if (nextTitle) db.lessons[idx].title = nextTitle;
   }
 
   if (updates.knowledge && typeof updates.knowledge === 'object') {
@@ -68,26 +67,24 @@ export async function PATCH(
     if (Array.isArray(k.strums)) db.lessons[idx].knowledge.strums = k.strums;
   }
 
-  if (updates.checklist) {
-    db.lessons[idx].checklist = updates.checklist;
-    // Auto-compute status from checklist
-    const checked = updates.checklist.filter((c: { done: boolean }) => c.done).length;
-    const total = updates.checklist.length;
-    if (total === 0 || checked === 0) {
-      db.lessons[idx].status = 'lock';
-    } else if (checked === total) {
-      db.lessons[idx].status = 'completed';
-    } else {
-      db.lessons[idx].status = 'in-progress';
-    }
-  }
-
   if (updates.progressions) {
     db.lessons[idx].progressions = updates.progressions;
   }
 
   if (typeof updates.isSong === 'boolean') {
     db.lessons[idx].isSong = updates.isSong;
+  }
+
+  if (typeof updates.favorite === 'boolean') {
+    db.lessons[idx].favorite = updates.favorite;
+  }
+
+  if (Array.isArray(updates.tabs)) {
+    db.lessons[idx].assets.tabs = updates.tabs as TabAsset[];
+  }
+
+  if (Array.isArray(updates.backingTracks)) {
+    db.lessons[idx].assets.backingTracks = updates.backingTracks as BackingTrack[];
   }
 
   rebuildGlobalKnowledge(db);

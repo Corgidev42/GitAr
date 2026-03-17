@@ -4,7 +4,6 @@
       "id": "D100",
       "title": "Rappels des bases pour bien démarrer",
       "level": "debutant",
-      "status": "completed",
       "knowledge": {
         "chords": [
           "D",
@@ -24,22 +23,21 @@
       },
       "assets": {
         "backingTracks": [],
-        "tabPath": "/assets/tabs/D100.pdf"
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D100.pdf"
+          }
+        ]
       },
-      "checklist": [
-        {
-          "label": "Maîtriser les accords",
-          "done": true
-        }
-      ],
       "progressions": [],
-      "isSong": false
+      "isSong": false,
+      "favorite": false
     },
     {
       "id": "D101",
       "title": "Les 4 accords magiques",
       "level": "debutant",
-      "status": "completed",
       "knowledge": {
         "chords": [
           "G",
@@ -69,22 +67,13 @@
             "path": "/assets/audio/D101/65bpm.mp3"
           }
         ],
-        "tabPath": "/assets/tabs/D101.pdf"
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D101.pdf"
+          }
+        ]
       },
-      "checklist": [
-        {
-          "label": "Maîtriser les accords",
-          "done": true
-        },
-        {
-          "label": "Pratiquer les techniques",
-          "done": true
-        },
-        {
-          "label": "Travailler les rythmes",
-          "done": true
-        }
-      ],
       "progressions": [
         {
           "name": "4 accords magiques",
@@ -105,13 +94,13 @@
           ]
         }
       ],
-      "isSong": false
+      "isSong": false,
+      "favorite": false
     },
     {
       "id": "D102",
       "title": "Le rythme feu de camp",
       "level": "debutant",
-      "status": "completed",
       "knowledge": {
         "chords": [
           "Em7",
@@ -130,7 +119,6 @@
           "croche"
         ],
         "strums": [
-          "rythme feu de camp",
           "Bas Bas Haut Haut Bas"
         ]
       },
@@ -149,45 +137,32 @@
             "path": "/assets/audio/D102/100bpm.mp3"
           }
         ],
-        "tabPath": "/assets/tabs/D102.pdf"
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D102.pdf"
+          }
+        ]
       },
-      "checklist": [
-        {
-          "label": "Maîtriser les accords",
-          "done": true
-        },
-        {
-          "label": "Pratiquer les techniques",
-          "done": true
-        },
-        {
-          "label": "Travailler les rythmes",
-          "done": true
-        },
-        {
-          "label": "Jouer avec le backing track",
-          "done": true
-        }
-      ],
       "progressions": [
         {
-          "name": "Suite #1",
+          "name": "Rythme Feu de Camp",
           "chords": [
-            "G",
+            "Em7",
             "Cadd2",
-            "D",
-            "Em7"
+            "G",
+            "D"
           ],
           "notes": "Révision des accords G, Cadd2 et D et un nouvel accord : Em7"
         }
       ],
-      "isSong": false
+      "isSong": false,
+      "favorite": false
     },
     {
       "id": "D102S",
       "title": "With or without you",
       "level": "debutant",
-      "status": "completed",
       "knowledge": {
         "chords": [
           "G",
@@ -214,21 +189,16 @@
             "path": "/assets/audio/D102S/109bpm.mp3"
           }
         ],
-        "tabPath": "/assets/tabs/D102S.pdf"
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D102S.pdf"
+          }
+        ]
       },
-      "checklist": [
-        {
-          "label": "Maîtriser les accords",
-          "done": true
-        },
-        {
-          "label": "Jouer avec le backing track",
-          "done": true
-        }
-      ],
       "progressions": [
         {
-          "name": "Progression principale",
+          "name": "With or without you",
           "chords": [
             "G",
             "D",
@@ -238,7 +208,73 @@
           "notes": "Utilisée pour l'intro, les couplets, les refrains, l'instrumental, le pont et l'interlude."
         }
       ],
-      "isSong": true
+      "isSong": true,
+      "favorite": true
+    },
+    {
+      "id": "D103S",
+      "title": "La fille du coupeur de joints",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "Em",
+          "D",
+          "C",
+          "G",
+          "Am"
+        ],
+        "techniques": [],
+        "rhythms": [],
+        "strums": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D103S/80bpm.mp3"
+          },
+          {
+            "bpm": 120,
+            "path": "/assets/audio/D103S/120bpm.mp3"
+          },
+          {
+            "bpm": 160,
+            "path": "/assets/audio/D103S/160bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D103S.pdf"
+          },
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D103S_PAC_D103_-_Fiche_paroles_-_La_fille_du_coupeur_de_joints.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D103S_PAC_D103_-_Fiche_paroles_-_La_fille_du_coupeur_de_joints.pdf"
+          }
+        ]
+      },
+      "progressions": [
+        {
+          "name": "La fille du coupeur de joint",
+          "chords": [
+            "Em",
+            "D",
+            "C",
+            "G",
+            "Am",
+            "Em",
+            "Am",
+            "Em"
+          ],
+          "notes": "Cette suite d'accords se répète tout au long du morceau."
+        }
+      ],
+      "isSong": true,
+      "favorite": true
     }
   ],
   "globalKnowledge": {
@@ -267,7 +303,6 @@
       "syncope"
     ],
     "strums": [
-      "rythme feu de camp",
       "Bas Bas Haut Haut Bas"
     ]
   },
@@ -297,7 +332,7 @@
       ]
     },
     "syncope": {
-      "summary": "Motif rythmique qui permet de mettre l’accent autre part que sur un temps, en avançant le moment où on marque le temps. On joue l'accord plus tôt et on ne joue pas le temps d'après.",
+      "summary": "Motif rythmique qui permet de mettre l'accent autre part que sur un temps, en avançant le moment où on marque le temps. On joue l'accord plus tôt et on ne joue pas le temps d'après.",
       "steps": [
         "Sur une mesure à 4 temps, l'impact du 3 n'est pas joué mais intégré au temps d'avant (le 2)",
         "On marque le « et », et pas le temps",
@@ -311,7 +346,7 @@
         "Choisir une tonalité (C, G, D) adaptée à sa voix pour faciliter l'exercice."
       ]
     },
-    "apprendre à s’accompagner en chantant": {
+    "apprendre à s'accompagner en chantant": {
       "summary": "Cette technique vise à améliorer la synchronisation entre le chant et le jeu de guitare, plutôt qu'à apprendre à chanter. Elle devient possible lorsque le jeu de guitare est devenu automatique et ne demande plus de concentration.",
       "steps": [
         "Pratiquer les rythmiques jusqu'à ce qu'elles soient naturelles et automatiques.",

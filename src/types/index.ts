@@ -3,6 +3,11 @@ export interface BackingTrack {
   path: string;
 }
 
+export interface TabAsset {
+  name: string;
+  path: string;
+}
+
 export interface Knowledge {
   chords: string[];
   techniques: string[];
@@ -17,30 +22,25 @@ export interface TechniqueDetail {
 }
 
 export interface ChordProgression {
-  name: string;
+  name?: string;
   chords: string[];
   notes?: string;
+  favorite?: boolean;
 }
 
 export interface GuitarLesson {
-  id: string; // ex: D1L05
+  id: string;
   title: string;
   level: 'debutant' | 'intermediaire';
-  status: 'lock' | 'in-progress' | 'completed';
   knowledge: Knowledge;
   assets: {
     backingTracks: BackingTrack[];
-    tabPath: string;
+    tabs: TabAsset[];
   };
-  checklist: ChecklistItem[];
   progressions?: ChordProgression[];
   techniqueDetails?: Record<string, TechniqueDetail>;
   isSong?: boolean;
-}
-
-export interface ChecklistItem {
-  label: string;
-  done: boolean;
+  favorite?: boolean;
 }
 
 export interface Database {

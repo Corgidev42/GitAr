@@ -27,13 +27,24 @@ function rebuildGlobalKnowledge(db: ReturnType<typeof readDatabase>) {
   }
 }
 
-/**
- * PATCH /api/database
- * Body: { type: 'knowledge_rename', category: 'chords'|'techniques'|'rhythms'|'strums', from: string, to: string }
- */
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const db = readDatabase();
+
+  if (body.type === 'knowledge_add') {
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums';
+    const value = (body.value as string)?.trim();
+    if (!category || !value) {
+      return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
+    }
+    const arr = db.globalKnowledge[category] || [];
+    if (!arr.includes(value)) {
+      arr.push(value);
+      db.globalKnowledge[category] = arr;
+      writeDatabase(db);
+    }
+    return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });
+  }
 
   if (body.type === 'knowledge_rename') {
     const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums';
@@ -69,12 +80,6 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ error: 'Unknown patch type' }, { status: 400 });
 }
 
-/**
- * DELETE /api/database
- * Body: { type: 'knowledge', category: 'chords'|'techniques'|'rhythms'|'strums', value: string }
- *    or { type: 'lesson', id: string }
- *    or { type: 'reset' }
- */
 export async function DELETE(req: NextRequest) {
   const body = await req.json();
   const db = readDatabase();
@@ -85,9 +90,7 @@ export async function DELETE(req: NextRequest) {
     if (!cat || !val) {
       return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
     }
-    // Remove from globalKnowledge
     db.globalKnowledge[cat] = (db.globalKnowledge[cat] || []).filter((v) => v !== val);
-    // Remove from each lesson's knowledge too
     for (const lesson of db.lessons) {
       lesson.knowledge[cat] = (lesson.knowledge[cat] || []).filter((v) => v !== val);
     }

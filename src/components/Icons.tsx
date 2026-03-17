@@ -6,15 +6,20 @@ import {
   FileText,
   Flame,
   Guitar,
+  Heart,
   Link2,
   Music,
   Pause,
   Pencil,
   Play,
+  Plus,
   RefreshCw,
   Sprout,
+  Star,
   Target,
   Trash2,
+  Upload,
+  X,
 } from 'lucide-react';
 
 type IconProps = LucideProps & { title?: string };
@@ -77,4 +82,24 @@ export function IconPause({ title = 'Pause', ...props }: IconProps) {
 
 export function IconRefresh({ title = 'Refresh', ...props }: IconProps) {
   return <RefreshCw aria-label={title} {...props} />;
+}
+
+export function IconHeart({ title = 'Favorite', ...props }: IconProps) {
+  return <Heart aria-label={title} {...props} />;
+}
+
+export function IconStar({ title = 'Star', ...props }: IconProps) {
+  return <Star aria-label={title} {...props} />;
+}
+
+export function IconPlus({ title = 'Add', ...props }: IconProps) {
+  return <Plus aria-label={title} {...props} />;
+}
+
+export function IconUpload({ title = 'Upload', ...props }: IconProps) {
+  return <Upload aria-label={title} {...props} />;
+}
+
+export function IconX({ title = 'Close', ...props }: IconProps) {
+  return <X aria-label={title} {...props} />;
 }
