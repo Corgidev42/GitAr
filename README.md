@@ -105,8 +105,13 @@ GitAr/
   - Dépose tes fichiers dans `/import`, lance `make ingest`
   - Les leçons sont ajoutées avec checklist et statut initial
 
+- **Accords : écoute audio** :
+  - Dans Knowledge Base → Accords, bouton ▶︎ pour écouter chaque accord (synthèse Web Audio)
+
 - **Rythmiques : lecteur de motif** :
-  - Dans Knowledge Base → Rythmiques, bouton ▶︎ pour jouer le motif (Bas/Haut) quand disponible
+  - Bouton ▶︎ pour jouer le motif (Bas/Haut) avec tempo réel (noires, croches, syncopes)
+  - Affichage de la mesure (ex. « 1 mesure de 4 temps »)
+  - Éditeur visuel pour créer de nouvelles rythmiques
 
 ## Mise à jour
 
@@ -115,12 +120,14 @@ GitAr/
   - `make ingest` pour réimporter
   - Utilise les boutons ✏️ pour éditer/supprimer
 
-## Historique des versions
+## Historique des versions (v2)
 
-- Statut des leçons désormais automatique
+- **Écoute des accords** : bouton play sur chaque accord dans Knowledge Base
+- **Rythmiques au tempo** : lecture basée sur les durées réelles (noire, croche, syncope)
+- **Indication de mesure** : « 1 mesure de 4 temps » sur les cartes rythmiques
+- **Symboles ronde/blanche** : rendu SVG pour une meilleure lisibilité
+- Statut des leçons automatique
 - Edition/suppression interactive
-- Normalisation IA améliorée
-- Prompt Gemini renforcé
 - Commande `make reset` ajoutée
 
 ## Licence

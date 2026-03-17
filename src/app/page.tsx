@@ -10,6 +10,13 @@ import {
   IconTrash, IconUpload, IconX, IconBook,
 } from '@/components/Icons';
 
+// Accordage standard guitare (E2 A2 D3 G3 B3 E4) en Hz
+const GUITAR_TUNING = [82.41, 110, 146.83, 196, 246.94, 329.63];
+
+function freqFromFret(stringIndex: number, fret: number): number {
+  return GUITAR_TUNING[stringIndex] * Math.pow(2, fret / 12);
+}
+
 // ─── Chord diagrams dictionary ───
 const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; position?: number }> = {
   'C':      { frets: [0, 3, 2, 0, 1, 0] },
@@ -134,10 +141,10 @@ const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; posit
   'B5':     { frets: [-1, 2, 4, 4, -1, -1], position: 2 },
 };
 
-// Symboles Unicode : 𝅝 ronde | 𝅗𝅥 blanche | ♩ noire | ♪ croche | ♫ croches liées | 𝅘𝅥𝅯 double croche
-const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; description: string }> = {
-  'ronde':          { label: 'Ronde', beats: 4, symbol: '𝅝', description: '4 temps — la note la plus longue courante' },
-  'blanche':        { label: 'Blanche', beats: 2, symbol: '𝅗𝅥', description: '2 temps — moitié d\'une ronde' },
+// Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
+const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
+  'ronde':          { label: 'Ronde', beats: 4, symbol: 'ronde', symbolSvg: true, description: '4 temps — la note la plus longue courante' },
+  'blanche':        { label: 'Blanche', beats: 2, symbol: 'blanche', symbolSvg: true, description: '2 temps — moitié d\'une ronde' },
   'noire':          { label: 'Noire', beats: 1, symbol: '♩', description: '1 temps — l\'unité de base en 4/4' },
   'croche':         { label: 'Croche', beats: 0.5, symbol: '♪', description: '½ temps — 2 par temps' },
   'croches':        { label: 'Croches', beats: 0.5, symbol: '♫', description: '½ temps — croches groupées par 2' },
@@ -172,6 +179,12 @@ const TECHNIQUE_DETAILS: Record<string, { title?: string; summary: string; steps
 
 // ─── Helpers ───
 
+// Durées en temps par coup (noire=1, croche=0.5, etc.) — motifs connus
+const STRUM_PATTERNS: Record<string, number[]> = {
+  'feu de camp': [1, 1, 0.5, 0.5, 1], // noire, noire, croche, syncope, croche, noire → 4 temps
+  'bas bas haut haut bas': [1, 1, 0.5, 0.5, 1],
+};
+
 function getStrumSteps(label: string): Array<'Bas' | 'Haut'> {
   const matches = label.match(/\b(Bas|Haut)\b/gi) || [];
   if (matches.length >= 2) {
@@ -181,6 +194,24 @@ function getStrumSteps(label: string): Array<'Bas' | 'Haut'> {
     return ['Bas', 'Bas', 'Haut', 'Haut', 'Bas'];
   }
   return [];
+}
+
+function getStrumDurations(label: string, steps: Array<'Bas' | 'Haut'>): { durations: number[]; totalBeats: number; measureInfo: string } {
+  const key = normalizeForKey(label);
+  const patternKey = Object.keys(STRUM_PATTERNS).find((k) => key.includes(normalizeForKey(k)));
+  let durations: number[];
+  if (patternKey && steps.length === STRUM_PATTERNS[patternKey].length) {
+    durations = STRUM_PATTERNS[patternKey];
+  } else {
+    // Fallback : répartir 4 temps équitablement
+    const totalBeats = 4;
+    durations = steps.map(() => totalBeats / steps.length);
+  }
+  const totalBeats = durations.reduce((a, b) => a + b, 0);
+  const measures = Math.ceil(totalBeats / 4);
+  const beatsPerMeasure = totalBeats <= 4 ? totalBeats : 4;
+  const measureInfo = `${measures} mesure${measures > 1 ? 's' : ''} de ${beatsPerMeasure} temps`;
+  return { durations, totalBeats, measureInfo };
 }
 
 function normalizeForKey(raw: string): string {
@@ -328,6 +359,19 @@ function RhythmEditor({
 
 // ─── Sub-components ───
 
+function RhythmSymbolSvg({ type }: { type: 'ronde' | 'blanche' }) {
+  return (
+    <span className="inline-block align-middle" style={{ width: 56, height: 40 }}>
+      <svg viewBox="0 0 28 20" className="w-full h-full" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <ellipse cx="10" cy="10" rx="6" ry="5" />
+        {type === 'blanche' && (
+          <line x1="16" y1="10" x2="16" y2="0" strokeLinecap="round" />
+        )}
+      </svg>
+    </span>
+  );
+}
+
 function RhythmCard({ name, expanded, onToggle }: { name: string; expanded: boolean; onToggle: () => void }) {
   const rhythm = RHYTHM_VISUALS[name.toLowerCase()];
   return (
@@ -335,7 +379,13 @@ function RhythmCard({ name, expanded, onToggle }: { name: string; expanded: bool
       <span className="text-sm font-medium capitalize">{name}</span>
       {expanded && rhythm && (
         <div className="mt-3 space-y-2">
-          <div className="text-5xl text-center py-2 font-serif" style={{ fontVariant: 'normal' }}>{rhythm.symbol}</div>
+          <div className="text-5xl text-center py-2 font-serif flex items-center justify-center" style={{ fontVariant: 'normal' }}>
+            {rhythm.symbolSvg && (rhythm.symbol === 'ronde' || rhythm.symbol === 'blanche') ? (
+              <RhythmSymbolSvg type={rhythm.symbol as 'ronde' | 'blanche'} />
+            ) : (
+              rhythm.symbol
+            )}
+          </div>
           <div className="text-xs text-[var(--muted)] text-center">{rhythm.description}</div>
           <div className="flex justify-center">
             <svg viewBox="0 0 120 40" className="w-full max-w-[180px] h-10">
@@ -352,12 +402,24 @@ function RhythmCard({ name, expanded, onToggle }: { name: string; expanded: bool
   );
 }
 
-function ChordDiagram({ name }: { name: string }) {
+function ChordDiagram({ name, onPlay }: { name: string; onPlay?: (name: string) => void }) {
   const chord = CHORD_DIAGRAMS[name];
+  const canPlay = chord && chord.frets.some((f) => f >= 0);
   return (
-    <div className="flex flex-col items-center p-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)]">
-      <span className="text-sm font-bold text-[var(--accent-light)] mb-2">{name}</span>
-      <svg viewBox="0 0 50 60" className="w-16 h-20">
+    <div className="flex flex-col items-center p-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] relative group">
+      <div className="flex items-center gap-2 w-full justify-center">
+        <span className="text-sm font-bold text-[var(--accent-light)]">{name}</span>
+        {canPlay && onPlay && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onPlay(name); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+            title="Écouter l'accord"
+          >
+            <IconPlay className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+      <svg viewBox="0 0 50 60" className="w-16 h-20 mt-1">
         <rect x="5" y="5" width="40" height="3" fill="var(--foreground)" />
         {[0,1,2,3,4,5].map((s) => (<line key={`s${s}`} x1={5+s*8} y1="5" x2={5+s*8} y2="55" stroke="var(--muted)" strokeWidth="0.5" />))}
         {[1,2,3,4].map((f) => (<line key={`f${f}`} x1="5" y1={5+f*12.5} x2="45" y2={5+f*12.5} stroke="var(--muted)" strokeWidth="0.5" />))}
@@ -654,7 +716,7 @@ export default function KnowledgePage() {
   }, [reload]);
 
   const stopStrum = useCallback(() => {
-    if (strumTimerRef.current) { window.clearInterval(strumTimerRef.current); strumTimerRef.current = null; }
+    if (strumTimerRef.current != null) { window.clearTimeout(strumTimerRef.current); strumTimerRef.current = null; }
     playingStepsRef.current = [];
     setPlayingStrumKey(null);
     setPlayingStrumStep(-1);
@@ -668,17 +730,17 @@ export default function KnowledgePage() {
     if (steps.length === 0) return;
     setEditorPlaying(false);
     const bpm = 92;
-    const intervalMs = Math.round(60000 / bpm / 2);
+    const beatMs = 60000 / bpm;
+    const { durations } = getStrumDurations(label, steps);
     stopStrum();
     setPlayingStrumKey(key);
     playingStepsRef.current = steps;
     if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
     if (audioCtxRef.current.state === 'suspended') await audioCtxRef.current.resume();
-    let idx = -1;
-    strumTimerRef.current = window.setInterval(() => {
+
+    const playStep = (idx: number) => {
       const current = playingStepsRef.current;
       if (current.length === 0) return;
-      idx = (idx + 1) % current.length;
       setPlayingStrumStep(idx);
       const ctx = audioCtxRef.current;
       if (!ctx) return;
@@ -695,7 +757,22 @@ export default function KnowledgePage() {
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.1);
-    }, intervalMs);
+    };
+
+    const scheduleLoop = (stepIdx: number) => {
+      const current = playingStepsRef.current;
+      if (current.length === 0) return;
+      const idx = stepIdx % current.length;
+      const dur = durations[idx] ?? 1;
+      const delayMs = dur * beatMs;
+      playStep(idx);
+      const id = window.setTimeout(() => {
+        if (playingStepsRef.current.length === 0) return;
+        scheduleLoop(stepIdx + 1);
+      }, delayMs);
+      strumTimerRef.current = id;
+    };
+    scheduleLoop(0);
   }, [playingStrumKey, stopStrum]);
 
   const playEditorStrum = useCallback(() => {
@@ -704,15 +781,16 @@ export default function KnowledgePage() {
     stopStrum();
     setEditorPlaying(true);
     setPlayingStrumKey('__editor__');
-    playingStepsRef.current = draftStrumSteps;
+    playingStepsRef.current = [...draftStrumSteps];
     if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
     const bpm = 92;
-    const intervalMs = Math.round(60000 / bpm / 2);
-    let idx = -1;
-    strumTimerRef.current = window.setInterval(() => {
+    const beatMs = 60000 / bpm;
+    const steps = draftStrumSteps;
+    const durations = steps.map(() => 4 / steps.length);
+
+    const playStep = (idx: number) => {
       const current = playingStepsRef.current;
       if (current.length === 0) return;
-      idx = (idx + 1) % current.length;
       setPlayingStrumStep(idx);
       const ctx = audioCtxRef.current;
       if (!ctx) return;
@@ -729,7 +807,22 @@ export default function KnowledgePage() {
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.1);
-    }, intervalMs);
+    };
+
+    const scheduleLoop = (stepIdx: number) => {
+      const current = playingStepsRef.current;
+      if (current.length === 0) return;
+      const idx = stepIdx % current.length;
+      const dur = durations[idx] ?? 1;
+      const delayMs = dur * beatMs;
+      playStep(idx);
+      const id = window.setTimeout(() => {
+        if (playingStepsRef.current.length === 0) return;
+        scheduleLoop(stepIdx + 1);
+      }, delayMs);
+      strumTimerRef.current = id;
+    };
+    scheduleLoop(0);
   }, [draftStrumSteps, editorPlaying, stopStrum]);
 
   const stopEditorStrum = useCallback(() => {
@@ -742,6 +835,32 @@ export default function KnowledgePage() {
       .then(() => safeReload());
     setDraftStrumSteps([]);
   }, [safeReload]);
+
+  const playChord = useCallback(async (name: string) => {
+    const chord = CHORD_DIAGRAMS[name];
+    if (!chord) return;
+    const frets = chord.frets;
+    const playable = frets.map((f, s) => (f >= 0 ? { string: s, fret: f } : null)).filter(Boolean) as { string: number; fret: number }[];
+    if (playable.length === 0) return;
+    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+    if (audioCtxRef.current.state === 'suspended') await audioCtxRef.current.resume();
+    const ctx = audioCtxRef.current;
+    const now = ctx.currentTime;
+    const duration = 1.2;
+    playable.forEach(({ string, fret }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freqFromFret(string, fret), now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    });
+  }, []);
 
   const toggleFavorite = async (lessonId: string, current: boolean) => {
     const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
@@ -887,7 +1006,7 @@ export default function KnowledgePage() {
         <Section title="Accords" icon={<IconMusic className="w-5 h-5" />} items={k.chords} editMode={editMode}
           onDelete={(v) => deleteItem('chords', v)} onEdit={(v) => setEditKnowledge({ category: 'chords', from: v, to: v })}
           onAdd={(v) => addItem('chords', v)} addPlaceholder="Ex: Cm7, F#m"
-          renderItem={(chord) => <ChordDiagram name={chord} />} />
+          renderItem={(chord) => <ChordDiagram name={chord} onPlay={playChord} />} />
       )}
 
       {tab === 'techniques' && (
@@ -915,38 +1034,35 @@ export default function KnowledgePage() {
           <Section title="Rythmiques" icon={<IconRhythm className="w-5 h-5" />} items={k.strums || []} editMode={editMode}
             onDelete={(v) => deleteItem('strums', v)} onEdit={(v) => setEditKnowledge({ category: 'strums', from: v, to: v })}
             onAdd={(v) => addItem('strums', v)} addPlaceholder="Ex: Bas Bas Haut Haut Bas"
-            renderItem={(strum) => (
-              <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[240px]">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium capitalize">{strum}</span>
-                  {(() => {
-                    const key = normalizeForKey(strum);
-                    const steps = getStrumSteps(strum);
-                    const isPlaying = playingStrumKey === key;
-                    const disabled = steps.length === 0;
-                    return (
-                      <button onClick={() => playStrum(strum)} disabled={disabled}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${disabled ? 'opacity-40 cursor-not-allowed border-[var(--surface-light)] text-[var(--muted)]' : isPlaying ? 'bg-[var(--accent)] border-transparent text-white' : 'bg-[var(--surface-light)] border-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]'}`}
-                        title={disabled ? 'Motif indisponible' : isPlaying ? 'Stop' : 'Jouer'}>
-                        {isPlaying ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4" />}
-                      </button>
-                    );
-                  })()}
+            renderItem={(strum) => {
+              const steps = getStrumSteps(strum);
+              const { measureInfo } = getStrumDurations(strum, steps);
+              const key = normalizeForKey(strum);
+              const isPlaying = playingStrumKey === key;
+              const disabled = steps.length === 0;
+              return (
+                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[240px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium capitalize">{strum}</span>
+                    <button onClick={() => playStrum(strum)} disabled={disabled}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${disabled ? 'opacity-40 cursor-not-allowed border-[var(--surface-light)] text-[var(--muted)]' : isPlaying ? 'bg-[var(--accent)] border-transparent text-white' : 'bg-[var(--surface-light)] border-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]'}`}
+                      title={disabled ? 'Motif indisponible' : isPlaying ? 'Stop' : 'Jouer'}>
+                      {isPlaying ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {steps.length > 0 && (
+                    <>
+                      <p className="text-[11px] text-[var(--muted)] mt-1.5">{measureInfo}</p>
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {steps.map((s, i) => (
+                          <span key={`${s}-${i}`} className={`text-xs px-2 py-1 rounded-md border ${isPlaying && i === playingStrumStep ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-[var(--surface-light)] text-[var(--muted)] border-[var(--surface-light)]'}`}>{s}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
-                {(() => {
-                  const steps = getStrumSteps(strum);
-                  if (steps.length === 0) return null;
-                  const isPlaying = playingStrumKey === normalizeForKey(strum);
-                  return (
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {steps.map((s, i) => (
-                        <span key={`${s}-${i}`} className={`text-xs px-2 py-1 rounded-md border ${isPlaying && i === playingStrumStep ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-[var(--surface-light)] text-[var(--muted)] border-[var(--surface-light)]'}`}>{s}</span>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            )} />
+              );
+            }} />
           <Section title="Rythmes" icon={<IconRhythm className="w-5 h-5" />} items={k.rhythms} editMode={editMode}
             onDelete={(v) => deleteItem('rhythms', v)} onEdit={(v) => setEditKnowledge({ category: 'rhythms', from: v, to: v })}
             onAdd={(v) => addItem('rhythms', v)} addPlaceholder="Ex: blanche, ronde"
