@@ -17,6 +17,12 @@ function AudioPlayer({ tracks, editMode, onRemoveTrack }: { tracks: BackingTrack
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) audioRef.current.pause();
+    };
+  }, []);
+
   const currentTrack = tracks[selectedIdx];
 
   const selectTrack = (idx: number) => {

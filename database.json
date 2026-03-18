@@ -108,7 +108,6 @@
           "Cadd2",
           "D",
           "A",
-          "B",
           "C"
         ],
         "techniques": [
@@ -248,10 +247,6 @@
             "path": "/assets/tabs/D103S.pdf"
           },
           {
-            "name": "Tablature",
-            "path": "/assets/tabs/D103S_PAC_D103_-_Fiche_paroles_-_La_fille_du_coupeur_de_joints.pdf"
-          },
-          {
             "name": "Parole",
             "path": "/assets/tabs/D103S_PAC_D103_-_Fiche_paroles_-_La_fille_du_coupeur_de_joints.pdf"
           }
@@ -275,6 +270,54 @@
       ],
       "isSong": true,
       "favorite": true
+    },
+    {
+      "id": "D104",
+      "title": "On ira – Jean-Jacques Goldman",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "Em7",
+          "G",
+          "Cadd2",
+          "Dsus4",
+          "D",
+          "D/F#"
+        ],
+        "techniques": [],
+        "rhythms": [
+          "croche",
+          "noire"
+        ],
+        "strums": [
+          "Bas Bas Haut Haut Bas Haut"
+        ]
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 104,
+            "path": "/assets/audio/D104/PAC_D104_-_On_ira_-_104bpm.mp3"
+          },
+          {
+            "bpm": 119,
+            "path": "/assets/audio/D104/PAC_D104_-_On_ira_-_119bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D104_PAC_D104_-_Jam_Along_-_On_ira.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D104_PAC_D104_-_Fiche_paroles_-_On_ira.pdf"
+          }
+        ]
+      },
+      "progressions": [],
+      "isSong": true,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -291,7 +334,7 @@
       "Dsus4",
       "Dsus2",
       "Em7",
-      "B"
+      "D/F#"
     ],
     "techniques": [
       "embellissement autour du D",
@@ -301,11 +344,12 @@
       "croche",
       "noire",
       "syncope",
-      "ronde",
-      "blanche"
+      "blanche",
+      "ronde"
     ],
     "strums": [
-      "Bas Bas Haut Haut Bas"
+      "Bas Bas Haut Haut Bas",
+      "Bas Bas Haut Haut Bas Haut"
     ]
   },
   "techniqueDetails": {

@@ -179,9 +179,10 @@ const TECHNIQUE_DETAILS: Record<string, { title?: string; summary: string; steps
 
 // ─── Helpers ───
 
-// Durées en temps par coup (noire=1, croche=0.5, etc.) — motifs connus
+// Durées en temps par coup (noire=1, croche=0.5, etc.) — motifs connus (ordre : plus long d'abord)
 const STRUM_PATTERNS: Record<string, number[]> = {
-  'feu de camp': [1, 1, 0.5, 0.5, 1], // noire, noire, croche, syncope, croche, noire → 4 temps
+  'bas bas haut haut bas haut': [1, 1, 0.5, 0.5, 1, 0.5], // dernier coup sur le "et" du 4
+  'feu de camp': [1, 1, 0.5, 0.5, 1],
   'bas bas haut haut bas': [1, 1, 0.5, 0.5, 1],
 };
 
@@ -210,7 +211,8 @@ function getStrumDurations(label: string, steps: Array<'Bas' | 'Haut'>): { durat
   const totalBeats = durations.reduce((a, b) => a + b, 0);
   const measures = Math.ceil(totalBeats / 4);
   const beatsPerMeasure = totalBeats <= 4 ? totalBeats : 4;
-  const measureInfo = `${measures} mesure${measures > 1 ? 's' : ''} de ${beatsPerMeasure} temps`;
+  const beatsDisplay = Math.round(beatsPerMeasure * 100) / 100; // évite les 3.9999999999999996
+  const measureInfo = `${measures} mesure${measures > 1 ? 's' : ''} de ${beatsDisplay} temps`;
   return { durations, totalBeats, measureInfo };
 }
 
