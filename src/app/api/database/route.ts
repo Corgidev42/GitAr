@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 import { readDatabase, writeDatabase } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
+
+function unlinkTechniqueImage(publicPath: string | undefined) {
+  if (!publicPath || !publicPath.startsWith('/assets/techniques/')) return;
+  const rel = publicPath.slice('/assets/techniques/'.length);
+  if (!rel || rel.includes('..') || rel.includes('/')) return;
+  const full = path.join(process.cwd(), 'public', 'assets', 'techniques', rel);
+  try {
+    if (fs.existsSync(full)) fs.unlinkSync(full);
+  } catch {
+    /* ignore */
+  }
+}
 
 export async function GET() {
   const db = readDatabase();
@@ -77,6 +91,47 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });
   }
 
+  if (body.type === 'technique_detail') {
+    const key = (body.key as string)?.trim().toLowerCase();
+    const detail = body.detail as {
+      title?: string;
+      summary?: string;
+      steps?: string[];
+      image?: string | null;
+    } | undefined;
+    if (!key || !detail) {
+      return NextResponse.json({ error: 'Missing key or detail' }, { status: 400 });
+    }
+    if (!db.techniqueDetails) db.techniqueDetails = {};
+    const prev = db.techniqueDetails[key] || {};
+    const steps = Array.isArray(detail.steps) ? detail.steps.map((s) => String(s).trim()).filter(Boolean) : undefined;
+
+    let nextImage: string | undefined;
+    if ('image' in detail) {
+      if (detail.image === null || detail.image === '') {
+        if (prev.image) unlinkTechniqueImage(prev.image);
+        nextImage = undefined;
+      } else if (typeof detail.image === 'string' && detail.image.startsWith('/assets/techniques/')) {
+        if (prev.image && prev.image !== detail.image) unlinkTechniqueImage(prev.image);
+        nextImage = detail.image;
+      } else {
+        nextImage = prev.image;
+      }
+    } else {
+      nextImage = prev.image;
+    }
+
+    const next: typeof prev = {
+      title: typeof detail.title === 'string' ? detail.title.trim() || undefined : undefined,
+      summary: typeof detail.summary === 'string' ? detail.summary.trim() : '',
+      steps: steps && steps.length > 0 ? steps : undefined,
+    };
+    if (nextImage) next.image = nextImage;
+    db.techniqueDetails[key] = next;
+    writeDatabase(db);
+    return NextResponse.json({ ok: true, techniqueDetails: db.techniqueDetails });
+  }
+
   return NextResponse.json({ error: 'Unknown patch type' }, { status: 400 });
 }
 
@@ -93,6 +148,12 @@ export async function DELETE(req: NextRequest) {
     db.globalKnowledge[cat] = (db.globalKnowledge[cat] || []).filter((v) => v !== val);
     for (const lesson of db.lessons) {
       lesson.knowledge[cat] = (lesson.knowledge[cat] || []).filter((v) => v !== val);
+    }
+    if (cat === 'techniques' && db.techniqueDetails) {
+      const k = val.toLowerCase();
+      const d = db.techniqueDetails[k];
+      if (d?.image) unlinkTechniqueImage(d.image);
+      delete db.techniqueDetails[k];
     }
     writeDatabase(db);
     return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });

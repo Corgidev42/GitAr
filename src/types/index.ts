@@ -19,6 +19,8 @@ export interface TechniqueDetail {
   title?: string;
   summary: string;
   steps?: string[];
+  /** Chemin public, ex. /assets/techniques/hammer-on_photo.png */
+  image?: string;
 }
 
 export interface ChordProgression {

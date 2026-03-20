@@ -47,3 +47,5 @@ next-env.d.ts
 !/public/assets/tabs/.gitkeep
 /public/assets/audio/*
 !/public/assets/audio/.gitkeep
+/public/assets/techniques/*
+!/public/assets/techniques/.gitkeep

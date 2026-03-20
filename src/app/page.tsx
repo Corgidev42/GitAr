@@ -106,7 +106,7 @@ const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; posit
   'Bm':     { frets: [-1, 2, 4, 4, 3, 2], barres: [2], position: 2 },
   'B7':     { frets: [-1, 2, 1, 2, 0, 2] },
   'Bmaj7':  { frets: [-1, 2, 4, 3, 4, 2], barres: [2], position: 2 },
-  'Bm7':    { frets: [-1, 2, 0, 2, 0, 2] },
+  'Bm7':    { frets: [-1, 2, 4, 4, 3, 2], barres: [2], position: 2 },
   'Bdim':   { frets: [-1, 2, 3, 4, 3, -1] },
   'Baug':   { frets: [-1, 2, 1, 0, 0, 3] },
   'Bsus2':  { frets: [-1, 2, 4, 4, 2, 2], barres: [2], position: 2 },
@@ -176,6 +176,20 @@ const TECHNIQUE_DETAILS: Record<string, { title?: string; summary: string; steps
     ],
   },
 };
+
+function mergeTechniqueForDisplay(name: string, dbDetails?: Database['techniqueDetails']) {
+  const key = name.toLowerCase();
+  const fromDb = dbDetails?.[key];
+  const fromStatic = TECHNIQUE_DETAILS[key];
+  const summary = fromDb?.summary ?? fromStatic?.summary ?? 'Pas de détail disponible pour cette technique.';
+  const steps = fromDb?.steps?.length ? fromDb.steps : fromStatic?.steps;
+  return {
+    title: fromDb?.title ?? fromStatic?.title ?? name,
+    summary,
+    steps,
+    image: fromDb?.image,
+  };
+}
 
 // ─── Helpers ───
 
@@ -702,6 +716,10 @@ export default function KnowledgePage() {
     category: 'chords' | 'techniques' | 'rhythms' | 'strums'; from: string; to: string;
   } | null>(null);
   const [editLessonTitle, setEditLessonTitle] = useState<{ id: string; title: string } | null>(null);
+  const [editTechnique, setEditTechnique] = useState<{
+    name: string; title: string; summary: string; stepsText: string; image: string | null;
+  } | null>(null);
+  const [techniqueImageUploading, setTechniqueImageUploading] = useState(false);
   const [draftStrumSteps, setDraftStrumSteps] = useState<Array<'Bas' | 'Haut'>>([]);
   const [editorPlaying, setEditorPlaying] = useState(false);
   const lastReloadAt = useRef(0);
@@ -897,6 +915,64 @@ export default function KnowledgePage() {
     if (res.ok) safeReload();
   };
 
+  const openEditTechnique = useCallback((techName: string) => {
+    if (!db) return;
+    const key = techName.toLowerCase();
+    const fromDb = db.techniqueDetails?.[key];
+    const fromStatic = TECHNIQUE_DETAILS[key];
+    setEditTechnique({
+      name: techName,
+      title: fromDb?.title ?? fromStatic?.title ?? '',
+      summary: fromDb?.summary ?? fromStatic?.summary ?? '',
+      stepsText: (fromDb?.steps?.length ? fromDb.steps : fromStatic?.steps ?? []).join('\n'),
+      image: fromDb?.image ?? null,
+    });
+  }, [db]);
+
+  const uploadTechniqueImage = async (file: File) => {
+    if (!editTechnique) return;
+    setTechniqueImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('type', 'technique');
+      fd.append('techniqueKey', editTechnique.name.toLowerCase().replace(/[^a-z0-9_-]+/gi, '_').slice(0, 64));
+      fd.append('files', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload échoué');
+      const paths = data.paths as string[];
+      if (paths?.[0]) setEditTechnique((prev) => (prev ? { ...prev, image: paths[0] } : null));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Upload impossible');
+    } finally {
+      setTechniqueImageUploading(false);
+    }
+  };
+
+  const saveTechniqueDetail = async () => {
+    if (!editTechnique) return;
+    const { name, title, summary, stepsText, image } = editTechnique;
+    const steps = stepsText.split('\n').map((s) => s.trim()).filter(Boolean);
+    const res = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'technique_detail',
+        key: name.toLowerCase(),
+        detail: {
+          title: title.trim() || undefined,
+          summary: summary.trim(),
+          steps: steps.length ? steps : undefined,
+          image: image === null ? null : image,
+        },
+      }),
+    });
+    if (res.ok) {
+      setEditTechnique(null);
+      safeReload();
+    }
+  };
+
   const deleteLesson = async (id: string) => {
     const res = await fetch('/api/database', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'lesson', id }) });
     if (res.ok) safeReload();
@@ -1015,9 +1091,22 @@ export default function KnowledgePage() {
         <Section title="Techniques" icon={<IconTarget className="w-5 h-5" />} items={k.techniques} editMode={editMode}
           onDelete={(v) => deleteItem('techniques', v)} onEdit={(v) => setEditKnowledge({ category: 'techniques', from: v, to: v })}
           renderItem={(tech) => (
-            <button onClick={() => setTechInfo(tech)} className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors text-left">
-              <span className="text-sm font-medium capitalize">{tech}</span>
-            </button>
+            <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[160px]">
+              <button type="button" onClick={() => setTechInfo(tech)} className="w-full text-left">
+                <span className="text-sm font-medium capitalize">{tech}</span>
+                {editMode && <span className="block text-[10px] text-[var(--muted)] mt-0.5">Clic = fiche</span>}
+              </button>
+              {editMode && (
+                <button
+                  type="button"
+                  onClick={() => openEditTechnique(tech)}
+                  className="mt-2 w-full text-xs px-2 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--accent-light)] hover:bg-[var(--accent)]/20 inline-flex items-center justify-center gap-1.5"
+                >
+                  <IconPencil className="w-3.5 h-3.5" />
+                  Éditer la fiche
+                </button>
+              )}
+            </div>
           )} />
       )}
 
@@ -1209,23 +1298,92 @@ export default function KnowledgePage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setTechInfo(null)}>
           <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-md border border-[var(--surface-light)]" onClick={(e) => e.stopPropagation()}>
             {(() => {
-              const key = techInfo.toLowerCase();
-              const info = db.techniqueDetails?.[key] || TECHNIQUE_DETAILS[key] || { title: techInfo, summary: 'Pas de détail disponible pour cette technique.' };
+              const info = mergeTechniqueForDisplay(techInfo, db.techniqueDetails);
               return (
                 <>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold">{info.title || techInfo}</h3>
+                    <h3 className="text-lg font-bold">{info.title}</h3>
                     <button onClick={() => setTechInfo(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
                   </div>
+                  {info.image && (
+                    <div className="mb-4 rounded-lg overflow-hidden border border-[var(--surface-light)] bg-[var(--background)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={info.image} alt="" className="w-full max-h-72 object-contain mx-auto" />
+                    </div>
+                  )}
                   <p className="text-sm">{info.summary}</p>
                   {info.steps && info.steps.length > 0 && (
                     <ul className="text-sm mt-3 space-y-1 list-disc pl-5">
                       {info.steps.map((s, i) => (<li key={i}>{s}</li>))}
                     </ul>
                   )}
+                  {editMode && (
+                    <div className="mt-4 pt-4 border-t border-[var(--surface-light)]">
+                      <button
+                        type="button"
+                        onClick={() => { const t = techInfo; setTechInfo(null); openEditTechnique(t); }}
+                        className="w-full px-3 py-2 rounded-lg bg-[var(--accent)] text-white text-sm inline-flex items-center justify-center gap-2 hover:bg-[var(--accent-light)]"
+                      >
+                        <IconPencil className="w-4 h-4" />
+                        Modifier la fiche
+                      </button>
+                    </div>
+                  )}
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {editTechnique && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditTechnique(null)}>
+          <div className="bg-[var(--surface)] rounded-xl p-6 w-full max-w-lg border border-[var(--surface-light)] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Éditer la technique</h3>
+              <button type="button" onClick={() => setEditTechnique(null)} className="text-[var(--muted)] hover:text-[var(--foreground)]">×</button>
+            </div>
+            <p className="text-xs text-[var(--muted)] mb-3">Technique : <span className="font-mono text-[var(--foreground)]">{editTechnique.name}</span> (renommer via le bouton ✏️ sur la carte)</p>
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Titre affiché (optionnel)</div>
+                <input value={editTechnique.title} onChange={(e) => setEditTechnique({ ...editTechnique, title: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" placeholder="Ex. Hammer-on" />
+              </div>
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Description</div>
+                <textarea value={editTechnique.summary} onChange={(e) => setEditTechnique({ ...editTechnique, summary: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm min-h-24" />
+              </div>
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Étapes (une par ligne, optionnel)</div>
+                <textarea value={editTechnique.stepsText} onChange={(e) => setEditTechnique({ ...editTechnique, stepsText: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm min-h-28 font-mono text-xs" placeholder="Étape 1&#10;Étape 2" />
+              </div>
+              <div>
+                <div className="text-xs text-[var(--muted)] mb-1">Image (JPEG, PNG, GIF, WebP, SVG)</div>
+                <div className="flex flex-wrap items-start gap-3">
+                  <label className={`px-3 py-2 rounded-lg text-sm cursor-pointer inline-flex items-center gap-2 ${techniqueImageUploading ? 'bg-[var(--surface-light)] text-[var(--muted)]' : 'bg-[var(--accent)] text-white hover:bg-[var(--accent-light)]'}`}>
+                    <IconUpload className="w-4 h-4" />
+                    {techniqueImageUploading ? 'Envoi…' : 'Choisir une image'}
+                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml" className="hidden" disabled={techniqueImageUploading}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadTechniqueImage(f); e.target.value = ''; }} />
+                  </label>
+                  {editTechnique.image && (
+                    <button type="button" onClick={() => setEditTechnique({ ...editTechnique, image: null })} className="px-3 py-2 text-sm rounded-lg text-red-400 hover:bg-red-500/20">
+                      Retirer l&apos;image
+                    </button>
+                  )}
+                </div>
+                {editTechnique.image && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-[var(--surface-light)] max-w-xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={editTechnique.image} alt="" className="w-full max-h-48 object-contain bg-[var(--background)]" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button type="button" onClick={() => setEditTechnique(null)} className="px-3 py-1.5 text-sm rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]">Annuler</button>
+              <button type="button" onClick={saveTechniqueDetail} className="px-3 py-1.5 text-sm rounded-lg bg-[var(--accent)] text-white">Enregistrer</button>
+            </div>
           </div>
         </div>
       )}

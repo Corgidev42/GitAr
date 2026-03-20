@@ -20,7 +20,7 @@ ingest:                ## Importer les fichiers de /import dans la base
 # ── Setup ──────────────────────────────────────
 setup:                 ## Installation complète du projet
 	npm install
-	mkdir -p import public/assets/tabs public/assets/audio
+	mkdir -p import public/assets/tabs public/assets/audio public/assets/techniques
 	@echo "✅ Projet prêt. Place tes fichiers dans /import puis: make ingest"
 
 clean:                 ## Nettoyer les caches
