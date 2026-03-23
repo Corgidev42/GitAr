@@ -197,6 +197,8 @@ function RhythmMeasureSvg({
     }
   }
 
+  const syncopeTargetIds = new Set(measurePairs.map((p) => p.to.id));
+
   return (
     <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto rounded-md bg-[var(--background)]/60">
       {/* Lignes de tablature */}
@@ -259,9 +261,16 @@ function RhythmMeasureSvg({
         const headStroke = selected ? 'var(--accent-light)' : 'var(--foreground)';
         const headFill = fillHead ? 'var(--foreground)' : 'transparent';
         const strokeWidth = 1.4;
+        const isSyncopeTarget = syncopeTargetIds.has(it.id);
+        const ghostSyncopeEnd = isSyncopeTarget && !selected;
 
         return (
-          <g key={it.id} onClick={() => onItemClick?.(it.id)} className={onItemClick ? 'cursor-pointer' : undefined}>
+          <g
+            key={it.id}
+            onClick={() => onItemClick?.(it.id)}
+            className={onItemClick ? 'cursor-pointer' : undefined}
+            opacity={ghostSyncopeEnd ? 0.38 : 1}
+          >
             <ellipse cx={xNoteHead} cy={headY} rx="4.5" ry="3.4" fill={headFill} stroke={headStroke} strokeWidth={strokeWidth} />
             {hasStem && <line x1={xNoteHead + 4.5} y1={headY} x2={xNoteHead + 4.5} y2={stemTopY} stroke={headStroke} strokeWidth="1.3" />}
             {hasFlag && <path d={`M ${xNoteHead + 4.5} ${stemTopY} q 6 2 5 8`} fill="none" stroke={headStroke} strokeWidth="1.3" />}
