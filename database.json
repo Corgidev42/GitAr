@@ -192,6 +192,10 @@
           {
             "name": "Tablature",
             "path": "/assets/tabs/D102S.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D102S_PAC_D102_-_Fiche_paroles_-_With_or_without_you.pdf"
           }
         ]
       },
@@ -204,7 +208,8 @@
             "Em7",
             "Cadd2"
           ],
-          "notes": "Utilisée pour l'intro, les couplets, les refrains, l'instrumental, le pont et l'interlude."
+          "notes": "Utilisée pour l'intro, les couplets, les refrains, l'instrumental, le pont et l'interlude.",
+          "favorite": true
         }
       ],
       "isSong": true,
@@ -265,7 +270,8 @@
             "Am",
             "Em"
           ],
-          "notes": "Cette suite d'accords se répète tout au long du morceau."
+          "notes": "Cette suite d'accords se répète tout au long du morceau.",
+          "favorite": true
         }
       ],
       "isSong": true,
@@ -370,7 +376,21 @@
           }
         ]
       },
-      "progressions": [],
+      "progressions": [
+        {
+          "chords": [
+            "E",
+            "A",
+            "Asus2",
+            "A",
+            "D",
+            "A",
+            "Asus4",
+            "A",
+            "E"
+          ]
+        }
+      ],
       "isSong": true,
       "favorite": false
     }
@@ -402,8 +422,7 @@
       "croche",
       "noire",
       "syncope",
-      "blanche",
-      "ronde"
+      "blanche"
     ],
     "strums": [
       "Bas Bas Haut Haut Bas",
