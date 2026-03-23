@@ -493,7 +493,8 @@
       "embellissement autour du D",
       "s'accompagner en chantant",
       "Rythmique en syncope",
-      "Embellissement Autour Du C"
+      "Embellissement Autour Du C",
+      "Embellissement Autour Du A"
     ],
     "rhythms": [
       "croche",
@@ -555,6 +556,14 @@
         "Ne pas se soucier de la justesse du chant lors de l'exercice.",
         "Utiliser des chansons simples comme 'Au clair de la lune' en C, G ou D pour s'exercer."
       ]
+    },
+    "embellissement autour du c": {
+      "summary": "On ajoute le petit doigt en case 3 sur la corde de Mi aigu.",
+      "image": "/assets/techniques/embellissement_autour_du_c_1774303474446.png"
+    },
+    "embellissement autour du a": {
+      "summary": "",
+      "image": "/assets/techniques/embellissement_autour_du_a_1774303717811.png"
     }
   }
 }
