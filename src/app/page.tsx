@@ -179,7 +179,8 @@ function RhythmMeasureSvg({
   const unit = compact ? 24 : 30; // largeur d'une croche
   const headY = compact ? 42 : 48;
   const stemTopY = compact ? 20 : 22;
-  const svgW = unit * STEPS_PER_MEASURE + 26;
+  // Pas de marge horizontale : même repère que la grille HTML (8 colonnes = 8 × unit)
+  const svgW = unit * STEPS_PER_MEASURE;
   const svgH = compact ? 70 : 86;
   const lineYs = compact ? [22, 28, 34, 40, 46, 52] : [24, 30, 36, 42, 48, 54]; // style tablature
 
@@ -200,12 +201,12 @@ function RhythmMeasureSvg({
     <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto rounded-md bg-[var(--background)]/60">
       {/* Lignes de tablature */}
       {lineYs.map((y, i) => (
-        <line key={`l-${i}`} x1="8" y1={y} x2={svgW - 8} y2={y} stroke="var(--muted)" strokeWidth="0.8" opacity="0.65" />
+        <line key={`l-${i}`} x1="0" y1={y} x2={svgW} y2={y} stroke="var(--muted)" strokeWidth="0.8" opacity="0.65" />
       ))}
 
       {/* Barres de temps et de mesure */}
       {Array.from({ length: STEPS_PER_MEASURE + 1 }).map((_, i) => {
-        const x = 13 + i * unit;
+        const x = i * unit;
         const isBeat = i % 2 === 0;
         return (
           <line
@@ -224,8 +225,11 @@ function RhythmMeasureSvg({
       {/* Notes et silences */}
       {measureItems.map((it) => {
         const start = it.start - measureBase;
-        const xStart = 13 + start * unit;
-        const xCenter = xStart + unit * 0.45;
+        const xStart = start * unit;
+        // Silences : symbole centré sur toute la durée occupée
+        const xRestCenter = (start + it.length / 2) * unit;
+        // Notes : tête alignée sur le milieu de la case cliquée (1 croche = 1 case), pas le milieu de la noire/blanche entière
+        const xNoteHead = (start + 0.5) * unit;
         const kind = rhythmFigureKind(it.length);
         const selected = selectedItemId === it.id;
 
@@ -242,7 +246,7 @@ function RhythmMeasureSvg({
                 stroke={selected ? 'var(--accent-light)' : 'transparent'}
                 strokeWidth="1.5"
               />
-              <text x={xCenter} y={headY + 2} textAnchor="middle" fontSize={compact ? 12 : 14} fill="var(--warning)">
+              <text x={xRestCenter} y={headY + 2} textAnchor="middle" fontSize={compact ? 12 : 14} fill="var(--warning)">
                 {it.symbol}
               </text>
             </g>
@@ -258,24 +262,24 @@ function RhythmMeasureSvg({
 
         return (
           <g key={it.id} onClick={() => onItemClick?.(it.id)} className={onItemClick ? 'cursor-pointer' : undefined}>
-            <ellipse cx={xCenter} cy={headY} rx="4.5" ry="3.4" fill={headFill} stroke={headStroke} strokeWidth={strokeWidth} />
-            {hasStem && <line x1={xCenter + 4.5} y1={headY} x2={xCenter + 4.5} y2={stemTopY} stroke={headStroke} strokeWidth="1.3" />}
-            {hasFlag && <path d={`M ${xCenter + 4.5} ${stemTopY} q 6 2 5 8`} fill="none" stroke={headStroke} strokeWidth="1.3" />}
+            <ellipse cx={xNoteHead} cy={headY} rx="4.5" ry="3.4" fill={headFill} stroke={headStroke} strokeWidth={strokeWidth} />
+            {hasStem && <line x1={xNoteHead + 4.5} y1={headY} x2={xNoteHead + 4.5} y2={stemTopY} stroke={headStroke} strokeWidth="1.3" />}
+            {hasFlag && <path d={`M ${xNoteHead + 4.5} ${stemTopY} q 6 2 5 8`} fill="none" stroke={headStroke} strokeWidth="1.3" />}
           </g>
         );
       })}
 
       {/* Barres pour paires de croches */}
       {beams.map((beam, i) => {
-        const aX = 13 + (beam.a.start - measureBase) * unit + (beam.a.length * unit) / 2 + 4.5;
-        const bX = 13 + (beam.b.start - measureBase) * unit + (beam.b.length * unit) / 2 + 4.5;
+        const aX = (beam.a.start - measureBase + 0.5) * unit + 4.5;
+        const bX = (beam.b.start - measureBase + 0.5) * unit + 4.5;
         return <line key={`beam-${i}`} x1={aX} y1={stemTopY} x2={bX} y2={stemTopY} stroke="var(--foreground)" strokeWidth="3" />;
       })}
 
       {/* Liaisons de syncope */}
       {measurePairs.map((p, i) => {
-        const fromX = 13 + (p.from.start - measureBase + p.from.length / 2) * unit;
-        const toX = 13 + (p.to.start - measureBase + p.to.length / 2) * unit;
+        const fromX = (p.from.start - measureBase + 0.5) * unit;
+        const toX = (p.to.start - measureBase + 0.5) * unit;
         const cx = (fromX + toX) / 2;
         return (
           <path
@@ -451,10 +455,11 @@ function RhythmPatternEditor({
       setError('Ajoute au moins deux notes dans la mesure pour créer une syncope.');
       return;
     }
+    // slot = indice global de la colonne cliquée (0…7 par mesure) : frontière « à droite » = note avec start >= slot
     const left = [...notes].reverse().find((n) => n.start < slot);
-    const right = notes.find((n) => n.start > slot);
-    if (!left || !right) {
-      setError('Clique entre deux notes (pas sur une note).');
+    const right = notes.find((n) => n.start >= slot);
+    if (!left || !right || left.id === right.id) {
+      setError('Clique entre deux notes (colonne à droite de la première note, à gauche de la seconde).');
       return;
     }
     connectSyncope(left.id, right.id);
