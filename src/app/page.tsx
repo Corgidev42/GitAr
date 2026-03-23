@@ -5,10 +5,13 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
-  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLink, IconMusic, IconPause,
+  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic, IconPause,
   IconPencil, IconPlay, IconPlus, IconRefresh, IconRhythm, IconTarget,
   IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
+import { ChordDiagramView } from '@/components/ChordDiagramView';
+import { ChordEditorModal, type ChordEditorOpen } from '@/components/ChordEditorModal';
+import { resolveChordDiagram } from '@/lib/chordDiagrams';
 
 // Accordage standard guitare (E2 A2 D3 G3 B3 E4) en Hz
 const GUITAR_TUNING = [82.41, 110, 146.83, 196, 246.94, 329.63];
@@ -16,130 +19,6 @@ const GUITAR_TUNING = [82.41, 110, 146.83, 196, 246.94, 329.63];
 function freqFromFret(stringIndex: number, fret: number): number {
   return GUITAR_TUNING[stringIndex] * Math.pow(2, fret / 12);
 }
-
-// ─── Chord diagrams dictionary ───
-const CHORD_DIAGRAMS: Record<string, { frets: number[]; barres?: number[]; position?: number }> = {
-  'C':      { frets: [-1, 3, 2, 0, 1, 0] },
-  'Cm':     { frets: [-1, 3, 1, 0, 1, -1], position: 3 },
-  'C7':     { frets: [0, 3, 2, 3, 1, 0] },
-  'Cmaj7':  { frets: [0, 3, 2, 0, 0, 0] },
-  'Cm7':    { frets: [-1, 3, 1, 3, 1, -1], position: 3 },
-  'Cdim':   { frets: [-1, 3, 4, 2, 4, -1] },
-  'Caug':   { frets: [-1, 3, 2, 1, 1, 0] },
-  'Csus2':  { frets: [-1, 3, 3, 0, 1, -1] },
-  'Csus4':  { frets: [-1, 3, 3, 0, 1, 1] },
-  'Cadd9':  { frets: [0, 3, 2, 0, 3, 0] },
-  'Cadd2':  { frets: [-1, 3, 2, 0, 3, 3] },
-  'C6':     { frets: [0, 3, 2, 2, 1, 0] },
-  'C9':     { frets: [-1, 3, 2, 3, 3, 0] },
-  'C/G':    { frets: [3, 3, 2, 0, 1, 0] },
-  'C/E':    { frets: [0, 3, 2, 0, 1, 0] },
-  'D':      { frets: [-1, -1, 0, 2, 3, 2] },
-  'Dm':     { frets: [-1, 0, 0, 2, 3, 1] },
-  'D7':     { frets: [-1, 0, 0, 2, 1, 2] },
-  'Dmaj7':  { frets: [-1, 0, 0, 2, 2, 2] },
-  'Dm7':    { frets: [-1, 0, 0, 2, 1, 1] },
-  'Ddim':   { frets: [-1, 0, 0, 1, 3, 1] },
-  'Daug':   { frets: [-1, 0, 0, 3, 3, 2] },
-  'Dsus2':  { frets: [-1, -1, 0, 2, 3, 0] },
-  'Dsus4':  { frets: [-1, -1, 0, 2, 3, 3] },
-  'Dadd9':  { frets: [-1, 0, 0, 2, 3, 0] },
-  'D6':     { frets: [-1, 0, 0, 2, 0, 2] },
-  'D9':     { frets: [-1, 0, 4, 2, 1, 0], position: 1 },
-  'D/F#':   { frets: [2, 0, 0, 2, 3, 2] },
-  'E':      { frets: [0, 2, 2, 1, 0, 0] },
-  'Em':     { frets: [0, 2, 2, 0, 0, 0] },
-  'E7':     { frets: [0, 2, 0, 1, 0, 0] },
-  'Emaj7':  { frets: [0, 2, 1, 1, 0, 0] },
-  'Em7':    { frets: [0, 2, 2, 0, 3, 3] },
-  'Edim':   { frets: [0, 1, 2, 0, -1, -1] },
-  'Eaug':   { frets: [0, 3, 2, 1, 1, 0] },
-  'Esus2':  { frets: [0, 2, 4, 4, 0, 0] },
-  'Esus4':  { frets: [0, 2, 2, 2, 0, 0] },
-  'Eadd9':  { frets: [0, 2, 2, 1, 0, 2] },
-  'E6':     { frets: [0, 2, 2, 1, 2, 0] },
-  'Em6':    { frets: [0, 2, 2, 0, 2, 0] },
-  'E9':     { frets: [0, 2, 0, 1, 0, 2] },
-  'F':      { frets: [1, 1, 2, 3, 3, 1], barres: [1] },
-  'Fm':     { frets: [1, 1, 3, 3, 1, 1], barres: [1] },
-  'F7':     { frets: [1, 1, 2, 1, 3, 1], barres: [1] },
-  'Fmaj7':  { frets: [-1, 0, 3, 2, 1, 0] },
-  'Fm7':    { frets: [1, 1, 1, 1, 1, 1], barres: [1] },
-  'Fdim':   { frets: [-1, 0, 1, 2, 1, -1] },
-  'Faug':   { frets: [-1, 0, 3, 2, 2, 1] },
-  'Fsus2':  { frets: [-1, 0, 3, 0, 1, 1] },
-  'Fsus4':  { frets: [-1, 0, 3, 3, 1, 1] },
-  'Fadd9':  { frets: [-1, 0, 3, 2, 1, 3] },
-  'F6':     { frets: [-1, 0, 0, 2, 1, 1] },
-  'F#':     { frets: [2, 2, 3, 4, 4, 2], barres: [2] },
-  'F#m':    { frets: [2, 2, 4, 4, 2, 2], barres: [2] },
-  'F#7':    { frets: [2, 2, 3, 2, 4, 2], barres: [2] },
-  'F#m7':   { frets: [2, 2, 2, 2, 2, 2], barres: [2], position: 2 },
-  'G':      { frets: [3, 2, 0, 0, 0, 3] },
-  'Gm':     { frets: [3, 3, 5, 5, 3, 3], barres: [3], position: 3 },
-  'G7':     { frets: [3, 2, 0, 0, 0, 1] },
-  'Gmaj7':  { frets: [3, 2, 0, 0, 0, 2] },
-  'Gm7':    { frets: [3, 3, 3, 3, 3, 3], barres: [3], position: 3 },
-  'Gdim':   { frets: [-1, -1, 5, 3, 2, 0] },
-  'Gaug':   { frets: [3, 2, 1, 0, 0, 3] },
-  'Gsus2':  { frets: [3, 0, 0, 0, 3, 3] },
-  'Gsus4':  { frets: [3, 3, 0, 0, 1, 3] },
-  'Gadd9':  { frets: [3, 0, 0, 0, 0, 3] },
-  'G6':     { frets: [3, 2, 0, 0, 0, 0] },
-  'G/B':    { frets: [-1, 2, 0, 0, 0, 3] },
-  'A':      { frets: [-1, 0, 2, 2, 2, -1] },
-  'Am':     { frets: [0, 0, 2, 2, 1, 0] },
-  'A7':     { frets: [0, 0, 2, 0, 2, 0] },
-  'Amaj7':  { frets: [0, 0, 2, 1, 2, 0] },
-  'Am7':    { frets: [0, 0, 2, 0, 1, 0] },
-  'Adim':   { frets: [-1, 0, 1, 2, 1, -1] },
-  'Aaug':   { frets: [-1, 0, 3, 2, 2, 1] },
-  'Asus2':  { frets: [-1, 0, 2, 2, 0, -1] },
-  'Asus4':  { frets: [-1, 0, 2, 2, 3, -1] },
-  'Aadd9':  { frets: [0, 0, 2, 4, 2, 0] },
-  'A6':     { frets: [0, 0, 2, 2, 2, 2] },
-  'Am6':    { frets: [0, 0, 2, 2, 1, 2] },
-  'A9':     { frets: [0, 0, 2, 4, 2, 3] },
-  'A/C#':   { frets: [-1, 4, 2, 2, 2, 0] },
-  'A/E':    { frets: [0, 0, 2, 2, 2, 0] },
-  'B':      { frets: [-1, 2, 4, 4, 4, 2], barres: [2], position: 2 },
-  'Bm':     { frets: [-1, 2, 4, 4, 3, 2], barres: [2], position: 2 },
-  'B7':     { frets: [-1, 2, 1, 2, 0, 2] },
-  'Bmaj7':  { frets: [-1, 2, 4, 3, 4, 2], barres: [2], position: 2 },
-  'Bm7':    { frets: [-1, 2, 4, 4, 3, 2], barres: [2], position: 2 },
-  'Bdim':   { frets: [-1, 2, 3, 4, 3, -1] },
-  'Baug':   { frets: [-1, 2, 1, 0, 0, 3] },
-  'Bsus2':  { frets: [-1, 2, 4, 4, 2, 2], barres: [2], position: 2 },
-  'Bsus4':  { frets: [-1, 2, 4, 4, 5, 2], barres: [2], position: 2 },
-  'B6':     { frets: [-1, 2, 4, 4, 4, 4], barres: [2], position: 2 },
-  'Bb':     { frets: [-1, 1, 3, 3, 3, 1], barres: [1] },
-  'Bbm':    { frets: [-1, 1, 3, 3, 2, 1], barres: [1] },
-  'Bb7':    { frets: [-1, 1, 3, 1, 3, 1], barres: [1] },
-  'Bbmaj7': { frets: [-1, 1, 3, 2, 3, 1], barres: [1] },
-  'Bbm7':   { frets: [-1, 1, 3, 1, 2, 1], barres: [1] },
-  'C#m':    { frets: [-1, 4, 2, 1, 2, 0], position: 1 },
-  'C#m7':   { frets: [-1, 4, 2, 4, 2, 0], position: 1 },
-  'C#':     { frets: [-1, 4, 3, 1, 2, 1], position: 1 },
-  'Db':     { frets: [-1, 4, 3, 1, 2, 1], position: 1 },
-  'Eb':     { frets: [-1, -1, 1, 3, 4, 3], position: 1 },
-  'Ebm':    { frets: [-1, -1, 1, 3, 4, 2], position: 1 },
-  'Eb7':    { frets: [-1, -1, 1, 3, 2, 3], position: 1 },
-  'Ab':     { frets: [4, 4, 6, 6, 6, 4], barres: [4], position: 4 },
-  'Abm':    { frets: [4, 4, 6, 6, 5, 4], barres: [4], position: 4 },
-  'G#m':    { frets: [4, 4, 6, 6, 5, 4], barres: [4], position: 4 },
-  'Dm6':    { frets: [-1, 0, 0, 2, 0, 1] },
-  'Cmaj9':  { frets: [0, 3, 2, 0, 3, 3] },
-  'Em9':    { frets: [0, 2, 0, 0, 0, 2] },
-  'Fmaj9':  { frets: [-1, 0, 3, 0, 1, 0] },
-  'Dm9':    { frets: [-1, 0, 0, 2, 1, 0] },
-  'C5':     { frets: [-1, 3, 5, 5, -1, -1] },
-  'D5':     { frets: [-1, 5, 7, 7, -1, -1], position: 5 },
-  'E5':     { frets: [0, 2, 2, -1, -1, -1] },
-  'F5':     { frets: [1, 3, 3, -1, -1, -1] },
-  'G5':     { frets: [3, 5, 5, -1, -1, -1], position: 3 },
-  'A5':     { frets: [-1, 0, 2, 2, -1, -1] },
-  'B5':     { frets: [-1, 2, 4, 4, -1, -1], position: 2 },
-};
 
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
@@ -418,39 +297,7 @@ function RhythmCard({ name, expanded, onToggle }: { name: string; expanded: bool
   );
 }
 
-function ChordDiagram({ name, onPlay }: { name: string; onPlay?: (name: string) => void }) {
-  const chord = CHORD_DIAGRAMS[name];
-  const canPlay = chord && chord.frets.some((f) => f >= 0);
-  return (
-    <div className="flex flex-col items-center p-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] relative group">
-      <div className="flex items-center gap-2 w-full justify-center">
-        <span className="text-sm font-bold text-[var(--accent-light)]">{name}</span>
-        {canPlay && onPlay && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onPlay(name); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-            title="Écouter l'accord"
-          >
-            <IconPlay className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-      <svg viewBox="0 0 50 60" className="w-16 h-20 mt-1">
-        <rect x="5" y="5" width="40" height="3" fill="var(--foreground)" />
-        {[0,1,2,3,4,5].map((s) => (<line key={`s${s}`} x1={5+s*8} y1="5" x2={5+s*8} y2="55" stroke="var(--muted)" strokeWidth="0.5" />))}
-        {[1,2,3,4].map((f) => (<line key={`f${f}`} x1="5" y1={5+f*12.5} x2="45" y2={5+f*12.5} stroke="var(--muted)" strokeWidth="0.5" />))}
-        {chord?.frets.map((fret, string) => {
-          if (fret === 0) return <text key={string} x={5+string*8} y="3" textAnchor="middle" fontSize="4" fill="var(--foreground)">O</text>;
-          if (fret === -1) return <text key={string} x={5+string*8} y="3" textAnchor="middle" fontSize="4" fill="var(--muted)">×</text>;
-          return <circle key={string} cx={5+string*8} cy={fret*12.5-1.25} r="3.5" fill="var(--foreground)" stroke="var(--accent)" strokeWidth="0.7" />;
-        })}
-        {!chord && <text x="25" y="35" textAnchor="middle" fontSize="5" fill="var(--muted)">?</text>}
-      </svg>
-    </div>
-  );
-}
-
-function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, onAdd, addPlaceholder, orderable, onMoveItem }: {
+function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, onAdd, addPlaceholder, orderable, onMoveItem, extraEditActions }: {
   title: string; icon?: ReactNode; items: string[];
   renderItem: (item: string) => React.ReactNode;
   editMode?: boolean; onDelete?: (item: string) => void; onEdit?: (item: string) => void;
@@ -458,6 +305,7 @@ function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, o
   /** Mode Éditer : flèches pour réordonner (swap avec le voisin) */
   orderable?: boolean;
   onMoveItem?: (index: number, direction: -1 | 1) => void;
+  extraEditActions?: (item: string) => React.ReactNode;
 }) {
   const [addValue, setAddValue] = useState('');
   const showReorder = editMode && orderable && onMoveItem && items.length > 0;
@@ -509,8 +357,9 @@ function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, o
             )}
             <div className="relative">
               {renderItem(item)}
-              {editMode && (onDelete || onEdit) && (
+              {editMode && (onDelete || onEdit || extraEditActions) && (
                 <div className="absolute -top-2 -right-2 flex gap-1">
+                  {extraEditActions?.(item)}
                   {onEdit && (<button onClick={() => onEdit(item)} className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--foreground)] shadow-lg" title={`Renommer ${item}`}><IconPencil className="w-3.5 h-3.5" /></button>)}
                   {onDelete && (<button onClick={() => onDelete(item)} className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg" title={`Supprimer ${item}`}><IconTrash className="w-3.5 h-3.5" /></button>)}
                 </div>
@@ -748,6 +597,7 @@ export default function KnowledgePage() {
     name: string; title: string; summary: string; stepsText: string; image: string | null;
   } | null>(null);
   const [techniqueImageUploading, setTechniqueImageUploading] = useState(false);
+  const [chordEditor, setChordEditor] = useState<ChordEditorOpen>(null);
   const [draftStrumSteps, setDraftStrumSteps] = useState<Array<'Bas' | 'Haut'>>([]);
   const [editorPlaying, setEditorPlaying] = useState(false);
   const lastReloadAt = useRef(0);
@@ -885,7 +735,7 @@ export default function KnowledgePage() {
   }, [safeReload]);
 
   const playChord = useCallback(async (name: string) => {
-    const chord = CHORD_DIAGRAMS[name];
+    const chord = resolveChordDiagram(name, db?.chordDiagrams ?? null);
     if (!chord) return;
     const frets = chord.frets;
     const playable = frets.map((f, s) => (f >= 0 ? { string: s, fret: f } : null)).filter(Boolean) as { string: number; fret: number }[];
@@ -908,7 +758,7 @@ export default function KnowledgePage() {
       osc.start(now);
       osc.stop(now + duration);
     });
-  }, []);
+  }, [db?.chordDiagrams]);
 
   const toggleFavorite = async (lessonId: string, current: boolean) => {
     const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
@@ -1135,12 +985,56 @@ export default function KnowledgePage() {
 
       {/* Content */}
       {tab === 'chords' && (
-        <Section title="Accords" icon={<IconMusic className="w-5 h-5" />} items={k.chords} editMode={editMode}
-          onDelete={(v) => deleteItem('chords', v)} onEdit={(v) => setEditKnowledge({ category: 'chords', from: v, to: v })}
-          onAdd={(v) => addItem('chords', v)} addPlaceholder="Ex: Cm7, F#m"
-          orderable
-          onMoveItem={(idx, dir) => reorderKnowledgeItem('chords', k.chords, idx, dir)}
-          renderItem={(chord) => <ChordDiagram name={chord} onPlay={playChord} />} />
+        <>
+          {editMode && (
+            <div className="mb-6 p-5 rounded-xl border-2 border-dashed border-[var(--accent)]/40 bg-[var(--surface)]/50">
+              <h3 className="text-sm font-bold text-[var(--accent-light)] mb-2 inline-flex items-center gap-2">
+                <IconLayoutGrid className="w-4 h-4" />
+                Accords personnalisés
+              </h3>
+              <p className="text-xs text-[var(--muted)] mb-3">
+                Crée un accord avec diagramme et doigté ; il sera enregistré dans la base. Les accords des leçons continuent d’être ajoutés automatiquement à la liste.
+              </p>
+              <button
+                type="button"
+                onClick={() => setChordEditor({ mode: 'create' })}
+                className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm inline-flex items-center gap-2 hover:bg-[var(--accent-light)]"
+              >
+                <IconPlus className="w-4 h-4" />
+                Créer un accord manuellement
+              </button>
+            </div>
+          )}
+          <Section
+            title="Accords"
+            icon={<IconMusic className="w-5 h-5" />}
+            items={k.chords}
+            editMode={editMode}
+            onDelete={(v) => deleteItem('chords', v)}
+            onEdit={(v) => setEditKnowledge({ category: 'chords', from: v, to: v })}
+            onAdd={(v) => addItem('chords', v)}
+            addPlaceholder="Ex: Cm7, F#m"
+            orderable
+            onMoveItem={(idx, dir) => reorderKnowledgeItem('chords', k.chords, idx, dir)}
+            extraEditActions={(chord) => (
+              <button
+                type="button"
+                onClick={() => setChordEditor({ mode: 'edit', name: chord })}
+                className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--accent)] shadow-lg"
+                title="Diagramme & doigté"
+              >
+                <IconLayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            )}
+            renderItem={(chord) => (
+              <ChordDiagramView
+                name={chord}
+                diagram={resolveChordDiagram(chord, db?.chordDiagrams ?? null)}
+                onPlay={playChord}
+              />
+            )}
+          />
+        </>
       )}
 
       {tab === 'techniques' && (
@@ -1401,6 +1295,13 @@ export default function KnowledgePage() {
 
       {/* Modals */}
       {showCreate && <CreateLessonModal onClose={() => setShowCreate(false)} onCreated={safeReload} />}
+      <ChordEditorModal
+        open={chordEditor != null}
+        payload={chordEditor}
+        chordDiagrams={db?.chordDiagrams}
+        onClose={() => setChordEditor(null)}
+        onSaved={safeReload}
+      />
 
       {techInfo && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setTechInfo(null)}>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { readDatabase, writeDatabase, syncGlobalKnowledgeFromLessons } from '@/lib/database';
+import type { ChordDiagramData } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,9 +69,77 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    if (category === 'chords' && db.chordDiagrams && Object.prototype.hasOwnProperty.call(db.chordDiagrams, nextFrom)) {
+      const d = db.chordDiagrams[nextFrom];
+      delete db.chordDiagrams[nextFrom];
+      db.chordDiagrams[nextTo] = d;
+    }
+
     syncGlobalKnowledgeFromLessons(db);
     writeDatabase(db);
     return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });
+  }
+
+  if (body.type === 'chord_diagram') {
+    const name = (body.name as string)?.trim();
+    const raw = body.diagram as Record<string, unknown> | undefined;
+    if (!name || !raw || !Array.isArray(raw.frets) || (raw.frets as unknown[]).length !== 6) {
+      return NextResponse.json({ error: 'Nom ou diagramme invalide (frets: 6 nombres)' }, { status: 400 });
+    }
+    const frets = (raw.frets as unknown[]).map((x) => Number(x));
+    for (const f of frets) {
+      if (!Number.isFinite(f) || f < -1 || f > 24) {
+        return NextResponse.json({ error: 'Case invalide (entre -1 et 24)' }, { status: 400 });
+      }
+    }
+    const fingersIn = Array.isArray(raw.fingers) ? (raw.fingers as unknown[]) : undefined;
+    const fingers =
+      fingersIn && fingersIn.length === 6
+        ? fingersIn.map((x) => {
+            if (x === null || x === undefined || x === '') return null;
+            if (x === 'T' || x === 't') return 'T';
+            const n = Number(x);
+            if (n >= 1 && n <= 4) return n as 1 | 2 | 3 | 4;
+            return null;
+          })
+        : undefined;
+    const barres =
+      Array.isArray(raw.barres) && (raw.barres as unknown[]).every((b) => typeof b === 'number' && b >= 0)
+        ? (raw.barres as number[])
+        : undefined;
+    const position =
+      typeof raw.position === 'number' && raw.position >= 1 && raw.position <= 20 ? raw.position : undefined;
+    const labelFr = typeof raw.labelFr === 'string' ? raw.labelFr.trim() || undefined : undefined;
+
+    if (!db.chordDiagrams) db.chordDiagrams = {};
+    const diagram: ChordDiagramData = { frets };
+    if (fingers && fingers.some((f) => f !== null)) diagram.fingers = fingers;
+    if (barres && barres.length > 0) diagram.barres = barres;
+    if (position !== undefined) diagram.position = position;
+    if (labelFr) diagram.labelFr = labelFr;
+
+    db.chordDiagrams[name] = diagram;
+
+    if (body.ensureInKnowledge === true) {
+      const arr = db.globalKnowledge.chords || [];
+      if (!arr.includes(name)) {
+        arr.push(name);
+        db.globalKnowledge.chords = arr;
+      }
+    }
+
+    writeDatabase(db);
+    return NextResponse.json({ ok: true, chordDiagrams: db.chordDiagrams });
+  }
+
+  if (body.type === 'chord_diagram_delete') {
+    const name = (body.name as string)?.trim();
+    if (!name || !db.chordDiagrams) {
+      return NextResponse.json({ error: 'Nom requis' }, { status: 400 });
+    }
+    delete db.chordDiagrams[name];
+    writeDatabase(db);
+    return NextResponse.json({ ok: true, chordDiagrams: db.chordDiagrams });
   }
 
   if (body.type === 'knowledge_reorder') {
@@ -172,6 +241,9 @@ export async function DELETE(req: NextRequest) {
     for (const lesson of db.lessons) {
       lesson.knowledge[cat] = (lesson.knowledge[cat] || []).filter((v) => v !== val);
     }
+    if (cat === 'chords' && db.chordDiagrams && db.chordDiagrams[val]) {
+      delete db.chordDiagrams[val];
+    }
     if (cat === 'techniques' && db.techniqueDetails) {
       const k = val.toLowerCase();
       const d = db.techniqueDetails[k];
@@ -194,7 +266,12 @@ export async function DELETE(req: NextRequest) {
   }
 
   if (body.type === 'reset') {
-    const empty = { lessons: [], globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [] }, techniqueDetails: {} };
+    const empty = {
+      lessons: [],
+      globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [] },
+      techniqueDetails: {},
+      chordDiagrams: {},
+    };
     writeDatabase(empty);
     return NextResponse.json({ ok: true });
   }

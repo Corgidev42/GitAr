@@ -1,0 +1,26 @@
+---
+description: Après des modifications de code ou de données, commit et push avec un message clair
+alwaysApply: true
+---
+
+# GitAr — Commit & push après modifications
+
+## Comportement attendu de l’agent
+
+1. **Après une unité logique de changements** (feature, correctif, refacto, mise à jour de `database.json`, etc.) :
+   - Proposer ou effectuer un **`git add`** des fichiers concernés (code + `database.json` si modifié).
+   - Créer un **commit** avec un message **clair et structuré**, par exemple :
+     - `feat(accords): éditeur diagramme et doigté personnalisés`
+     - `fix(lesson): arrêt du backing track à la sortie`
+     - `chore(db): sauvegarde knowledge base`
+   - Puis **`git push`** vers la branche suivie (sauf si l’utilisateur préfère ne pas pousser).
+
+2. **Format de message** (Conventional Commits, en anglais ou en français cohérent avec le dépôt) :
+   - `type(scope): description courte`
+   - Types courants : `feat`, `fix`, `chore`, `docs`, `refactor`, `style`, `test`.
+
+3. **Ne pas** pousser de secrets ; vérifier que seuls les fichiers voulus sont indexés.
+
+4. En cas de **conflit** ou d’**échec de push** : l’indiquer clairement et ne pas forcer (`--force`) sans demande explicite.
+
+5. Cette règle complète `.cursor/rules/git-database.mdc` : la base locale reste prioritaire pour la sauvegarde de `database.json`.

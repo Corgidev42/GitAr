@@ -45,8 +45,24 @@ export interface GuitarLesson {
   favorite?: boolean;
 }
 
+/** Doigté affiché dans les pastilles du diagramme (1–4, pouce T) */
+export type ChordFingerMark = 1 | 2 | 3 | 4 | 'T';
+
+export interface ChordDiagramData {
+  frets: number[];
+  /** Par corde (ordre : Mi grave → Mi aigu), uniquement si case > 0 */
+  fingers?: (ChordFingerMark | null)[];
+  barres?: number[];
+  /** Première case affichée si l’accord est haut sur le manche */
+  position?: number;
+  /** Sous-titre FR sous le nom (ex. « LA sus2 ») */
+  labelFr?: string;
+}
+
 export interface Database {
   lessons: GuitarLesson[];
   globalKnowledge: Knowledge;
   techniqueDetails?: Record<string, TechniqueDetail>;
+  /** Surcharges / accords créés à la main (clé = nom exact comme dans la KB) */
+  chordDiagrams?: Record<string, ChordDiagramData>;
 }

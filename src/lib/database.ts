@@ -25,6 +25,10 @@ export function readDatabase(): Database {
     db.techniqueDetails = {};
     changed = true;
   }
+  if (!db.chordDiagrams) {
+    db.chordDiagrams = {};
+    changed = true;
+  }
 
   // Migration: convert old schema to new schema
   for (const lesson of db.lessons) {

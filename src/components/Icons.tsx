@@ -9,6 +9,7 @@ import {
   Flame,
   Guitar,
   Heart,
+  LayoutGrid,
   Link2,
   Music,
   Pause,
@@ -40,6 +41,10 @@ export function IconBook({ title = 'Book', ...props }: IconProps) {
 
 export function IconMusic({ title = 'Music', ...props }: IconProps) {
   return <Music aria-label={title} {...props} />;
+}
+
+export function IconLayoutGrid({ title = 'Grille', ...props }: IconProps) {
+  return <LayoutGrid aria-label={title} {...props} />;
 }
 
 export function IconRhythm({ title = 'Rhythm', ...props }: IconProps) {
