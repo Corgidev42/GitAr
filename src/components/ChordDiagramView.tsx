@@ -1,7 +1,6 @@
 'use client';
 
 import type { ChordDiagramData } from '@/types';
-import { IconPlay } from '@/components/Icons';
 
 function fingerLabel(f: number | string | null | undefined): string {
   if (f === null || f === undefined) return '';
@@ -12,15 +11,12 @@ function fingerLabel(f: number | string | null | undefined): string {
 export function ChordDiagramView({
   name,
   diagram,
-  onPlay,
   size = 'md',
 }: {
   name: string;
   diagram: ChordDiagramData | null;
-  onPlay?: (name: string) => void;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const canPlay = diagram && diagram.frets.some((f) => f >= 0);
   const fingers = diagram?.fingers;
   const labelFr = diagram?.labelFr;
   const svgClass = size === 'lg' ? 'w-28 h-36 mt-2' : size === 'sm' ? 'w-12 h-16 mt-1' : 'w-16 h-20 mt-1';
@@ -29,19 +25,6 @@ export function ChordDiagramView({
     <div className="flex flex-col items-center p-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] group">
       <div className="flex items-center gap-2 w-full justify-center flex-wrap">
         <span className="text-sm font-bold text-[var(--accent-light)] text-center">{name}</span>
-        {canPlay && onPlay && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPlay(name);
-            }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
-            title="Écouter l'accord"
-          >
-            <IconPlay className="w-3.5 h-3.5" />
-          </button>
-        )}
       </div>
       {labelFr ? <span className="text-[10px] text-[var(--muted)] text-center leading-tight mt-0.5">{labelFr}</span> : null}
       <svg viewBox="0 0 50 72" className={svgClass}>

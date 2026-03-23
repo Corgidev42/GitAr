@@ -13,13 +13,6 @@ import { ChordDiagramView } from '@/components/ChordDiagramView';
 import { ChordEditorModal, type ChordEditorOpen } from '@/components/ChordEditorModal';
 import { resolveChordDiagram } from '@/lib/chordDiagrams';
 
-// Accordage standard guitare (E2 A2 D3 G3 B3 E4) en Hz
-const GUITAR_TUNING = [82.41, 110, 146.83, 196, 246.94, 329.63];
-
-function freqFromFret(stringIndex: number, fret: number): number {
-  return GUITAR_TUNING[stringIndex] * Math.pow(2, fret / 12);
-}
-
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
   'ronde':          { label: 'Ronde', beats: 4, symbol: 'ronde', symbolSvg: true, description: '4 temps — la note la plus longue courante' },
@@ -734,32 +727,6 @@ export default function KnowledgePage() {
     setDraftStrumSteps([]);
   }, [safeReload]);
 
-  const playChord = useCallback(async (name: string) => {
-    const chord = resolveChordDiagram(name, db?.chordDiagrams ?? null);
-    if (!chord) return;
-    const frets = chord.frets;
-    const playable = frets.map((f, s) => (f >= 0 ? { string: s, fret: f } : null)).filter(Boolean) as { string: number; fret: number }[];
-    if (playable.length === 0) return;
-    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-    if (audioCtxRef.current.state === 'suspended') await audioCtxRef.current.resume();
-    const ctx = audioCtxRef.current;
-    const now = ctx.currentTime;
-    const duration = 1.2;
-    playable.forEach(({ string, fret }) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freqFromFret(string, fret), now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + duration);
-    });
-  }, [db?.chordDiagrams]);
-
   const toggleFavorite = async (lessonId: string, current: boolean) => {
     const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1031,11 +998,7 @@ export default function KnowledgePage() {
               </button>
             )}
             renderItem={(chord) => (
-              <ChordDiagramView
-                name={chord}
-                diagram={resolveChordDiagram(chord, db?.chordDiagrams ?? null)}
-                onPlay={playChord}
-              />
+              <ChordDiagramView name={chord} diagram={resolveChordDiagram(chord, db?.chordDiagrams ?? null)} />
             )}
           />
         </>
