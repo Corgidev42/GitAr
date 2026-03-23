@@ -393,6 +393,81 @@
       ],
       "isSong": true,
       "favorite": false
+    },
+    {
+      "id": "D105",
+      "title": "San Francisco – Maxime le Forestier",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "G",
+          "D",
+          "C",
+          "A",
+          "Em",
+          "Bm7"
+        ],
+        "techniques": [],
+        "rhythms": [
+          "croche",
+          "noire"
+        ],
+        "strums": [
+          "Bas Bas Haut Haut Bas"
+        ]
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 65,
+            "path": "/assets/audio/D105/PAC_D105_-_San_Francisco_-_65bpm.mp3"
+          },
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D105/PAC_D105_-_San_Francisco_-_80bpm.mp3"
+          },
+          {
+            "bpm": 95,
+            "path": "/assets/audio/D105/PAC_D105_-_San_Francisco_-_95bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D105_PAC_D105_-_Jam_Along_-_San_Francisco.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D105_PAC_D105_-_Fiche_paroles_-_San_Francisco.pdf"
+          }
+        ]
+      },
+      "progressions": [
+        {
+          "chords": [
+            "Em",
+            "G",
+            "Bm7",
+            "C",
+            "G",
+            "D",
+            "C"
+          ]
+        },
+        {
+          "chords": [
+            "Em",
+            "G",
+            "Bm7",
+            "C",
+            "G",
+            "D",
+            "A"
+          ]
+        }
+      ],
+      "isSong": true,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -411,7 +486,8 @@
       "Em7",
       "D/F#",
       "Asus4",
-      "Asus2"
+      "Asus2",
+      "Bm7"
     ],
     "techniques": [
       "embellissement autour du D",
