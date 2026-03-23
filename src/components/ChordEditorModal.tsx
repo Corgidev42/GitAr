@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ChordDiagramData, ChordFingerMark } from '@/types';
 import { ChordDiagramView } from '@/components/ChordDiagramView';
 import { IconX } from '@/components/Icons';
@@ -211,14 +212,23 @@ export function ChordEditorModal({
 
   const hasCustomOverride = payload.mode === 'edit' && chordDiagrams && Object.prototype.hasOwnProperty.call(chordDiagrams, payload.name);
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+  const modal = (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[200] p-4"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
         className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-2xl border border-[var(--surface-light)] max-h-[92vh] overflow-y-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chord-editor-title"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">{payload.mode === 'create' ? 'Créer un accord' : 'Éditer le diagramme'}</h2>
+          <h2 id="chord-editor-title" className="text-xl font-bold">
+            {payload.mode === 'create' ? 'Créer un accord' : 'Éditer le diagramme'}
+          </h2>
           <button type="button" onClick={onClose} className="text-[var(--muted)] hover:text-[var(--foreground)] p-1">
             <IconX className="w-5 h-5" />
           </button>
@@ -385,4 +395,7 @@ export function ChordEditorModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
 }

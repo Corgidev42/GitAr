@@ -26,7 +26,7 @@ export function ChordDiagramView({
   const svgClass = size === 'lg' ? 'w-28 h-36 mt-2' : size === 'sm' ? 'w-12 h-16 mt-1' : 'w-16 h-20 mt-1';
 
   return (
-    <div className="flex flex-col items-center p-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] relative group">
+    <div className="flex flex-col items-center p-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] group">
       <div className="flex items-center gap-2 w-full justify-center flex-wrap">
         <span className="text-sm font-bold text-[var(--accent-light)] text-center">{name}</span>
         {canPlay && onPlay && (

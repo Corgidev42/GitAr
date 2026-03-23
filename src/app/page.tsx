@@ -355,13 +355,13 @@ function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, o
                 </button>
               </div>
             )}
-            <div className="relative">
+            <div className="flex flex-col gap-1.5 w-fit max-w-full">
               {renderItem(item)}
               {editMode && (onDelete || onEdit || extraEditActions) && (
-                <div className="absolute -top-2 -right-2 flex gap-1">
+                <div className="flex gap-1 justify-end flex-wrap shrink-0 z-10">
                   {extraEditActions?.(item)}
-                  {onEdit && (<button onClick={() => onEdit(item)} className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--foreground)] shadow-lg" title={`Renommer ${item}`}><IconPencil className="w-3.5 h-3.5" /></button>)}
-                  {onDelete && (<button onClick={() => onDelete(item)} className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg" title={`Supprimer ${item}`}><IconTrash className="w-3.5 h-3.5" /></button>)}
+                  {onEdit && (<button type="button" onClick={() => onEdit(item)} className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--foreground)] shadow-lg" title={`Renommer ${item}`}><IconPencil className="w-3.5 h-3.5" /></button>)}
+                  {onDelete && (<button type="button" onClick={() => onDelete(item)} className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg" title={`Supprimer ${item}`}><IconTrash className="w-3.5 h-3.5" /></button>)}
                 </div>
               )}
             </div>
@@ -1019,11 +1019,15 @@ export default function KnowledgePage() {
             extraEditActions={(chord) => (
               <button
                 type="button"
-                onClick={() => setChordEditor({ mode: 'edit', name: chord })}
-                className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--accent)] shadow-lg"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setChordEditor({ mode: 'edit', name: chord });
+                }}
+                className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--accent)] hover:bg-[var(--accent)]/15 shadow-lg"
                 title="Diagramme & doigté"
               >
-                <IconLayoutGrid className="w-3.5 h-3.5" />
+                <IconLayoutGrid className="w-3.5 h-3.5 pointer-events-none" />
               </button>
             )}
             renderItem={(chord) => (
