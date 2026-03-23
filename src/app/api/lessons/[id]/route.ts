@@ -80,10 +80,16 @@ export async function PATCH(
   }
 
   if (Array.isArray(updates.tabs)) {
+    if (!db.lessons[idx].assets) {
+      db.lessons[idx].assets = { backingTracks: [], tabs: [] };
+    }
     db.lessons[idx].assets.tabs = updates.tabs as TabAsset[];
   }
 
   if (Array.isArray(updates.backingTracks)) {
+    if (!db.lessons[idx].assets) {
+      db.lessons[idx].assets = { backingTracks: [], tabs: [] };
+    }
     db.lessons[idx].assets.backingTracks = updates.backingTracks as BackingTrack[];
   }
 

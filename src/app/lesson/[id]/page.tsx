@@ -9,6 +9,17 @@ import {
   IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
 
+/** Garantit assets.tabs / assets.backingTracks (évite crash si JSON incomplet). */
+function normalizeLesson(l: GuitarLesson): GuitarLesson {
+  return {
+    ...l,
+    assets: {
+      tabs: Array.isArray(l.assets?.tabs) ? l.assets.tabs : [],
+      backingTracks: Array.isArray(l.assets?.backingTracks) ? l.assets.backingTracks : [],
+    },
+  };
+}
+
 // ─── Audio Player ───
 function AudioPlayer({ tracks, editMode, onRemoveTrack }: { tracks: BackingTrack[]; editMode?: boolean; onRemoveTrack?: (idx: number) => void }) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -16,6 +27,10 @@ function AudioPlayer({ tracks, editMode, onRemoveTrack }: { tracks: BackingTrack
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    setSelectedIdx((i) => (tracks.length > 0 && i >= tracks.length ? 0 : i));
+  }, [tracks.length]);
 
   useEffect(() => {
     return () => {
@@ -234,7 +249,13 @@ export default function LessonPage() {
     lastReloadAt.current = now;
     fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error('Not found'); return r.json(); })
-      .then((data: GuitarLesson) => { setLesson(data); setDraftTitle(data.title); setDraftKnowledge(data.knowledge); setLoading(false); })
+      .then((data: GuitarLesson) => {
+        const n = normalizeLesson(data);
+        setLesson(n);
+        setDraftTitle(n.title);
+        setDraftKnowledge(n.knowledge);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [lessonId]);
 
@@ -254,7 +275,14 @@ export default function LessonPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: draftTitle, knowledge: draftKnowledge }),
     });
-    if (res.ok) { const updated = await res.json(); setLesson(updated); setDraftTitle(updated.title); setDraftKnowledge(updated.knowledge); setEditMode(false); }
+    if (res.ok) {
+      const updated = await res.json();
+      const n = normalizeLesson(updated);
+      setLesson(n);
+      setDraftTitle(n.title);
+      setDraftKnowledge(n.knowledge);
+      setEditMode(false);
+    }
   };
 
   const toggleFavorite = async () => {
@@ -263,65 +291,99 @@ export default function LessonPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ favorite: !lesson.favorite }),
     });
-    if (res.ok) { const updated = await res.json(); setLesson(updated); }
+    if (res.ok) setLesson(normalizeLesson(await res.json()));
   };
 
   const handleAddTab = async (name: string, file: File) => {
     if (!lesson) return;
-    const fd = new FormData();
-    fd.append('lessonId', lesson.id);
-    fd.append('type', 'tab');
-    fd.append('files', file);
-    const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
-    if (!uploadRes.ok) return;
-    const { paths } = await uploadRes.json();
-    const newTabs = [...lesson.assets.tabs, { name, path: paths[0] }];
-    const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tabs: newTabs }),
-    });
-    if (res.ok) { const updated = await res.json(); setLesson(updated); }
+    try {
+      const fd = new FormData();
+      fd.append('lessonId', lesson.id.trim());
+      fd.append('type', 'tab');
+      fd.append('files', file);
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        alert((err as { error?: string }).error || `Upload impossible (${uploadRes.status})`);
+        return;
+      }
+      const { paths } = await uploadRes.json();
+      const prevTabs = lesson.assets?.tabs ?? [];
+      const newTabs = [...prevTabs, { name, path: paths[0] }];
+      const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tabs: newTabs }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error || `Enregistrement impossible (${res.status})`);
+        return;
+      }
+      setLesson(normalizeLesson(await res.json()));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erreur réseau');
+    }
   };
 
   const handleRemoveTab = async (idx: number) => {
     if (!lesson) return;
-    const newTabs = lesson.assets.tabs.filter((_, i) => i !== idx);
+    const newTabs = (lesson.assets?.tabs ?? []).filter((_, i) => i !== idx);
     const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tabs: newTabs }),
     });
-    if (res.ok) { const updated = await res.json(); setLesson(updated); }
+    if (res.ok) setLesson(normalizeLesson(await res.json()));
   };
 
   const handleRemoveTrack = async (idx: number) => {
     if (!lesson) return;
-    const newTracks = lesson.assets.backingTracks.filter((_, i) => i !== idx);
+    const newTracks = (lesson.assets?.backingTracks ?? []).filter((_, i) => i !== idx);
     const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ backingTracks: newTracks }),
     });
-    if (res.ok) { const updated = await res.json(); setLesson(updated); }
+    if (res.ok) setLesson(normalizeLesson(await res.json()));
   };
 
   const handleAddAudio = async (files: FileList) => {
     if (!lesson) return;
-    const fd = new FormData();
-    fd.append('lessonId', lesson.id);
-    fd.append('type', 'audio');
-    for (const f of Array.from(files)) fd.append('files', f);
-    const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
-    if (!uploadRes.ok) return;
-    const { paths } = await uploadRes.json();
-    const newTracks: BackingTrack[] = Array.from(files).map((f, i) => {
-      const bpmMatch = f.name.match(/(\d+)\s*bpm/i);
-      return { bpm: bpmMatch ? parseInt(bpmMatch[1], 10) : 120, path: paths[i] };
-    });
-    const allTracks = [...lesson.assets.backingTracks, ...newTracks].sort((a, b) => a.bpm - b.bpm);
-    const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ backingTracks: allTracks }),
-    });
-    if (res.ok) { const updated = await res.json(); setLesson(updated); }
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    try {
+      const fd = new FormData();
+      fd.append('lessonId', lesson.id.trim());
+      fd.append('type', 'audio');
+      for (const f of list) fd.append('files', f);
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        alert((err as { error?: string }).error || `Upload impossible (${uploadRes.status})`);
+        return;
+      }
+      const { paths } = await uploadRes.json();
+      if (!Array.isArray(paths) || paths.length !== list.length) {
+        alert('Réponse serveur invalide après upload.');
+        return;
+      }
+      const newTracks: BackingTrack[] = list.map((f, i) => {
+        const bpmMatch = f.name.match(/(\d+)\s*bpm/i);
+        return { bpm: bpmMatch ? parseInt(bpmMatch[1], 10) : 120, path: paths[i] };
+      });
+      const existing = lesson.assets?.backingTracks ?? [];
+      const allTracks = [...existing, ...newTracks].sort((a, b) => a.bpm - b.bpm);
+      const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backingTracks: allTracks }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error || `Enregistrement du backing track impossible (${res.status})`);
+        return;
+      }
+      setLesson(normalizeLesson(await res.json()));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erreur réseau');
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]"><div className="text-[var(--muted)] animate-pulse">Chargement...</div></div>;
@@ -366,7 +428,7 @@ export default function LessonPage() {
               method: 'PATCH', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ isSong: !lesson.isSong }),
             });
-            if (res.ok) { const updated = await res.json(); setLesson(updated); }
+            if (res.ok) setLesson(normalizeLesson(await res.json()));
           }} className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${lesson.isSong ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-[var(--surface)] text-[var(--muted)] border-[var(--surface-light)] hover:text-[var(--foreground)]'}`}>
             Morceau
           </button>
@@ -446,11 +508,11 @@ export default function LessonPage() {
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <PDFViewer tabs={lesson.assets.tabs} onAddTab={handleAddTab} onRemoveTab={handleRemoveTab} editMode={editMode} />
+          <PDFViewer tabs={lesson.assets?.tabs ?? []} onAddTab={handleAddTab} onRemoveTab={handleRemoveTab} editMode={editMode} />
         </div>
         <div className="space-y-6">
           <div>
-            <AudioPlayer tracks={lesson.assets.backingTracks} editMode={editMode} onRemoveTrack={handleRemoveTrack} />
+            <AudioPlayer tracks={lesson.assets?.backingTracks ?? []} editMode={editMode} onRemoveTrack={handleRemoveTrack} />
             <label className="mt-2 px-3 py-1.5 rounded-lg bg-[var(--surface)] text-[var(--muted)] text-xs cursor-pointer inline-flex items-center gap-1.5 border border-[var(--surface-light)] hover:text-[var(--foreground)] transition-colors">
               <IconUpload className="w-3.5 h-3.5" />Ajouter MP3
               <input type="file" accept=".mp3,audio/*" multiple className="hidden" onChange={(e) => { if (e.target.files && e.target.files.length > 0) handleAddAudio(e.target.files); e.target.value = ''; }} />
@@ -463,19 +525,19 @@ export default function LessonPage() {
               if (chords.length < 3) return;
               const next = [...(lesson.progressions || []), { chords, notes }];
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: next }) });
-              if (res.ok) { const updated = await res.json(); setLesson(updated); }
+              if (res.ok) setLesson(normalizeLesson(await res.json()));
             }}
             onEdit={async (idx, chordsLine, notes) => {
               const chords = chordsLine.split(/[-–→>|,]/).map((s) => s.trim()).filter(Boolean);
               if (chords.length < 3) return;
               const next = (lesson.progressions || []).map((p, i) => i === idx ? { ...p, chords, notes } : p);
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: next }) });
-              if (res.ok) { const updated = await res.json(); setLesson(updated); }
+              if (res.ok) setLesson(normalizeLesson(await res.json()));
             }}
             onDelete={async (idx) => {
               const next = (lesson.progressions || []).filter((_, i) => i !== idx);
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: next }) });
-              if (res.ok) { const updated = await res.json(); setLesson(updated); }
+              if (res.ok) setLesson(normalizeLesson(await res.json()));
             }}
           />
         </div>

@@ -8,7 +8,7 @@ const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
-  const fileType = formData.get('type') as 'tab' | 'audio' | 'technique';
+  const fileType = String(formData.get('type') || '').trim() as 'tab' | 'audio' | 'technique';
 
   if (!fileType) {
     return NextResponse.json({ error: 'Missing type' }, { status: 400 });
@@ -46,9 +46,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ paths: uploadedPaths });
   }
 
-  const lessonId = formData.get('lessonId') as string;
+  const lessonId = ((formData.get('lessonId') as string) || '').trim();
   if (!lessonId) {
     return NextResponse.json({ error: 'Missing lessonId' }, { status: 400 });
+  }
+
+  if (fileType !== 'tab' && fileType !== 'audio') {
+    return NextResponse.json({ error: 'Type invalide (tab ou audio attendu)' }, { status: 400 });
   }
 
   const uploadedPaths: string[] = [];
