@@ -5,8 +5,8 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
-  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic, IconPause,
-  IconPencil, IconPlay, IconPlus, IconRefresh, IconRhythm, IconTarget,
+  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic,
+  IconPencil, IconPlus, IconRefresh, IconRhythm, IconTarget,
   IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
 import { ChordDiagramView } from '@/components/ChordDiagramView';
@@ -63,184 +63,465 @@ function mergeTechniqueForDisplay(name: string, dbDetails?: Database['techniqueD
   };
 }
 
-// ─── Helpers ───
+// ─── Helpers rythmiques (éditeur en 4/4, grille en doubles-croches) ───
 
-// Durées en temps par coup (noire=1, croche=0.5, etc.) — motifs connus (ordre : plus long d'abord)
-const STRUM_PATTERNS: Record<string, number[]> = {
-  'bas bas haut haut bas haut': [1, 1, 0.5, 0.5, 1, 0.5], // dernier coup sur le "et" du 4
-  'feu de camp': [1, 1, 0.5, 0.5, 1],
-  'bas bas haut haut bas': [1, 1, 0.5, 0.5, 1],
-};
+const RHYTHM_V2_PREFIX = 'RHYTHM_V2:';
+const STEPS_PER_MEASURE = 8; // 8 croches par mesure en 4/4
 
-function getStrumSteps(label: string): Array<'Bas' | 'Haut'> {
-  const matches = label.match(/\b(Bas|Haut)\b/gi) || [];
-  if (matches.length >= 2) {
-    return matches.map((m) => (m.toLowerCase() === 'bas' ? 'Bas' : 'Haut')) as Array<'Bas' | 'Haut'>;
-  }
-  if (label.toLowerCase().includes('feu de camp')) {
-    return ['Bas', 'Bas', 'Haut', 'Haut', 'Bas'];
-  }
-  return [];
+type RhythmFigureId = 'whole' | 'half' | 'quarter' | 'eighth' | 'rest_half' | 'rest_quarter' | 'rest_eighth';
+type RhythmItem = { id: string; start: number; length: number; symbol: string; isRest: boolean; syncToStart?: number; syncopated?: boolean };
+type RhythmPatternV2 = { v: 2; name: string; measures: number; items: RhythmItem[] };
+
+const RHYTHM_FIGURES: Array<{ id: RhythmFigureId; label: string; symbol: string; length: number; isRest: boolean }> = [
+  { id: 'whole', label: 'Ronde', symbol: '𝅝', length: 8, isRest: false },
+  { id: 'half', label: 'Blanche', symbol: '𝅗𝅥', length: 4, isRest: false },
+  { id: 'quarter', label: 'Noire', symbol: '♩', length: 2, isRest: false },
+  { id: 'eighth', label: 'Croche', symbol: '♪', length: 1, isRest: false },
+  { id: 'rest_half', label: 'Silence blanche', symbol: '𝄼', length: 4, isRest: true },
+  { id: 'rest_quarter', label: 'Silence noire', symbol: '𝄽', length: 2, isRest: true },
+  { id: 'rest_eighth', label: 'Silence croche', symbol: '𝄾', length: 1, isRest: true },
+];
+
+function makeEmptyRhythmPattern(): RhythmPatternV2 {
+  return { v: 2, name: 'Rythmique perso', measures: 1, items: [] };
 }
 
-function getStrumDurations(label: string, steps: Array<'Bas' | 'Haut'>): { durations: number[]; totalBeats: number; measureInfo: string } {
-  const key = normalizeForKey(label);
-  const patternKey = Object.keys(STRUM_PATTERNS).find((k) => key.includes(normalizeForKey(k)));
-  let durations: number[];
-  if (patternKey && steps.length === STRUM_PATTERNS[patternKey].length) {
-    durations = STRUM_PATTERNS[patternKey];
-  } else {
-    // Fallback : répartir 4 temps équitablement
-    const totalBeats = 4;
-    durations = steps.map(() => totalBeats / steps.length);
+function getRhythmSlots(pattern: RhythmPatternV2): number {
+  return pattern.measures * STEPS_PER_MEASURE;
+}
+
+function parseRhythmPattern(raw: string): RhythmPatternV2 | null {
+  if (!raw.startsWith(RHYTHM_V2_PREFIX)) return null;
+  try {
+    const encoded = raw.slice(RHYTHM_V2_PREFIX.length);
+    const parsed = JSON.parse(decodeURIComponent(encoded)) as RhythmPatternV2;
+    if (parsed.v !== 2 || !parsed.name || !Array.isArray(parsed.items) || !Number.isInteger(parsed.measures) || parsed.measures < 1 || parsed.measures > 16) return null;
+    const maxSlots = parsed.measures * STEPS_PER_MEASURE;
+    const validItems = parsed.items
+      .filter((it) => Number.isInteger(it.start) && Number.isInteger(it.length) && it.start >= 0 && it.length > 0 && it.start + it.length <= maxSlots)
+      .map((it) => ({
+        id: String(it.id || `${it.start}-${it.length}`),
+        start: it.start,
+        length: it.length,
+        symbol: String(it.symbol || '♩'),
+        isRest: !!it.isRest,
+        syncToStart: Number.isInteger((it as { syncToStart?: unknown }).syncToStart) ? Number((it as { syncToStart?: unknown }).syncToStart) : undefined,
+        syncopated: !!it.syncopated,
+      }))
+      .sort((a, b) => a.start - b.start);
+    return { v: 2, name: parsed.name, measures: parsed.measures, items: validItems };
+  } catch {
+    return null;
   }
-  const totalBeats = durations.reduce((a, b) => a + b, 0);
-  const measures = Math.ceil(totalBeats / 4);
-  const beatsPerMeasure = totalBeats <= 4 ? totalBeats : 4;
-  const beatsDisplay = Math.round(beatsPerMeasure * 100) / 100; // évite les 3.9999999999999996
-  const measureInfo = `${measures} mesure${measures > 1 ? 's' : ''} de ${beatsDisplay} temps`;
-  return { durations, totalBeats, measureInfo };
 }
 
-function normalizeForKey(raw: string): string {
-  return raw.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[']/g, "'").replace(/[^a-z0-9]+/g, ' ').trim();
+function serializeRhythmPattern(pattern: RhythmPatternV2): string {
+  return `${RHYTHM_V2_PREFIX}${encodeURIComponent(JSON.stringify(pattern))}`;
 }
 
-// ─── Visual Rhythm Staff (notation type tablature) ───
-function VisualRhythmStaff({
-  steps,
-  onStepsChange,
-  isPlaying,
-  playingStep,
-}: {
-  steps: Array<'Bas' | 'Haut'>;
-  onStepsChange: (s: Array<'Bas' | 'Haut'>) => void;
-  isPlaying: boolean;
-  playingStep: number;
-}) {
-  const staffY = 24;
-  const stemLen = 8;
-  const noteR = 2.5;
-  const padding = 20;
-  const totalW = 320;
-  const n = Math.max(steps.length, 1);
-  const stepW = (totalW - 2 * padding) / Math.max(n, 8);
+function rhythmDisplayName(value: string): string {
+  const parsed = parseRhythmPattern(value);
+  return parsed?.name ?? value;
+}
 
-  const addStroke = (step: 'Bas' | 'Haut') => onStepsChange([...steps, step]);
-  const removeAt = (i: number) => onStepsChange(steps.filter((_, j) => j !== i));
+function formatRhythmMeta(pattern: RhythmPatternV2): string {
+  const syncCount = getSyncopePairs(pattern.items).length;
+  return `${pattern.measures} mesure${pattern.measures > 1 ? 's' : ''} · 4/4 · ${pattern.items.length} figure${pattern.items.length > 1 ? 's' : ''} · ${syncCount} syncope${syncCount > 1 ? 's' : ''}`;
+}
 
+function overlaps(aStart: number, aLength: number, bStart: number, bLength: number): boolean {
+  const aEnd = aStart + aLength;
+  const bEnd = bStart + bLength;
+  return aStart < bEnd && bStart < aEnd;
+}
+
+function uid(): string {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getSyncopePairs(items: RhythmItem[]): Array<{ from: RhythmItem; to: RhythmItem }> {
+  const notes = items.filter((it) => !it.isRest).sort((a, b) => a.start - b.start);
+  return notes.flatMap((from) => {
+    let target: RhythmItem | undefined;
+    if (Number.isInteger(from.syncToStart)) {
+      target = notes.find((n) => n.start === from.syncToStart);
+    } else if (from.syncopated) {
+      // Compat anciens motifs: "syncopated: true" => liaison vers la note suivante
+      target = notes.find((n) => n.start > from.start);
+    }
+    if (!target || target.start <= from.start) return [];
+    return [{ from, to: target }];
+  });
+}
+
+function RhythmPatternPreview({ pattern }: { pattern: RhythmPatternV2 }) {
+  const totalSlots = getRhythmSlots(pattern);
+  const pairs = getSyncopePairs(pattern.items);
   return (
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${totalW} 50`} className="w-full min-w-[280px] max-w-[400px] h-14" style={{ color: 'var(--foreground)' }}>
-        {/* Zone cliquable pour ajouter (en arrière-plan) */}
-        <rect x={padding} y={8} width={totalW - 2 * padding} height={34} fill="transparent" onClick={() => addStroke('Bas')} onContextMenu={(e) => { e.preventDefault(); addStroke('Haut'); }} className="cursor-crosshair" />
-        {/* Ligne de portée */}
-        <line x1={padding} y1={staffY} x2={totalW - padding} y2={staffY} stroke="currentColor" strokeWidth="1" opacity="0.5" />
-        {/* Repères de temps (1, 2, 3, 4) */}
-        {[1, 2, 3, 4].map((b) => {
-          const x = padding + (b - 1) * (totalW - 2 * padding) / 4;
-          return (
-            <line key={b} x1={x} y1={staffY - 4} x2={x} y2={staffY + 4} stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
-          );
-        })}
-        {/* Notes (au-dessus pour intercepter les clics) */}
-        {steps.map((step, i) => {
-          const x = padding + (i + 0.5) * stepW;
-          const isDown = step === 'Bas';
-          const stemY = isDown ? staffY + stemLen : staffY - stemLen;
-          const isActive = isPlaying && i === playingStep;
-          return (
-            <g key={i} className="cursor-pointer" onClick={(e) => { e.stopPropagation(); removeAt(i); }}>
-              {/* Tête de note */}
-              <circle cx={x} cy={staffY} r={noteR} fill={isActive ? 'var(--accent)' : 'currentColor'} stroke={isActive ? 'var(--accent)' : 'currentColor'} strokeWidth="0.5" opacity={isActive ? 1 : 0.9} />
-              {/* Hampe (vers le bas = Bas, vers le haut = Haut) */}
-              <line x1={x + noteR} y1={staffY} x2={x + noteR} y2={stemY} stroke={isActive ? 'var(--accent)' : 'currentColor'} strokeWidth="1" opacity={isActive ? 1 : 0.9} />
-              {/* Liaison (barre) pour paires de croches */}
-              {i < steps.length - 1 && i % 2 === 0 && (
-                <line x1={x + noteR} y1={staffY - 2} x2={padding + (i + 1.5) * stepW + noteR} y2={staffY - 2} stroke="currentColor" strokeWidth="1.5" opacity="0.7" />
-              )}
-            </g>
-          );
-        })}
-      </svg>
-      <p className="text-[10px] text-[var(--muted)] mt-1">Clic sur la portée = ajouter · Clic sur une note = supprimer · Clic droit = coup vers le haut</p>
+    <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2">
+      <div className="relative h-11">
+        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${totalSlots}, minmax(0, 1fr))` }}>
+          {Array.from({ length: totalSlots }).map((_, i) => (
+            <div key={i} className={`border-r border-[var(--surface-light)]/60 ${i % 2 === 0 ? 'border-l border-[var(--surface-light)]/40' : ''}`} />
+          ))}
+        </div>
+        {pattern.items.map((it) => (
+          <div
+            key={it.id}
+            className={`absolute top-1.5 bottom-1.5 rounded-md px-1.5 text-[10px] inline-flex items-center justify-center ${it.isRest ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-[var(--accent)]/20 text-[var(--accent-light)] border border-[var(--accent)]/40'}`}
+            style={{ left: `${(it.start / totalSlots) * 100}%`, width: `${(it.length / totalSlots) * 100}%` }}
+            title={pairs.some((p) => p.from.id === it.id || p.to.id === it.id) ? 'Syncope active' : undefined}
+          >
+            <span>{it.symbol}</span>
+          </div>
+        ))}
+        {pairs.length > 0 && (
+          <svg className="absolute inset-0 pointer-events-none" viewBox={`0 0 ${totalSlots * 20} 44`} preserveAspectRatio="none">
+            {pairs.map((p, i) => {
+              const x1 = (p.from.start + p.from.length) * 20;
+              const x2 = p.to.start * 20;
+              const cx = (x1 + x2) / 2;
+              return (
+                <path
+                  key={`${p.from.id}-${p.to.id}-${i}`}
+                  d={`M ${x1} 10 Q ${cx} 2 ${x2} 10`}
+                  stroke="var(--accent-light)"
+                  strokeWidth="1.2"
+                  fill="none"
+                  opacity="0.95"
+                />
+              );
+            })}
+          </svg>
+        )}
+      </div>
     </div>
   );
 }
 
-// ─── Rhythm Editor (create & play rythmiques) ───
-function RhythmEditor({
-  steps,
-  onStepsChange,
-  onSave,
-  onPlay,
-  onStop,
-  isPlaying,
-  playingStep,
+function RhythmPatternEditor({
   editMode,
+  source,
+  onSave,
+  onCancelEdit,
 }: {
-  steps: Array<'Bas' | 'Haut'>;
-  onStepsChange: (s: Array<'Bas' | 'Haut'>) => void;
-  onSave: (label: string) => void;
-  onPlay: () => void;
-  onStop: () => void;
-  isPlaying: boolean;
-  playingStep: number;
   editMode: boolean;
+  source: string | null;
+  onSave: (payload: { encoded: string; source: string | null }) => void;
+  onCancelEdit: () => void;
 }) {
-  const [saveName, setSaveName] = useState('');
+  const [pattern, setPattern] = useState<RhythmPatternV2>(makeEmptyRhythmPattern());
+  const [selectedFigureId, setSelectedFigureId] = useState<RhythmFigureId>('quarter');
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [syncopeStartId, setSyncopeStartId] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  const addStep = (step: 'Bas' | 'Haut') => onStepsChange([...steps, step]);
-  const removeLast = () => steps.length > 0 && onStepsChange(steps.slice(0, -1));
-  const clearAll = () => onStepsChange([]);
-  const canPlay = steps.length >= 4;
+  useEffect(() => {
+    if (!editMode) return;
+    if (!source) {
+      setPattern(makeEmptyRhythmPattern());
+      setSelectedItemId(null);
+      setSyncopeStartId(null);
+      setError('');
+      return;
+    }
+    const parsed = parseRhythmPattern(source);
+    if (parsed) {
+      setPattern(parsed);
+      setSelectedItemId(null);
+      setSyncopeStartId(null);
+      setError('');
+      return;
+    }
+    setPattern(makeEmptyRhythmPattern());
+    setSelectedItemId(null);
+    setSyncopeStartId(null);
+    setError('Impossible de charger ce motif (ancien format non éditable directement).');
+  }, [editMode, source]);
 
   if (!editMode) return null;
+
+  const totalSlots = getRhythmSlots(pattern);
+  const selectedFigure = RHYTHM_FIGURES.find((f) => f.id === selectedFigureId) ?? RHYTHM_FIGURES[2];
+  const selectedItem = selectedItemId ? pattern.items.find((i) => i.id === selectedItemId) || null : null;
+  const syncopeStartItem = syncopeStartId ? pattern.items.find((i) => i.id === syncopeStartId) || null : null;
+  const syncopePairs = getSyncopePairs(pattern.items);
+
+  const setMeasures = (nextMeasures: number) => {
+    const maxSlots = nextMeasures * STEPS_PER_MEASURE;
+    setPattern((prev) => ({
+      ...prev,
+      measures: nextMeasures,
+      items: prev.items.filter((it) => it.start + it.length <= maxSlots),
+    }));
+    setSelectedItemId(null);
+    setSyncopeStartId(null);
+  };
+
+  const placeFigureAt = (slot: number) => {
+    const figure = selectedFigure;
+    if (slot + figure.length > totalSlots) {
+      setError('La figure dépasse la fin des mesures.');
+      return;
+    }
+    setError('');
+    const nextItem: RhythmItem = {
+      id: uid(),
+      start: slot,
+      length: figure.length,
+      symbol: figure.symbol,
+      isRest: figure.isRest,
+    };
+    setPattern((prev) => ({
+      ...prev,
+      items: [...prev.items.filter((it) => !overlaps(it.start, it.length, nextItem.start, nextItem.length)), nextItem].sort((a, b) => a.start - b.start),
+    }));
+    setSelectedItemId(nextItem.id);
+  };
+
+  const removeSelected = () => {
+    if (!selectedItemId) return;
+    setPattern((prev) => ({
+      ...prev,
+      items: prev.items
+        .filter((x) => x.id !== selectedItemId)
+        .map((x) => (x.syncToStart === selectedItem?.start ? { ...x, syncToStart: undefined, syncopated: false } : x)),
+    }));
+    setSelectedItemId(null);
+    setSyncopeStartId(null);
+  };
+
+  const startSyncopeSelection = () => {
+    if (!selectedItem || selectedItem.isRest) {
+      setError('Sélectionne d’abord une note (pas un silence) pour le point A.');
+      return;
+    }
+    setSyncopeStartId(selectedItem.id);
+    setError('Syncope: choisis maintenant la note B (dans la même mesure, plus loin).');
+  };
+
+  const clearSyncopeFromSelected = () => {
+    if (!selectedItem) return;
+    setPattern((prev) => ({
+      ...prev,
+      items: prev.items.map((it) => (it.id === selectedItem.id ? { ...it, syncToStart: undefined, syncopated: false } : it)),
+    }));
+    setError('');
+  };
+
+  const connectSyncope = (fromId: string, toId: string) => {
+    if (fromId === toId) {
+      setError('A et B doivent être deux notes différentes.');
+      return;
+    }
+    const from = pattern.items.find((it) => it.id === fromId);
+    const to = pattern.items.find((it) => it.id === toId);
+    if (!from || !to || from.isRest || to.isRest) {
+      setError('La syncope A→B se fait uniquement entre deux notes.');
+      return;
+    }
+    if (to.start <= from.start) {
+      setError('B doit être placé après A.');
+      return;
+    }
+    const fromMeasure = Math.floor(from.start / STEPS_PER_MEASURE);
+    const toMeasure = Math.floor(to.start / STEPS_PER_MEASURE);
+    if (fromMeasure !== toMeasure) {
+      setError('Pour l’instant, la syncope A→B doit rester dans la même mesure.');
+      return;
+    }
+    if (from.start % 2 === 0) {
+      setError('A doit partir d’un contretemps (sur un "et").');
+      return;
+    }
+    setPattern((prev) => ({
+      ...prev,
+      items: prev.items.map((it) => (it.id === from.id ? { ...it, syncToStart: to.start, syncopated: true } : it)),
+    }));
+    setSelectedItemId(from.id);
+    setSyncopeStartId(null);
+    setError('');
+  };
+
+  const handleSave = () => {
+    const trimmed = pattern.name.trim();
+    if (!trimmed) {
+      setError('Donne un nom à la rythmique.');
+      return;
+    }
+    if (pattern.items.length === 0) {
+      setError('Ajoute au moins une figure rythmique.');
+      return;
+    }
+    const clean: RhythmPatternV2 = {
+      ...pattern,
+      name: trimmed,
+      items: [...pattern.items].sort((a, b) => a.start - b.start),
+    };
+    onSave({ encoded: serializeRhythmPattern(clean), source });
+    setSelectedItemId(null);
+  };
 
   return (
     <div className="mb-10 p-5 rounded-xl border-2 border-dashed border-[var(--accent)]/40 bg-[var(--surface)]/50">
       <h3 className="text-sm font-bold text-[var(--accent-light)] mb-3 inline-flex items-center gap-2">
-        <IconRhythm className="w-4 h-4" />Créer une rythmique
+        <IconRhythm className="w-4 h-4" />
+        {source ? 'Éditer une rythmique' : 'Créer une rythmique'}
       </h3>
-      <p className="text-xs text-[var(--muted)] mb-4">Construis ton motif en cliquant sur la portée. Hampe vers le bas = coup vers le bas, hampe vers le haut = coup vers le haut.</p>
+      <p className="text-xs text-[var(--muted)] mb-4">
+        Clique une case (grille en croches) pour placer la figure sélectionnée. Pour la syncope: sélectionne une note A, clique "Syncope A→B", puis clique la note B.
+      </p>
+
+      <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-3">
+        <input
+          value={pattern.name}
+          onChange={(e) => setPattern((prev) => ({ ...prev, name: e.target.value }))}
+          placeholder="Nom de la rythmique"
+          className="px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
+        />
+        <div className="inline-flex items-center gap-2">
+          <span className="text-xs text-[var(--muted)]">Mesures</span>
+          <select
+            value={pattern.measures}
+            onChange={(e) => setMeasures(parseInt(e.target.value, 10))}
+            className="px-2 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
+          >
+            {[1, 2, 3, 4, 6, 8].map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <button onClick={() => addStep('Bas')} className="px-4 py-2 rounded-lg bg-amber-900/40 text-amber-300 border border-amber-600/50 hover:bg-amber-900/60 transition-colors font-medium">
-          ♩ Coup vers le bas
-        </button>
-        <button onClick={() => addStep('Haut')} className="px-4 py-2 rounded-lg bg-emerald-900/40 text-emerald-300 border border-emerald-600/50 hover:bg-emerald-900/60 transition-colors font-medium">
-          ♪ Coup vers le haut
-        </button>
-        <button onClick={removeLast} disabled={steps.length === 0} className="px-3 py-2 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-40" title="Retirer le dernier">
-          ← Retirer
-        </button>
-        <button onClick={clearAll} disabled={steps.length === 0} className="px-3 py-2 rounded-lg text-red-400 hover:bg-red-500/20 disabled:opacity-40" title="Effacer tout">
-          Effacer
-        </button>
-      </div>
-
-      <div className="mb-4 p-4 rounded-lg bg-[var(--background)]/80 border border-[var(--surface-light)]">
-        <VisualRhythmStaff steps={steps} onStepsChange={onStepsChange} isPlaying={isPlaying} playingStep={playingStep} />
-      </div>
-
-      {steps.length > 0 && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <button onClick={canPlay ? (isPlaying ? onStop : onPlay) : undefined} disabled={!canPlay}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${canPlay ? (isPlaying ? 'bg-red-500 text-white' : 'bg-[var(--accent)] text-white hover:bg-[var(--accent-light)]') : 'bg-[var(--surface-light)] text-[var(--muted)] opacity-50 cursor-not-allowed'}`}
-            title={canPlay ? (isPlaying ? 'Stop' : 'Jouer') : 'Ajoute au moins 4 temps'}>
-            {isPlaying ? <IconPause className="w-5 h-5" /> : <IconPlay className="w-5 h-5" />}
+        {RHYTHM_FIGURES.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setSelectedFigureId(f.id)}
+            className={`px-3 py-1.5 rounded-lg border text-xs ${selectedFigureId === f.id ? 'bg-[var(--accent)]/20 text-[var(--accent-light)] border-[var(--accent)]/60' : 'bg-[var(--background)] text-[var(--muted)] border-[var(--surface-light)] hover:text-[var(--foreground)]'}`}
+          >
+            {f.symbol} {f.label}
           </button>
-          <span className="text-xs text-[var(--muted)]">BPM 92</span>
-          <div className="flex gap-2 ml-4">
-            <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="Nom (ex: rythme perso)"
-              className="px-3 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm w-40" />
-            <button onClick={() => { const label = saveName.trim() ? `${saveName} (${steps.join(' ')})` : steps.join(' '); onSave(label); setSaveName(''); clearAll(); }}
-              className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-sm hover:bg-[var(--accent-light)]">
-              Enregistrer
-            </button>
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
+
+      <div className="mb-4 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/80 p-3 overflow-x-auto">
+        {Array.from({ length: pattern.measures }).map((_, measureIdx) => {
+          const base = measureIdx * STEPS_PER_MEASURE;
+          const measureItems = pattern.items.filter((it) => it.start >= base && it.start < base + STEPS_PER_MEASURE);
+          return (
+            <div key={measureIdx} className="mb-3 last:mb-0">
+              <div className="text-[10px] text-[var(--muted)] mb-1">Mesure {measureIdx + 1}</div>
+              <div className="relative min-w-[320px] h-14 rounded-md border border-[var(--surface-light)]">
+                <div className="absolute inset-0 grid grid-cols-8">
+                  {Array.from({ length: STEPS_PER_MEASURE }).map((__, slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => {
+                        if (syncopeStartId) {
+                          setError('Sélection syncope active: clique une note B, pas une case vide.');
+                          return;
+                        }
+                        placeFigureAt(base + slot);
+                      }}
+                      className={`border-r border-[var(--surface-light)]/70 hover:bg-[var(--accent)]/10 ${slot % 2 === 0 ? 'bg-[var(--surface)]/30' : ''}`}
+                      title={syncopeStartId ? 'Sélection syncope active: clique une note B' : `Placer ${selectedFigure.label}`}
+                    />
+                  ))}
+                </div>
+                {measureItems.map((it) => (
+                  <button
+                    key={it.id}
+                    type="button"
+                    onClick={() => {
+                      if (syncopeStartId) {
+                        connectSyncope(syncopeStartId, it.id);
+                        return;
+                      }
+                      setSelectedItemId(it.id);
+                      setError('');
+                    }}
+                    className={`absolute top-1.5 bottom-1.5 rounded-md px-1.5 text-[11px] inline-flex items-center justify-center border ${it.isRest ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-[var(--accent)]/20 text-[var(--accent-light)] border-[var(--accent)]/40'} ${selectedItemId === it.id ? 'ring-2 ring-[var(--accent)]/70' : ''}`}
+                    style={{ left: `${((it.start - base) / STEPS_PER_MEASURE) * 100}%`, width: `${(it.length / STEPS_PER_MEASURE) * 100}%` }}
+                    title={syncopePairs.some((p) => p.from.id === it.id || p.to.id === it.id) ? 'Syncope active' : undefined}
+                  >
+                    <span>{it.symbol}</span>
+                  </button>
+                ))}
+                {syncopePairs
+                  .filter((p) => Math.floor(p.from.start / STEPS_PER_MEASURE) === measureIdx && Math.floor(p.to.start / STEPS_PER_MEASURE) === measureIdx)
+                  .map((p, idx) => {
+                    const fromX = ((p.from.start - base + p.from.length) / STEPS_PER_MEASURE) * 100;
+                    const toX = ((p.to.start - base) / STEPS_PER_MEASURE) * 100;
+                    const midX = (fromX + toX) / 2;
+                    return (
+                      <svg key={`arc-${p.from.id}-${p.to.id}-${idx}`} className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <path d={`M ${fromX} 18 Q ${midX} 3 ${toX} 18`} stroke="var(--accent-light)" strokeWidth="0.9" fill="none" />
+                      </svg>
+                    );
+                  })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={removeSelected} disabled={!selectedItem} className="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-300 text-xs disabled:opacity-40">
+          Supprimer la figure sélectionnée
+        </button>
+        <button type="button" onClick={startSyncopeSelection} disabled={!selectedItem || !!selectedItem.isRest} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs disabled:opacity-40">
+          Syncope A→B
+        </button>
+        <button type="button" onClick={clearSyncopeFromSelected} disabled={!selectedItem || !selectedItem.syncToStart} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs disabled:opacity-40">
+          Retirer syncope
+        </button>
+        {syncopeStartItem && (
+          <button
+            type="button"
+            onClick={() => { setSyncopeStartId(null); setError(''); }}
+            className="px-3 py-1.5 rounded-lg bg-amber-500/15 text-amber-300 text-xs"
+          >
+            Annuler A ({syncopeStartItem.symbol})
+          </button>
+        )}
+        {syncopeStartItem && (
+          <span className="text-[11px] text-amber-300">A sélectionné sur la case {syncopeStartItem.start + 1}. Clique maintenant une note B.</span>
+        )}
+        {syncopePairs.length > 0 && !syncopeStartItem && (
+          <span className="text-[11px] text-[var(--muted)]">{syncopePairs.length} syncope{syncopePairs.length > 1 ? 's' : ''}</span>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setPattern((prev) => ({
+              ...prev,
+              items: prev.items.map((it) => ({ ...it, syncToStart: undefined, syncopated: false })),
+            }));
+            setSyncopeStartId(null);
+          }}
+          disabled={syncopePairs.length === 0}
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs disabled:opacity-40"
+        >
+          Retirer toutes les syncopes
+        </button>
+        <button type="button" onClick={() => { setPattern(makeEmptyRhythmPattern()); setSelectedItemId(null); setSyncopeStartId(null); setError(''); }} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs">
+          Nouveau motif
+        </button>
+        {source && (
+          <button type="button" onClick={onCancelEdit} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs">
+            Quitter l’édition
+          </button>
+        )}
+        <button type="button" onClick={handleSave} className="ml-auto px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs">
+          {source ? 'Mettre à jour la rythmique' : 'Enregistrer la rythmique'}
+        </button>
+      </div>
+
+      <p className="text-[11px] text-[var(--muted)] mt-3">{formatRhythmMeta(pattern)}</p>
+      {error ? <p className="text-xs text-red-400 mt-2">{error}</p> : null}
     </div>
   );
 }
@@ -507,7 +788,7 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
             </div>
             <div>
               <label className="text-xs text-[var(--muted)] mb-1 block">Rythmiques</label>
-              <input value={strums} onChange={(e) => setStrums(e.target.value)} placeholder="Bas Bas Haut Haut Bas" className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" />
+              <input value={strums} onChange={(e) => setStrums(e.target.value)} placeholder="Nom libre (optionnel, format legacy)" className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" />
             </div>
           </div>
 
@@ -575,8 +856,7 @@ export default function KnowledgePage() {
   const [expandedRhythm, setExpandedRhythm] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
-  const [playingStrumKey, setPlayingStrumKey] = useState<string | null>(null);
-  const [playingStrumStep, setPlayingStrumStep] = useState<number>(-1);
+  const [editingRhythmSource, setEditingRhythmSource] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [favFilter, setFavFilter] = useState(false);
   const [editProgression, setEditProgression] = useState<{
@@ -591,12 +871,7 @@ export default function KnowledgePage() {
   } | null>(null);
   const [techniqueImageUploading, setTechniqueImageUploading] = useState(false);
   const [chordEditor, setChordEditor] = useState<ChordEditorOpen>(null);
-  const [draftStrumSteps, setDraftStrumSteps] = useState<Array<'Bas' | 'Haut'>>([]);
-  const [editorPlaying, setEditorPlaying] = useState(false);
   const lastReloadAt = useRef(0);
-  const strumTimerRef = useRef<number | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const playingStepsRef = useRef<Array<'Bas' | 'Haut'>>([]);
 
   const reload = useCallback(() => fetch('/api/database', { cache: 'no-store' }).then((r) => r.json()).then(setDb), []);
   const safeReload = useCallback(() => {
@@ -606,125 +881,22 @@ export default function KnowledgePage() {
     reload();
   }, [reload]);
 
-  const stopStrum = useCallback(() => {
-    if (strumTimerRef.current != null) { window.clearTimeout(strumTimerRef.current); strumTimerRef.current = null; }
-    playingStepsRef.current = [];
-    setPlayingStrumKey(null);
-    setPlayingStrumStep(-1);
-    setEditorPlaying(false);
-  }, []);
-
-  const playStrum = useCallback(async (label: string) => {
-    const key = normalizeForKey(label);
-    if (playingStrumKey === key) { stopStrum(); return; }
-    const steps = getStrumSteps(label);
-    if (steps.length === 0) return;
-    setEditorPlaying(false);
-    const bpm = 92;
-    const beatMs = 60000 / bpm;
-    const { durations } = getStrumDurations(label, steps);
-    stopStrum();
-    setPlayingStrumKey(key);
-    playingStepsRef.current = steps;
-    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-    if (audioCtxRef.current.state === 'suspended') await audioCtxRef.current.resume();
-
-    const playStep = (idx: number) => {
-      const current = playingStepsRef.current;
-      if (current.length === 0) return;
-      setPlayingStrumStep(idx);
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const now = ctx.currentTime;
-      const step = current[idx];
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(step === 'Bas' ? 220 : 330, now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    };
-
-    const scheduleLoop = (stepIdx: number) => {
-      const current = playingStepsRef.current;
-      if (current.length === 0) return;
-      const idx = stepIdx % current.length;
-      const dur = durations[idx] ?? 1;
-      const delayMs = dur * beatMs;
-      playStep(idx);
-      const id = window.setTimeout(() => {
-        if (playingStepsRef.current.length === 0) return;
-        scheduleLoop(stepIdx + 1);
-      }, delayMs);
-      strumTimerRef.current = id;
-    };
-    scheduleLoop(0);
-  }, [playingStrumKey, stopStrum]);
-
-  const playEditorStrum = useCallback(() => {
-    if (draftStrumSteps.length < 4) return;
-    if (editorPlaying) { stopStrum(); setEditorPlaying(false); return; }
-    stopStrum();
-    setEditorPlaying(true);
-    setPlayingStrumKey('__editor__');
-    playingStepsRef.current = [...draftStrumSteps];
-    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-    const bpm = 92;
-    const beatMs = 60000 / bpm;
-    const steps = draftStrumSteps;
-    const durations = steps.map(() => 4 / steps.length);
-
-    const playStep = (idx: number) => {
-      const current = playingStepsRef.current;
-      if (current.length === 0) return;
-      setPlayingStrumStep(idx);
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const now = ctx.currentTime;
-      const step = current[idx];
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(step === 'Bas' ? 220 : 330, now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    };
-
-    const scheduleLoop = (stepIdx: number) => {
-      const current = playingStepsRef.current;
-      if (current.length === 0) return;
-      const idx = stepIdx % current.length;
-      const dur = durations[idx] ?? 1;
-      const delayMs = dur * beatMs;
-      playStep(idx);
-      const id = window.setTimeout(() => {
-        if (playingStepsRef.current.length === 0) return;
-        scheduleLoop(stepIdx + 1);
-      }, delayMs);
-      strumTimerRef.current = id;
-    };
-    scheduleLoop(0);
-  }, [draftStrumSteps, editorPlaying, stopStrum]);
-
-  const stopEditorStrum = useCallback(() => {
-    stopStrum();
-    setEditorPlaying(false);
-  }, [stopStrum]);
-
-  const saveEditorStrum = useCallback((label: string) => {
-    fetch('/api/database', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'knowledge_add', category: 'strums', value: label }) })
-      .then(() => safeReload());
-    setDraftStrumSteps([]);
+  const saveRhythmPattern = useCallback(async ({ encoded, source }: { encoded: string; source: string | null }) => {
+    const add = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'knowledge_add', category: 'strums', value: encoded }),
+    });
+    if (!add.ok) return;
+    if (source && source !== encoded) {
+      await fetch('/api/database', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'knowledge', category: 'strums', value: source }),
+      });
+    }
+    setEditingRhythmSource(null);
+    safeReload();
   }, [safeReload]);
 
   const toggleFavorite = async (lessonId: string, current: boolean) => {
@@ -888,8 +1060,6 @@ export default function KnowledgePage() {
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); };
   }, [safeReload]);
 
-  useEffect(() => () => stopStrum(), [stopStrum]);
-
   if (loading) return <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]"><div className="text-[var(--muted)] animate-pulse">Chargement...</div></div>;
   if (!db) return null;
 
@@ -1032,50 +1202,49 @@ export default function KnowledgePage() {
 
       {tab === 'rhythms' && (
         <>
-          <RhythmEditor
-            steps={draftStrumSteps}
-            onStepsChange={setDraftStrumSteps}
-            onSave={saveEditorStrum}
-            onPlay={playEditorStrum}
-            onStop={stopEditorStrum}
-            isPlaying={editorPlaying}
-            playingStep={playingStrumStep}
+          <RhythmPatternEditor
             editMode={editMode}
+            source={editingRhythmSource}
+            onSave={saveRhythmPattern}
+            onCancelEdit={() => setEditingRhythmSource(null)}
           />
-          <Section title="Rythmiques" icon={<IconRhythm className="w-5 h-5" />} items={k.strums || []} editMode={editMode}
-            onDelete={(v) => deleteItem('strums', v)} onEdit={(v) => setEditKnowledge({ category: 'strums', from: v, to: v })}
-            onAdd={(v) => addItem('strums', v)} addPlaceholder="Ex: Bas Bas Haut Haut Bas"
+          <Section
+            title="Rythmiques"
+            icon={<IconRhythm className="w-5 h-5" />}
+            items={k.strums || []}
+            editMode={editMode}
+            onDelete={(v) => deleteItem('strums', v)}
             orderable
             onMoveItem={(idx, dir) => reorderKnowledgeItem('strums', k.strums || [], idx, dir)}
-            renderItem={(strum) => {
-              const steps = getStrumSteps(strum);
-              const { measureInfo } = getStrumDurations(strum, steps);
-              const key = normalizeForKey(strum);
-              const isPlaying = playingStrumKey === key;
-              const disabled = steps.length === 0;
-              return (
-                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[240px]">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium capitalize">{strum}</span>
-                    <button onClick={() => playStrum(strum)} disabled={disabled}
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${disabled ? 'opacity-40 cursor-not-allowed border-[var(--surface-light)] text-[var(--muted)]' : isPlaying ? 'bg-[var(--accent)] border-transparent text-white' : 'bg-[var(--surface-light)] border-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)]'}`}
-                      title={disabled ? 'Motif indisponible' : isPlaying ? 'Stop' : 'Jouer'}>
-                      {isPlaying ? <IconPause className="w-4 h-4" /> : <IconPlay className="w-4 h-4" />}
-                    </button>
+            extraEditActions={(value) => (
+              <button
+                type="button"
+                onClick={() => setEditingRhythmSource(value)}
+                className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--accent)] shadow-lg"
+                title="Éditer la rythmique"
+              >
+                <IconPencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+            renderItem={(value) => {
+              const parsed = parseRhythmPattern(value);
+              if (!parsed) {
+                return (
+                  <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[240px]">
+                    <div className="text-sm font-medium">{value}</div>
+                    <p className="text-[11px] text-amber-300 mt-1">Ancien format (lecture seule). Recrée-le via l’éditeur ci-dessus.</p>
                   </div>
-                  {steps.length > 0 && (
-                    <>
-                      <p className="text-[11px] text-[var(--muted)] mt-1.5">{measureInfo}</p>
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {steps.map((s, i) => (
-                          <span key={`${s}-${i}`} className={`text-xs px-2 py-1 rounded-md border ${isPlaying && i === playingStrumStep ? 'bg-[var(--accent)] text-white border-transparent' : 'bg-[var(--surface-light)] text-[var(--muted)] border-[var(--surface-light)]'}`}>{s}</span>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                );
+              }
+              return (
+                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[260px]">
+                  <div className="text-sm font-medium">{rhythmDisplayName(value)}</div>
+                  <p className="text-[11px] text-[var(--muted)] mt-1">{formatRhythmMeta(parsed)}</p>
+                  <RhythmPatternPreview pattern={parsed} />
                 </div>
               );
-            }} />
+            }}
+          />
           <Section title="Rythmes" icon={<IconRhythm className="w-5 h-5" />} items={k.rhythms} editMode={editMode}
             onDelete={(v) => deleteItem('rhythms', v)} onEdit={(v) => setEditKnowledge({ category: 'rhythms', from: v, to: v })}
             onAdd={(v) => addItem('rhythms', v)} addPlaceholder="Ex: blanche, ronde"
