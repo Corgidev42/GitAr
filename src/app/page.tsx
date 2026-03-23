@@ -166,7 +166,6 @@ function RhythmMeasureSvg({
   measurePairs,
   measureBase,
   selectedItemId,
-  syncopeStartId,
   compact = false,
   onItemClick,
 }: {
@@ -174,7 +173,6 @@ function RhythmMeasureSvg({
   measurePairs: Array<{ from: RhythmItem; to: RhythmItem }>;
   measureBase: number;
   selectedItemId?: string | null;
-  syncopeStartId?: string | null;
   compact?: boolean;
   onItemClick?: (itemId: string) => void;
 }) {
@@ -227,10 +225,9 @@ function RhythmMeasureSvg({
       {measureItems.map((it) => {
         const start = it.start - measureBase;
         const xStart = 13 + start * unit;
-        const xCenter = xStart + (it.length * unit) / 2;
+        const xCenter = xStart + unit * 0.45;
         const kind = rhythmFigureKind(it.length);
         const selected = selectedItemId === it.id;
-        const isStart = syncopeStartId === it.id;
 
         if (it.isRest) {
           return (
@@ -257,7 +254,7 @@ function RhythmMeasureSvg({
         const hasFlag = kind === 'eighth' && !beams.some((b) => b.a.id === it.id || b.b.id === it.id);
         const headStroke = selected ? 'var(--accent-light)' : 'var(--foreground)';
         const headFill = fillHead ? 'var(--foreground)' : 'transparent';
-        const strokeWidth = isStart ? 2.2 : 1.4;
+        const strokeWidth = 1.4;
 
         return (
           <g key={it.id} onClick={() => onItemClick?.(it.id)} className={onItemClick ? 'cursor-pointer' : undefined}>
@@ -329,7 +326,7 @@ function RhythmPatternEditor({
   const [pattern, setPattern] = useState<RhythmPatternV2>(makeEmptyRhythmPattern());
   const [selectedFigureId, setSelectedFigureId] = useState<RhythmFigureId>('quarter');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [syncopeStartId, setSyncopeStartId] = useState<string | null>(null);
+  const [syncopeBrushMode, setSyncopeBrushMode] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -337,7 +334,7 @@ function RhythmPatternEditor({
     if (!source) {
       setPattern(makeEmptyRhythmPattern());
       setSelectedItemId(null);
-      setSyncopeStartId(null);
+      setSyncopeBrushMode(false);
       setError('');
       return;
     }
@@ -345,13 +342,13 @@ function RhythmPatternEditor({
     if (parsed) {
       setPattern(parsed);
       setSelectedItemId(null);
-      setSyncopeStartId(null);
+      setSyncopeBrushMode(false);
       setError('');
       return;
     }
     setPattern(makeEmptyRhythmPattern());
     setSelectedItemId(null);
-    setSyncopeStartId(null);
+    setSyncopeBrushMode(false);
     setError('Impossible de charger ce motif (ancien format non éditable directement).');
   }, [editMode, source]);
 
@@ -360,7 +357,6 @@ function RhythmPatternEditor({
   const totalSlots = getRhythmSlots(pattern);
   const selectedFigure = RHYTHM_FIGURES.find((f) => f.id === selectedFigureId) ?? RHYTHM_FIGURES[2];
   const selectedItem = selectedItemId ? pattern.items.find((i) => i.id === selectedItemId) || null : null;
-  const syncopeStartItem = syncopeStartId ? pattern.items.find((i) => i.id === syncopeStartId) || null : null;
   const syncopePairs = getSyncopePairs(pattern.items);
 
   const setMeasures = (nextMeasures: number) => {
@@ -371,7 +367,7 @@ function RhythmPatternEditor({
       items: prev.items.filter((it) => it.start + it.length <= maxSlots),
     }));
     setSelectedItemId(null);
-    setSyncopeStartId(null);
+    setSyncopeBrushMode(false);
   };
 
   const placeFigureAt = (slot: number) => {
@@ -404,16 +400,7 @@ function RhythmPatternEditor({
         .map((x) => (x.syncToStart === selectedItem?.start ? { ...x, syncToStart: undefined, syncopated: false } : x)),
     }));
     setSelectedItemId(null);
-    setSyncopeStartId(null);
-  };
-
-  const startSyncopeSelection = () => {
-    if (!selectedItem || selectedItem.isRest) {
-      setError('Sélectionne d’abord une note (pas un silence) pour le point A.');
-      return;
-    }
-    setSyncopeStartId(selectedItem.id);
-    setError('Syncope: choisis maintenant la note B (dans la même mesure, plus loin).');
+    setSyncopeBrushMode(false);
   };
 
   const clearSyncopeFromSelected = () => {
@@ -446,17 +433,31 @@ function RhythmPatternEditor({
       setError('Pour l’instant, la syncope A→B doit rester dans la même mesure.');
       return;
     }
-    if (from.start % 2 === 0) {
-      setError('A doit partir d’un contretemps (sur un "et").');
-      return;
-    }
     setPattern((prev) => ({
       ...prev,
       items: prev.items.map((it) => (it.id === from.id ? { ...it, syncToStart: to.start, syncopated: true } : it)),
     }));
     setSelectedItemId(from.id);
-    setSyncopeStartId(null);
     setError('');
+  };
+
+  const paintSyncopeAtGap = (slot: number) => {
+    const measureIdx = Math.floor(slot / STEPS_PER_MEASURE);
+    const base = measureIdx * STEPS_PER_MEASURE;
+    const notes = pattern.items
+      .filter((it) => !it.isRest && it.start >= base && it.start < base + STEPS_PER_MEASURE)
+      .sort((a, b) => a.start - b.start);
+    if (notes.length < 2) {
+      setError('Ajoute au moins deux notes dans la mesure pour créer une syncope.');
+      return;
+    }
+    const left = [...notes].reverse().find((n) => n.start < slot);
+    const right = notes.find((n) => n.start > slot);
+    if (!left || !right) {
+      setError('Clique entre deux notes (pas sur une note).');
+      return;
+    }
+    connectSyncope(left.id, right.id);
   };
 
   const handleSave = () => {
@@ -485,7 +486,7 @@ function RhythmPatternEditor({
         {source ? 'Éditer une rythmique' : 'Créer une rythmique'}
       </h3>
       <p className="text-xs text-[var(--muted)] mb-4">
-        Clique une case (grille en croches) pour placer la figure sélectionnée. Pour la syncope: sélectionne une note A, clique "Syncope A→B", puis clique la note B.
+        Clique une case (grille en croches) pour placer la figure sélectionnée. Pour la syncope, active le pinceau puis clique entre deux notes.
       </p>
 
       <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-3">
@@ -538,10 +539,9 @@ function RhythmPatternEditor({
                   measurePairs={measurePairs}
                   measureBase={base}
                   selectedItemId={selectedItemId}
-                  syncopeStartId={syncopeStartId}
                   onItemClick={(itemId) => {
-                    if (syncopeStartId) {
-                      connectSyncope(syncopeStartId, itemId);
+                    if (syncopeBrushMode) {
+                      setError('En mode pinceau syncope, clique dans l’espace entre deux notes.');
                       return;
                     }
                     setSelectedItemId(itemId);
@@ -554,14 +554,15 @@ function RhythmPatternEditor({
                       key={slot}
                       type="button"
                       onClick={() => {
-                        if (syncopeStartId) {
-                          setError('Sélection syncope active: clique une note B, pas une case vide.');
+                        const globalSlot = base + slot;
+                        if (syncopeBrushMode) {
+                          paintSyncopeAtGap(globalSlot);
                           return;
                         }
-                        placeFigureAt(base + slot);
+                        placeFigureAt(globalSlot);
                       }}
                       className={`border-r border-transparent hover:bg-[var(--accent)]/10 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''}`}
-                      title={syncopeStartId ? 'Sélection syncope active: clique une note B' : `Placer ${selectedFigure.label}`}
+                      title={syncopeBrushMode ? 'Pinceau syncope: clique entre deux notes' : `Placer ${selectedFigure.label}`}
                     />
                   ))}
                 </div>
@@ -575,25 +576,20 @@ function RhythmPatternEditor({
         <button type="button" onClick={removeSelected} disabled={!selectedItem} className="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-300 text-xs disabled:opacity-40">
           Supprimer la figure sélectionnée
         </button>
-        <button type="button" onClick={startSyncopeSelection} disabled={!selectedItem || !!selectedItem.isRest} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs disabled:opacity-40">
-          Syncope A→B
+        <button
+          type="button"
+          onClick={() => { setSyncopeBrushMode((v) => !v); setError(''); }}
+          className={`px-3 py-1.5 rounded-lg text-xs ${syncopeBrushMode ? 'bg-[var(--accent)]/25 text-[var(--accent-light)] border border-[var(--accent)]/60' : 'bg-[var(--surface-light)] text-[var(--muted)]'}`}
+        >
+          {syncopeBrushMode ? 'Pinceau syncope: ON' : 'Pinceau syncope'}
         </button>
         <button type="button" onClick={clearSyncopeFromSelected} disabled={!selectedItem || !selectedItem.syncToStart} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs disabled:opacity-40">
           Retirer syncope
         </button>
-        {syncopeStartItem && (
-          <button
-            type="button"
-            onClick={() => { setSyncopeStartId(null); setError(''); }}
-            className="px-3 py-1.5 rounded-lg bg-amber-500/15 text-amber-300 text-xs"
-          >
-            Annuler A ({syncopeStartItem.symbol})
-          </button>
+        {syncopeBrushMode && (
+          <span className="text-[11px] text-amber-300">Pinceau actif: clique sur un espace entre deux notes pour créer la liaison.</span>
         )}
-        {syncopeStartItem && (
-          <span className="text-[11px] text-amber-300">A sélectionné sur la case {syncopeStartItem.start + 1}. Clique maintenant une note B.</span>
-        )}
-        {syncopePairs.length > 0 && !syncopeStartItem && (
+        {syncopePairs.length > 0 && !syncopeBrushMode && (
           <span className="text-[11px] text-[var(--muted)]">{syncopePairs.length} syncope{syncopePairs.length > 1 ? 's' : ''}</span>
         )}
         <button
@@ -603,14 +599,14 @@ function RhythmPatternEditor({
               ...prev,
               items: prev.items.map((it) => ({ ...it, syncToStart: undefined, syncopated: false })),
             }));
-            setSyncopeStartId(null);
+            setSyncopeBrushMode(false);
           }}
           disabled={syncopePairs.length === 0}
           className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs disabled:opacity-40"
         >
           Retirer toutes les syncopes
         </button>
-        <button type="button" onClick={() => { setPattern(makeEmptyRhythmPattern()); setSelectedItemId(null); setSyncopeStartId(null); setError(''); }} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs">
+        <button type="button" onClick={() => { setPattern(makeEmptyRhythmPattern()); setSelectedItemId(null); setSyncopeBrushMode(false); setError(''); }} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs">
           Nouveau motif
         </button>
         {source && (
