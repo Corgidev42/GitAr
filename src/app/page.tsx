@@ -154,47 +154,163 @@ function getSyncopePairs(items: RhythmItem[]): Array<{ from: RhythmItem; to: Rhy
   });
 }
 
+function rhythmFigureKind(length: number): 'whole' | 'half' | 'quarter' | 'eighth' {
+  if (length >= 8) return 'whole';
+  if (length >= 4) return 'half';
+  if (length >= 2) return 'quarter';
+  return 'eighth';
+}
+
+function RhythmMeasureSvg({
+  measureItems,
+  measurePairs,
+  measureBase,
+  selectedItemId,
+  syncopeStartId,
+  compact = false,
+  onItemClick,
+}: {
+  measureItems: RhythmItem[];
+  measurePairs: Array<{ from: RhythmItem; to: RhythmItem }>;
+  measureBase: number;
+  selectedItemId?: string | null;
+  syncopeStartId?: string | null;
+  compact?: boolean;
+  onItemClick?: (itemId: string) => void;
+}) {
+  const unit = compact ? 24 : 30; // largeur d'une croche
+  const headY = compact ? 42 : 48;
+  const stemTopY = compact ? 20 : 22;
+  const svgW = unit * STEPS_PER_MEASURE + 26;
+  const svgH = compact ? 70 : 86;
+  const lineYs = compact ? [22, 28, 34, 40, 46, 52] : [24, 30, 36, 42, 48, 54]; // style tablature
+
+  const eighthNotes = measureItems
+    .filter((it) => !it.isRest && it.length === 1)
+    .sort((a, b) => a.start - b.start);
+  const beams: Array<{ a: RhythmItem; b: RhythmItem }> = [];
+  for (let i = 0; i < eighthNotes.length - 1; i += 1) {
+    const a = eighthNotes[i];
+    const b = eighthNotes[i + 1];
+    if (b.start === a.start + 1 && Math.floor((a.start - measureBase) / 2) === Math.floor((b.start - measureBase) / 2)) {
+      beams.push({ a, b });
+      i += 1;
+    }
+  }
+
+  return (
+    <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto rounded-md bg-[var(--background)]/60">
+      {/* Lignes de tablature */}
+      {lineYs.map((y, i) => (
+        <line key={`l-${i}`} x1="8" y1={y} x2={svgW - 8} y2={y} stroke="var(--muted)" strokeWidth="0.8" opacity="0.65" />
+      ))}
+
+      {/* Barres de temps et de mesure */}
+      {Array.from({ length: STEPS_PER_MEASURE + 1 }).map((_, i) => {
+        const x = 13 + i * unit;
+        const isBeat = i % 2 === 0;
+        return (
+          <line
+            key={`g-${i}`}
+            x1={x}
+            y1={lineYs[0] - 4}
+            x2={x}
+            y2={lineYs[lineYs.length - 1] + 4}
+            stroke="var(--surface-light)"
+            strokeWidth={isBeat ? 1 : 0.5}
+            opacity={isBeat ? 0.55 : 0.35}
+          />
+        );
+      })}
+
+      {/* Notes et silences */}
+      {measureItems.map((it) => {
+        const start = it.start - measureBase;
+        const xStart = 13 + start * unit;
+        const xCenter = xStart + (it.length * unit) / 2;
+        const kind = rhythmFigureKind(it.length);
+        const selected = selectedItemId === it.id;
+        const isStart = syncopeStartId === it.id;
+
+        if (it.isRest) {
+          return (
+            <g key={it.id} onClick={() => onItemClick?.(it.id)} className={onItemClick ? 'cursor-pointer' : undefined}>
+              <rect
+                x={xStart + 2}
+                y={headY - 10}
+                width={Math.max(14, it.length * unit - 4)}
+                height="18"
+                rx="3"
+                fill="transparent"
+                stroke={selected ? 'var(--accent-light)' : 'transparent'}
+                strokeWidth="1.5"
+              />
+              <text x={xCenter} y={headY + 2} textAnchor="middle" fontSize={compact ? 12 : 14} fill="var(--warning)">
+                {it.symbol}
+              </text>
+            </g>
+          );
+        }
+
+        const fillHead = kind === 'quarter' || kind === 'eighth';
+        const hasStem = kind !== 'whole';
+        const hasFlag = kind === 'eighth' && !beams.some((b) => b.a.id === it.id || b.b.id === it.id);
+        const headStroke = selected ? 'var(--accent-light)' : 'var(--foreground)';
+        const headFill = fillHead ? 'var(--foreground)' : 'transparent';
+        const strokeWidth = isStart ? 2.2 : 1.4;
+
+        return (
+          <g key={it.id} onClick={() => onItemClick?.(it.id)} className={onItemClick ? 'cursor-pointer' : undefined}>
+            <ellipse cx={xCenter} cy={headY} rx="4.5" ry="3.4" fill={headFill} stroke={headStroke} strokeWidth={strokeWidth} />
+            {hasStem && <line x1={xCenter + 4.5} y1={headY} x2={xCenter + 4.5} y2={stemTopY} stroke={headStroke} strokeWidth="1.3" />}
+            {hasFlag && <path d={`M ${xCenter + 4.5} ${stemTopY} q 6 2 5 8`} fill="none" stroke={headStroke} strokeWidth="1.3" />}
+          </g>
+        );
+      })}
+
+      {/* Barres pour paires de croches */}
+      {beams.map((beam, i) => {
+        const aX = 13 + (beam.a.start - measureBase) * unit + (beam.a.length * unit) / 2 + 4.5;
+        const bX = 13 + (beam.b.start - measureBase) * unit + (beam.b.length * unit) / 2 + 4.5;
+        return <line key={`beam-${i}`} x1={aX} y1={stemTopY} x2={bX} y2={stemTopY} stroke="var(--foreground)" strokeWidth="3" />;
+      })}
+
+      {/* Liaisons de syncope */}
+      {measurePairs.map((p, i) => {
+        const fromX = 13 + (p.from.start - measureBase + p.from.length / 2) * unit;
+        const toX = 13 + (p.to.start - measureBase + p.to.length / 2) * unit;
+        const cx = (fromX + toX) / 2;
+        return (
+          <path
+            key={`sync-${i}`}
+            d={`M ${fromX} ${headY + 10} Q ${cx} ${headY + 18} ${toX} ${headY + 10}`}
+            stroke="var(--accent)"
+            strokeWidth="1.6"
+            fill="none"
+            opacity="0.95"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 function RhythmPatternPreview({ pattern }: { pattern: RhythmPatternV2 }) {
-  const totalSlots = getRhythmSlots(pattern);
   const pairs = getSyncopePairs(pattern.items);
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2">
-      <div className="relative h-11">
-        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${totalSlots}, minmax(0, 1fr))` }}>
-          {Array.from({ length: totalSlots }).map((_, i) => (
-            <div key={i} className={`border-r border-[var(--surface-light)]/60 ${i % 2 === 0 ? 'border-l border-[var(--surface-light)]/40' : ''}`} />
-          ))}
-        </div>
-        {pattern.items.map((it) => (
-          <div
-            key={it.id}
-            className={`absolute top-1.5 bottom-1.5 rounded-md px-1.5 text-[10px] inline-flex items-center justify-center ${it.isRest ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-[var(--accent)]/20 text-[var(--accent-light)] border border-[var(--accent)]/40'}`}
-            style={{ left: `${(it.start / totalSlots) * 100}%`, width: `${(it.length / totalSlots) * 100}%` }}
-            title={pairs.some((p) => p.from.id === it.id || p.to.id === it.id) ? 'Syncope active' : undefined}
-          >
-            <span>{it.symbol}</span>
+      {Array.from({ length: pattern.measures }).map((_, measureIdx) => {
+        const base = measureIdx * STEPS_PER_MEASURE;
+        const measureItems = pattern.items.filter((it) => it.start >= base && it.start < base + STEPS_PER_MEASURE);
+        const measurePairs = pairs.filter(
+          (p) => Math.floor(p.from.start / STEPS_PER_MEASURE) === measureIdx && Math.floor(p.to.start / STEPS_PER_MEASURE) === measureIdx,
+        );
+        return (
+          <div key={`prev-${measureIdx}`} className="mb-2 last:mb-0">
+            <RhythmMeasureSvg measureItems={measureItems} measurePairs={measurePairs} measureBase={base} compact />
           </div>
-        ))}
-        {pairs.length > 0 && (
-          <svg className="absolute inset-0 pointer-events-none" viewBox={`0 0 ${totalSlots * 20} 44`} preserveAspectRatio="none">
-            {pairs.map((p, i) => {
-              const x1 = (p.from.start + p.from.length) * 20;
-              const x2 = p.to.start * 20;
-              const cx = (x1 + x2) / 2;
-              return (
-                <path
-                  key={`${p.from.id}-${p.to.id}-${i}`}
-                  d={`M ${x1} 10 Q ${cx} 2 ${x2} 10`}
-                  stroke="var(--accent-light)"
-                  strokeWidth="1.2"
-                  fill="none"
-                  opacity="0.95"
-                />
-              );
-            })}
-          </svg>
-        )}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -410,10 +526,28 @@ function RhythmPatternEditor({
         {Array.from({ length: pattern.measures }).map((_, measureIdx) => {
           const base = measureIdx * STEPS_PER_MEASURE;
           const measureItems = pattern.items.filter((it) => it.start >= base && it.start < base + STEPS_PER_MEASURE);
+          const measurePairs = syncopePairs.filter(
+            (p) => Math.floor(p.from.start / STEPS_PER_MEASURE) === measureIdx && Math.floor(p.to.start / STEPS_PER_MEASURE) === measureIdx,
+          );
           return (
             <div key={measureIdx} className="mb-3 last:mb-0">
               <div className="text-[10px] text-[var(--muted)] mb-1">Mesure {measureIdx + 1}</div>
-              <div className="relative min-w-[320px] h-14 rounded-md border border-[var(--surface-light)]">
+              <div className="relative min-w-[360px] rounded-md border border-[var(--surface-light)] bg-[var(--background)]/50">
+                <RhythmMeasureSvg
+                  measureItems={measureItems}
+                  measurePairs={measurePairs}
+                  measureBase={base}
+                  selectedItemId={selectedItemId}
+                  syncopeStartId={syncopeStartId}
+                  onItemClick={(itemId) => {
+                    if (syncopeStartId) {
+                      connectSyncope(syncopeStartId, itemId);
+                      return;
+                    }
+                    setSelectedItemId(itemId);
+                    setError('');
+                  }}
+                />
                 <div className="absolute inset-0 grid grid-cols-8">
                   {Array.from({ length: STEPS_PER_MEASURE }).map((__, slot) => (
                     <button
@@ -426,42 +560,11 @@ function RhythmPatternEditor({
                         }
                         placeFigureAt(base + slot);
                       }}
-                      className={`border-r border-[var(--surface-light)]/70 hover:bg-[var(--accent)]/10 ${slot % 2 === 0 ? 'bg-[var(--surface)]/30' : ''}`}
+                      className={`border-r border-transparent hover:bg-[var(--accent)]/10 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''}`}
                       title={syncopeStartId ? 'Sélection syncope active: clique une note B' : `Placer ${selectedFigure.label}`}
                     />
                   ))}
                 </div>
-                {measureItems.map((it) => (
-                  <button
-                    key={it.id}
-                    type="button"
-                    onClick={() => {
-                      if (syncopeStartId) {
-                        connectSyncope(syncopeStartId, it.id);
-                        return;
-                      }
-                      setSelectedItemId(it.id);
-                      setError('');
-                    }}
-                    className={`absolute top-1.5 bottom-1.5 rounded-md px-1.5 text-[11px] inline-flex items-center justify-center border ${it.isRest ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-[var(--accent)]/20 text-[var(--accent-light)] border-[var(--accent)]/40'} ${selectedItemId === it.id ? 'ring-2 ring-[var(--accent)]/70' : ''}`}
-                    style={{ left: `${((it.start - base) / STEPS_PER_MEASURE) * 100}%`, width: `${(it.length / STEPS_PER_MEASURE) * 100}%` }}
-                    title={syncopePairs.some((p) => p.from.id === it.id || p.to.id === it.id) ? 'Syncope active' : undefined}
-                  >
-                    <span>{it.symbol}</span>
-                  </button>
-                ))}
-                {syncopePairs
-                  .filter((p) => Math.floor(p.from.start / STEPS_PER_MEASURE) === measureIdx && Math.floor(p.to.start / STEPS_PER_MEASURE) === measureIdx)
-                  .map((p, idx) => {
-                    const fromX = ((p.from.start - base + p.from.length) / STEPS_PER_MEASURE) * 100;
-                    const toX = ((p.to.start - base) / STEPS_PER_MEASURE) * 100;
-                    const midX = (fromX + toX) / 2;
-                    return (
-                      <svg key={`arc-${p.from.id}-${p.to.id}-${idx}`} className="absolute inset-0 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <path d={`M ${fromX} 18 Q ${midX} 3 ${toX} 18`} stroke="var(--accent-light)" strokeWidth="0.9" fill="none" />
-                      </svg>
-                    );
-                  })}
               </div>
             </div>
           );
