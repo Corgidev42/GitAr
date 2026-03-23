@@ -1,0 +1,18 @@
+---
+description: Toujours sécuriser database.json (commit/push) avant toute opération risquée
+alwaysApply: true
+---
+
+# GitAr — Base de données locale (`database.json`)
+
+## Règle obligatoire pour l’agent et les contributeurs
+
+1. **Avant** toute modification importante du projet, des scripts, des commandes Git destructrices (`checkout`, `reset`, `stash` sur des fichiers suivis), ou de longues sessions d’édition :  
+   - Vérifier si `database.json` a des changements non commités.  
+   - Si oui : **commit** (et idéalement **push**) `database.json` avec un message du type `chore(db): sauvegarde avant …` pour ne **pas perdre** le diff local.
+
+2. **Ne jamais** lancer `git checkout -- database.json` ou équivalent sur la machine de l’utilisateur **sans** confirmation explicite — cela **écrase** les leçons et la KB non poussées.
+
+3. Après des ajouts de leçons, morceaux ou knowledge base : proposer un commit incluant `database.json` quand c’est pertinent.
+
+4. La base est versionnée dans ce dépôt : la traiter comme une **source de vérité** à sauvegarder aussi souvent que le code.

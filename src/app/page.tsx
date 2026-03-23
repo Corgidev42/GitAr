@@ -5,9 +5,9 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
-  IconCheck, IconGuitar, IconHeart, IconLink, IconMusic, IconPause,
+  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLink, IconMusic, IconPause,
   IconPencil, IconPlay, IconPlus, IconRefresh, IconRhythm, IconTarget,
-  IconTrash, IconUpload, IconX, IconBook,
+  IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
 
 // Accordage standard guitare (E2 A2 D3 G3 B3 E4) en Hz
@@ -450,13 +450,17 @@ function ChordDiagram({ name, onPlay }: { name: string; onPlay?: (name: string) 
   );
 }
 
-function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, onAdd, addPlaceholder }: {
+function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, onAdd, addPlaceholder, orderable, onMoveItem }: {
   title: string; icon?: ReactNode; items: string[];
   renderItem: (item: string) => React.ReactNode;
   editMode?: boolean; onDelete?: (item: string) => void; onEdit?: (item: string) => void;
   onAdd?: (value: string) => void; addPlaceholder?: string;
+  /** Mode Éditer : flèches pour réordonner (swap avec le voisin) */
+  orderable?: boolean;
+  onMoveItem?: (index: number, direction: -1 | 1) => void;
 }) {
   const [addValue, setAddValue] = useState('');
+  const showReorder = editMode && orderable && onMoveItem && items.length > 0;
   return (
     <section className="mb-10">
       <div className="flex items-center gap-2 mb-4">
@@ -475,19 +479,43 @@ function Section({ title, icon, items, renderItem, editMode, onDelete, onEdit, o
           </button>
         </div>
       )}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-start">
         {items.length === 0 && !editMode ? (
           <div className="text-sm text-[var(--muted)] py-4">Aucun élément. Passe en mode Éditer pour en ajouter.</div>
         ) : null}
-        {items.map((item) => (
-          <div key={item} className="relative group">
-            {renderItem(item)}
-            {editMode && (onDelete || onEdit) && (
-              <div className="absolute -top-2 -right-2 flex gap-1">
-                {onEdit && (<button onClick={() => onEdit(item)} className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--foreground)] shadow-lg" title={`Renommer ${item}`}><IconPencil className="w-3.5 h-3.5" /></button>)}
-                {onDelete && (<button onClick={() => onDelete(item)} className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg" title={`Supprimer ${item}`}><IconTrash className="w-3.5 h-3.5" /></button>)}
+        {items.map((item, idx) => (
+          <div key={item} className="relative group flex items-start gap-1">
+            {showReorder && (
+              <div className="flex flex-col gap-0.5 shrink-0 pt-1">
+                <button
+                  type="button"
+                  disabled={idx === 0}
+                  onClick={() => onMoveItem!(idx, -1)}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none"
+                  title="Monter"
+                >
+                  <IconChevronUp className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={idx >= items.length - 1}
+                  onClick={() => onMoveItem!(idx, 1)}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none"
+                  title="Descendre"
+                >
+                  <IconChevronDown className="w-4 h-4" />
+                </button>
               </div>
             )}
+            <div className="relative">
+              {renderItem(item)}
+              {editMode && (onDelete || onEdit) && (
+                <div className="absolute -top-2 -right-2 flex gap-1">
+                  {onEdit && (<button onClick={() => onEdit(item)} className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-[var(--foreground)] shadow-lg" title={`Renommer ${item}`}><IconPencil className="w-3.5 h-3.5" /></button>)}
+                  {onDelete && (<button onClick={() => onDelete(item)} className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-400 shadow-lg" title={`Supprimer ${item}`}><IconTrash className="w-3.5 h-3.5" /></button>)}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -915,6 +943,32 @@ export default function KnowledgePage() {
     if (res.ok) safeReload();
   };
 
+  const reorderKnowledgeItem = useCallback(async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', items: string[], index: number, direction: -1 | 1) => {
+    const j = index + direction;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[index], next[j]] = [next[j], next[index]];
+    const res = await fetch('/api/database', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'knowledge_reorder', category, items: next }) });
+    if (res.ok) safeReload();
+  }, [safeReload]);
+
+  const swapLessonsById = useCallback(async (lessonIdA: string, lessonIdB: string) => {
+    const res = await fetch('/api/database', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'lessons_swap', lessonIdA, lessonIdB }) });
+    if (res.ok) safeReload();
+  }, [safeReload]);
+
+  const moveProgression = useCallback(async (lessonId: string, progressionIndex: number, direction: -1 | 1) => {
+    if (!db) return;
+    const lesson = db.lessons.find((l) => l.id === lessonId);
+    const progs = [...(lesson?.progressions || [])];
+    if (progs.length < 2) return;
+    const to = progressionIndex + direction;
+    if (to < 0 || to >= progs.length) return;
+    [progs[progressionIndex], progs[to]] = [progs[to], progs[progressionIndex]];
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: progs }) });
+    if (res.ok) safeReload();
+  }, [db, safeReload]);
+
   const openEditTechnique = useCallback((techName: string) => {
     if (!db) return;
     const key = techName.toLowerCase();
@@ -1084,12 +1138,17 @@ export default function KnowledgePage() {
         <Section title="Accords" icon={<IconMusic className="w-5 h-5" />} items={k.chords} editMode={editMode}
           onDelete={(v) => deleteItem('chords', v)} onEdit={(v) => setEditKnowledge({ category: 'chords', from: v, to: v })}
           onAdd={(v) => addItem('chords', v)} addPlaceholder="Ex: Cm7, F#m"
+          orderable
+          onMoveItem={(idx, dir) => reorderKnowledgeItem('chords', k.chords, idx, dir)}
           renderItem={(chord) => <ChordDiagram name={chord} onPlay={playChord} />} />
       )}
 
       {tab === 'techniques' && (
         <Section title="Techniques" icon={<IconTarget className="w-5 h-5" />} items={k.techniques} editMode={editMode}
           onDelete={(v) => deleteItem('techniques', v)} onEdit={(v) => setEditKnowledge({ category: 'techniques', from: v, to: v })}
+          onAdd={(v) => addItem('techniques', v)} addPlaceholder="Ex: hammer-on, pull-off, tapping"
+          orderable
+          onMoveItem={(idx, dir) => reorderKnowledgeItem('techniques', k.techniques, idx, dir)}
           renderItem={(tech) => (
             <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[160px]">
               <button type="button" onClick={() => setTechInfo(tech)} className="w-full text-left">
@@ -1125,6 +1184,8 @@ export default function KnowledgePage() {
           <Section title="Rythmiques" icon={<IconRhythm className="w-5 h-5" />} items={k.strums || []} editMode={editMode}
             onDelete={(v) => deleteItem('strums', v)} onEdit={(v) => setEditKnowledge({ category: 'strums', from: v, to: v })}
             onAdd={(v) => addItem('strums', v)} addPlaceholder="Ex: Bas Bas Haut Haut Bas"
+            orderable
+            onMoveItem={(idx, dir) => reorderKnowledgeItem('strums', k.strums || [], idx, dir)}
             renderItem={(strum) => {
               const steps = getStrumSteps(strum);
               const { measureInfo } = getStrumDurations(strum, steps);
@@ -1157,6 +1218,8 @@ export default function KnowledgePage() {
           <Section title="Rythmes" icon={<IconRhythm className="w-5 h-5" />} items={k.rhythms} editMode={editMode}
             onDelete={(v) => deleteItem('rhythms', v)} onEdit={(v) => setEditKnowledge({ category: 'rhythms', from: v, to: v })}
             onAdd={(v) => addItem('rhythms', v)} addPlaceholder="Ex: blanche, ronde"
+            orderable
+            onMoveItem={(idx, dir) => reorderKnowledgeItem('rhythms', k.rhythms, idx, dir)}
             renderItem={(rhythm) => (
               <RhythmCard name={rhythm} expanded={expandedRhythm === rhythm} onToggle={() => setExpandedRhythm(expandedRhythm === rhythm ? null : rhythm)} />
             )} />
@@ -1177,8 +1240,23 @@ export default function KnowledgePage() {
             <div className="text-sm text-[var(--muted)]">{favFilter ? 'Aucun favori pour le moment.' : 'Aucune suite détectée pour le moment.'}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProgressions.map((p, idx) => (
-                <div key={`${p.lessonId}-${idx}`} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)]">
+              {filteredProgressions.map((p) => {
+                const progCount = db.lessons.find((l) => l.id === p.lessonId)?.progressions?.length ?? 0;
+                return (
+                <div key={`${p.lessonId}-${p.progressionIndex}`} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] flex gap-2">
+                  {editMode && progCount > 1 && (
+                    <div className="flex flex-col gap-0.5 shrink-0 pt-0.5">
+                      <button type="button" disabled={p.progressionIndex <= 0} onClick={() => moveProgression(p.lessonId, p.progressionIndex, -1)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none" title="Monter dans la leçon">
+                        <IconChevronUp className="w-4 h-4" />
+                      </button>
+                      <button type="button" disabled={p.progressionIndex >= progCount - 1} onClick={() => moveProgression(p.lessonId, p.progressionIndex, 1)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none" title="Descendre dans la leçon">
+                        <IconChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-sm font-semibold">{p.chords.join(' → ')}</div>
                     <div className="flex items-center gap-2">
@@ -1199,8 +1277,10 @@ export default function KnowledgePage() {
                   </div>
                   <div className="text-xs text-[var(--muted)] mt-2">{p.lessonId} — {p.lessonTitle}</div>
                   {p.notes && <div className="text-xs text-[var(--muted)] mt-2">{p.notes}</div>}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -1220,8 +1300,21 @@ export default function KnowledgePage() {
             <div className="text-sm text-[var(--muted)]">{favFilter ? 'Aucun favori pour le moment.' : 'Aucun morceau pour le moment.'}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredSongs.map((s) => (
-                <div key={s.id} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors">
+              {filteredSongs.map((s, idx) => (
+                <div key={s.id} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors flex gap-2">
+                  {editMode && filteredSongs.length > 1 && (
+                    <div className="flex flex-col gap-0.5 shrink-0 pt-0.5">
+                      <button type="button" disabled={idx === 0} onClick={() => swapLessonsById(s.id, filteredSongs[idx - 1].id)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none" title="Monter dans la liste">
+                        <IconChevronUp className="w-4 h-4" />
+                      </button>
+                      <button type="button" disabled={idx >= filteredSongs.length - 1} onClick={() => swapLessonsById(s.id, filteredSongs[idx + 1].id)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none" title="Descendre dans la liste">
+                        <IconChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="text-xs text-[var(--muted)] font-mono">{s.id}</div>
@@ -1243,6 +1336,7 @@ export default function KnowledgePage() {
                   {s.progressions && s.progressions.length > 0 && (
                     <div className="text-xs text-[var(--muted)] mt-2">{s.progressions[0].chords.join(' → ')}</div>
                   )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1261,8 +1355,21 @@ export default function KnowledgePage() {
             <div className="text-sm text-[var(--muted)]">Aucune leçon pour le moment.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lessons.map((l) => (
-                <div key={l.id} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors">
+              {lessons.map((l, idx) => (
+                <div key={l.id} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors flex gap-2">
+                  {editMode && lessons.length > 1 && (
+                    <div className="flex flex-col gap-0.5 shrink-0 pt-0.5">
+                      <button type="button" disabled={idx === 0} onClick={() => swapLessonsById(l.id, lessons[idx - 1].id)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none" title="Monter dans la liste">
+                        <IconChevronUp className="w-4 h-4" />
+                      </button>
+                      <button type="button" disabled={idx >= lessons.length - 1} onClick={() => swapLessonsById(l.id, lessons[idx + 1].id)}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-[var(--surface-light)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-25 disabled:pointer-events-none" title="Descendre dans la liste">
+                        <IconChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="text-xs text-[var(--muted)] font-mono">{l.id}</div>
@@ -1284,6 +1391,7 @@ export default function KnowledgePage() {
                     {l.knowledge.chords.length > 4 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-light)] text-[var(--muted)]">+{l.knowledge.chords.length - 4}</span>}
                   </div>
                   <Link href={`/lesson/${encodeURIComponent(l.id)}`} className="inline-block text-xs text-[var(--accent-light)] hover:text-[var(--foreground)] mt-2">Ouvrir</Link>
+                  </div>
                 </div>
               ))}
             </div>

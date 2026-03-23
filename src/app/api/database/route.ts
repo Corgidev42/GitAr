@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { readDatabase, writeDatabase } from '@/lib/database';
+import { readDatabase, writeDatabase, syncGlobalKnowledgeFromLessons } from '@/lib/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,24 +22,6 @@ export async function GET() {
   return NextResponse.json(db);
 }
 
-function rebuildGlobalKnowledge(db: ReturnType<typeof readDatabase>) {
-  db.globalKnowledge = { chords: [], techniques: [], rhythms: [], strums: [] };
-  const strumsAcc = db.globalKnowledge.strums || (db.globalKnowledge.strums = []);
-  for (const lesson of db.lessons) {
-    for (const chord of lesson.knowledge.chords) {
-      if (!db.globalKnowledge.chords.includes(chord)) db.globalKnowledge.chords.push(chord);
-    }
-    for (const tech of lesson.knowledge.techniques) {
-      if (!db.globalKnowledge.techniques.includes(tech)) db.globalKnowledge.techniques.push(tech);
-    }
-    for (const rhythm of lesson.knowledge.rhythms) {
-      if (!db.globalKnowledge.rhythms.includes(rhythm)) db.globalKnowledge.rhythms.push(rhythm);
-    }
-    for (const strum of lesson.knowledge.strums || []) {
-      if (!strumsAcc.includes(strum)) strumsAcc.push(strum);
-    }
-  }
-}
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
@@ -86,9 +68,50 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    rebuildGlobalKnowledge(db);
+    syncGlobalKnowledgeFromLessons(db);
     writeDatabase(db);
     return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });
+  }
+
+  if (body.type === 'knowledge_reorder') {
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums';
+    const items = body.items as string[];
+    if (!category || !Array.isArray(items)) {
+      return NextResponse.json({ error: 'Missing category or items' }, { status: 400 });
+    }
+    const cur = db.globalKnowledge[category] || [];
+    if (items.length !== cur.length) {
+      return NextResponse.json({ error: 'La liste doit contenir exactement les mêmes éléments' }, { status: 400 });
+    }
+    const curSet = new Set(cur);
+    for (const x of items) {
+      if (!curSet.has(x)) return NextResponse.json({ error: 'Élément inconnu dans la liste' }, { status: 400 });
+      curSet.delete(x);
+    }
+    if (curSet.size > 0) {
+      return NextResponse.json({ error: 'Liste incomplète' }, { status: 400 });
+    }
+    db.globalKnowledge[category] = items;
+    writeDatabase(db);
+    return NextResponse.json({ ok: true, globalKnowledge: db.globalKnowledge });
+  }
+
+  if (body.type === 'lessons_swap') {
+    const a = (body.lessonIdA as string)?.trim();
+    const b = (body.lessonIdB as string)?.trim();
+    if (!a || !b || a === b) {
+      return NextResponse.json({ error: 'lessonIdA et lessonIdB requis' }, { status: 400 });
+    }
+    const ia = db.lessons.findIndex((l) => l.id === a);
+    const ib = db.lessons.findIndex((l) => l.id === b);
+    if (ia < 0 || ib < 0) {
+      return NextResponse.json({ error: 'Leçon introuvable' }, { status: 404 });
+    }
+    const tmp = db.lessons[ia];
+    db.lessons[ia] = db.lessons[ib];
+    db.lessons[ib] = tmp;
+    writeDatabase(db);
+    return NextResponse.json({ ok: true, lessons: db.lessons });
   }
 
   if (body.type === 'technique_detail') {
@@ -165,7 +188,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing lesson id' }, { status: 400 });
     }
     db.lessons = db.lessons.filter((l) => l.id !== id);
-    rebuildGlobalKnowledge(db);
+    syncGlobalKnowledgeFromLessons(db);
     writeDatabase(db);
     return NextResponse.json({ ok: true });
   }

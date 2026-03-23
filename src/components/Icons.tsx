@@ -2,6 +2,8 @@ import type { LucideProps } from 'lucide-react';
 import {
   BookOpen,
   Check,
+  ChevronDown,
+  ChevronUp,
   Drum,
   FileText,
   Flame,
@@ -94,6 +96,14 @@ export function IconStar({ title = 'Star', ...props }: IconProps) {
 
 export function IconPlus({ title = 'Add', ...props }: IconProps) {
   return <Plus aria-label={title} {...props} />;
+}
+
+export function IconChevronUp({ title = 'Monter', ...props }: IconProps) {
+  return <ChevronUp aria-label={title} {...props} />;
+}
+
+export function IconChevronDown({ title = 'Descendre', ...props }: IconProps) {
+  return <ChevronDown aria-label={title} {...props} />;
 }
 
 export function IconUpload({ title = 'Upload', ...props }: IconProps) {

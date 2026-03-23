@@ -8,6 +8,11 @@ Système local de gestion d'apprentissage guitare (LMS). Automatise l'ingestion 
 - **Stockage** : `database.json` local + système de fichiers
 - **IA** : Google Gemini (optionnel) pour l'extraction structurée des leçons
 
+## Convention Git — `database.json`
+
+- **Avant** toute opération risquée (gros refactor, `git checkout` / `reset`, scripts, longue session sans sauvegarde) : **commit** puis idéalement **push** `database.json` pour ne pas perdre le diff local (leçons, KB, ordre des listes).
+- Règle projet pour l’agent Cursor : `.cursor/rules/git-database.mdc`.
+
 ## Démarrage rapide
 
 ```bash

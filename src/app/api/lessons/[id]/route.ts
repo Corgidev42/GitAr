@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDatabase, writeDatabase } from '@/lib/database';
+import { readDatabase, writeDatabase, syncGlobalKnowledgeFromLessons } from '@/lib/database';
 import type { TabAsset, BackingTrack } from '@/types';
 
 export const dynamic = 'force-dynamic';
-
-function rebuildGlobalKnowledge(db: ReturnType<typeof readDatabase>) {
-  db.globalKnowledge = { chords: [], techniques: [], rhythms: [], strums: [] };
-  const strumsAcc = db.globalKnowledge.strums || (db.globalKnowledge.strums = []);
-  for (const lesson of db.lessons) {
-    for (const chord of lesson.knowledge.chords) {
-      if (!db.globalKnowledge.chords.includes(chord)) db.globalKnowledge.chords.push(chord);
-    }
-    for (const tech of lesson.knowledge.techniques) {
-      if (!db.globalKnowledge.techniques.includes(tech)) db.globalKnowledge.techniques.push(tech);
-    }
-    for (const rhythm of lesson.knowledge.rhythms) {
-      if (!db.globalKnowledge.rhythms.includes(rhythm)) db.globalKnowledge.rhythms.push(rhythm);
-    }
-    for (const strum of lesson.knowledge.strums || []) {
-      if (!strumsAcc.includes(strum)) strumsAcc.push(strum);
-    }
-  }
-}
 
 export async function GET(
   _req: NextRequest,
@@ -93,7 +74,7 @@ export async function PATCH(
     db.lessons[idx].assets.backingTracks = updates.backingTracks as BackingTrack[];
   }
 
-  rebuildGlobalKnowledge(db);
+  syncGlobalKnowledgeFromLessons(db);
   writeDatabase(db);
   return NextResponse.json(db.lessons[idx]);
 }

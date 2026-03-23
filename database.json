@@ -326,75 +326,6 @@
       "favorite": false
     },
     {
-      "id": "D106",
-      "title": "La poupée qui fait non - Michel Polnareff",
-      "level": "debutant",
-      "knowledge": {
-        "chords": [
-          "E",
-          "D",
-          "A",
-          "Asus4",
-          "Asus2"
-        ],
-        "techniques": [
-          "Rythmique en syncope"
-        ],
-        "rhythms": [
-          "noire",
-          "croche",
-          "blanche",
-          "syncope"
-        ],
-        "strums": [
-          "Bas . Haut Bas Bas"
-        ]
-      },
-      "assets": {
-        "backingTracks": [
-          {
-            "bpm": 60,
-            "path": "/assets/audio/D106/PAC_D106_-_La_poupee_qui_fait_non_-_60bpm.mp3"
-          },
-          {
-            "bpm": 80,
-            "path": "/assets/audio/D106/PAC_D106_-_La_poupee_qui_fait_non_-_80bpm.mp3"
-          },
-          {
-            "bpm": 100,
-            "path": "/assets/audio/D106/PAC_D106_-_La_poupee_qui_fait_non_-_100bpm.mp3"
-          }
-        ],
-        "tabs": [
-          {
-            "name": "Tablature",
-            "path": "/assets/tabs/D106_PAC_D106_-_Jam_Along_-_La_poupee_qui_fait_non.pdf"
-          },
-          {
-            "name": "Parole",
-            "path": "/assets/tabs/D106_PAC_D106_-_Fiche_paroles_-_La_poupee_qui_fait_non.pdf"
-          }
-        ]
-      },
-      "progressions": [
-        {
-          "chords": [
-            "E",
-            "A",
-            "Asus2",
-            "A",
-            "D",
-            "A",
-            "Asus4",
-            "A",
-            "E"
-          ]
-        }
-      ],
-      "isSong": true,
-      "favorite": false
-    },
-    {
       "id": "D105",
       "title": "San Francisco – Maxime le Forestier",
       "level": "debutant",
@@ -468,6 +399,75 @@
       ],
       "isSong": true,
       "favorite": false
+    },
+    {
+      "id": "D106",
+      "title": "La poupée qui fait non - Michel Polnareff",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "E",
+          "D",
+          "A",
+          "Asus4",
+          "Asus2"
+        ],
+        "techniques": [
+          "Rythmique en syncope"
+        ],
+        "rhythms": [
+          "noire",
+          "croche",
+          "blanche",
+          "syncope"
+        ],
+        "strums": [
+          "Bas . Haut Bas Bas"
+        ]
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 60,
+            "path": "/assets/audio/D106/PAC_D106_-_La_poupee_qui_fait_non_-_60bpm.mp3"
+          },
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D106/PAC_D106_-_La_poupee_qui_fait_non_-_80bpm.mp3"
+          },
+          {
+            "bpm": 100,
+            "path": "/assets/audio/D106/PAC_D106_-_La_poupee_qui_fait_non_-_100bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D106_PAC_D106_-_Jam_Along_-_La_poupee_qui_fait_non.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D106_PAC_D106_-_Fiche_paroles_-_La_poupee_qui_fait_non.pdf"
+          }
+        ]
+      },
+      "progressions": [
+        {
+          "chords": [
+            "E",
+            "A",
+            "Asus2",
+            "A",
+            "D",
+            "A",
+            "Asus4",
+            "A",
+            "E"
+          ]
+        }
+      ],
+      "isSong": true,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -492,7 +492,8 @@
     "techniques": [
       "embellissement autour du D",
       "s'accompagner en chantant",
-      "Rythmique en syncope"
+      "Rythmique en syncope",
+      "Embellissement Autour Du C"
     ],
     "rhythms": [
       "croche",

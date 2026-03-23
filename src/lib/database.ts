@@ -86,6 +86,49 @@ export function writeDatabase(db: Database): void {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf-8');
 }
 
+/** Conserve l’ordre actuel de la KB et ajoute en fin les entrées présentes dans les leçons. */
+export function syncGlobalKnowledgeFromLessons(db: Database): void {
+  type Cat = 'chords' | 'techniques' | 'rhythms';
+  const cats: Cat[] = ['chords', 'techniques', 'rhythms'];
+  for (const cat of cats) {
+    const current = db.globalKnowledge[cat] || [];
+    const next: string[] = [];
+    const seen = new Set<string>();
+    for (const x of current) {
+      if (seen.has(x)) continue;
+      seen.add(x);
+      next.push(x);
+    }
+    for (const lesson of db.lessons) {
+      const arr = lesson.knowledge[cat] || [];
+      for (const x of arr) {
+        if (!seen.has(x)) {
+          seen.add(x);
+          next.push(x);
+        }
+      }
+    }
+    db.globalKnowledge[cat] = next;
+  }
+  const strumCurrent = db.globalKnowledge.strums || [];
+  const seenS = new Set<string>();
+  const nextS: string[] = [];
+  for (const x of strumCurrent) {
+    if (seenS.has(x)) continue;
+    seenS.add(x);
+    nextS.push(x);
+  }
+  for (const lesson of db.lessons) {
+    for (const x of lesson.knowledge.strums || []) {
+      if (!seenS.has(x)) {
+        seenS.add(x);
+        nextS.push(x);
+      }
+    }
+  }
+  db.globalKnowledge.strums = nextS;
+}
+
 export function upsertLesson(lesson: GuitarLesson): void {
   const db = readDatabase();
   const idx = db.lessons.findIndex((l) => l.id === lesson.id);
