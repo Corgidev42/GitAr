@@ -553,6 +553,16 @@
     "embellissement autour du a": {
       "summary": "",
       "image": "/assets/techniques/embellissement_autour_du_a_1774303717811.png"
+    },
+    "embellissement autour du d": {
+      "title": "Embellissement autour du D",
+      "summary": "Variations courtes autour de l’accord de D, ajoutant des notes de passage et suspensions.",
+      "steps": [
+        "Basculer entre D, Dsus2 et Dsus4",
+        "Ajouter la basse A (D/A) pour varier la couleur",
+        "Utiliser des hammer-on sur la corde de mi aigu (2→3) et pull-off (3→2)"
+      ],
+      "image": "/assets/techniques/embellissement_autour_du_d_1774310661052.png"
     }
   },
   "chordDiagrams": {}
