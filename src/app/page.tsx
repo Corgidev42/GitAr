@@ -7,11 +7,12 @@ import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
   IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic,
   IconPencil, IconPlus, IconRefresh, IconRhythm, IconTarget,
-  IconTrash, IconUpload, IconX,
+  IconPause, IconPlay, IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
 import { ChordDiagramView } from '@/components/ChordDiagramView';
 import { ChordEditorModal, type ChordEditorOpen } from '@/components/ChordEditorModal';
 import { resolveChordDiagram } from '@/lib/chordDiagrams';
+import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
@@ -168,6 +169,7 @@ function RhythmMeasureSvg({
   selectedItemId,
   compact = false,
   onItemClick,
+  playbackHighlightSlot,
 }: {
   measureItems: RhythmItem[];
   measurePairs: Array<{ from: RhythmItem; to: RhythmItem }>;
@@ -175,6 +177,8 @@ function RhythmMeasureSvg({
   selectedItemId?: string | null;
   compact?: boolean;
   onItemClick?: (itemId: string) => void;
+  /** Case courante 0–7 pendant la lecture (aperçu visuel). */
+  playbackHighlightSlot?: number | null;
 }) {
   const unit = compact ? 24 : 30; // largeur d'une croche
   const headY = compact ? 42 : 48;
@@ -223,6 +227,21 @@ function RhythmMeasureSvg({
           />
         );
       })}
+
+      {playbackHighlightSlot !== null &&
+        playbackHighlightSlot !== undefined &&
+        playbackHighlightSlot >= 0 &&
+        playbackHighlightSlot < STEPS_PER_MEASURE && (
+          <rect
+            x={playbackHighlightSlot * unit}
+            y={lineYs[0] - 4}
+            width={unit}
+            height={lineYs[lineYs.length - 1] - lineYs[0] + 8}
+            fill="var(--accent)"
+            opacity={0.14}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
 
       {/* Notes et silences */}
       {measureItems.map((it) => {
@@ -305,7 +324,7 @@ function RhythmMeasureSvg({
   );
 }
 
-function RhythmPatternPreview({ pattern }: { pattern: RhythmPatternV2 }) {
+function RhythmPatternPreview({ pattern, globalPlayhead = null }: { pattern: RhythmPatternV2; globalPlayhead?: number | null }) {
   const pairs = getSyncopePairs(pattern.items);
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2">
@@ -315,12 +334,74 @@ function RhythmPatternPreview({ pattern }: { pattern: RhythmPatternV2 }) {
         const measurePairs = pairs.filter(
           (p) => Math.floor(p.from.start / STEPS_PER_MEASURE) === measureIdx && Math.floor(p.to.start / STEPS_PER_MEASURE) === measureIdx,
         );
+        const localHighlight =
+          globalPlayhead !== null && globalPlayhead >= base && globalPlayhead < base + STEPS_PER_MEASURE
+            ? globalPlayhead - base
+            : null;
         return (
           <div key={`prev-${measureIdx}`} className="mb-2 last:mb-0">
-            <RhythmMeasureSvg measureItems={measureItems} measurePairs={measurePairs} measureBase={base} compact />
+            <RhythmMeasureSvg
+              measureItems={measureItems}
+              measurePairs={measurePairs}
+              measureBase={base}
+              compact
+              playbackHighlightSlot={localHighlight}
+            />
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Carte rythmique dans la liste (hors éditeur) : écoute + tempo. */
+function StrumRhythmMenuCard({ pattern }: { pattern: RhythmPatternV2 }) {
+  const [audioErr, setAudioErr] = useState('');
+  const pb = useRhythmPlayback(pattern, { onAudioError: setAudioErr });
+
+  return (
+    <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[260px]">
+      <div className="text-sm font-medium">{pattern.name}</div>
+      <p className="text-[11px] text-[var(--muted)] mt-1">{formatRhythmMeta(pattern)}</p>
+      <div className="flex flex-wrap items-center gap-2 mt-2 rounded-md border border-[var(--surface-light)] bg-[var(--background)]/50 px-2 py-1.5">
+        <span className="text-[10px] text-[var(--muted)] shrink-0">Lecture</span>
+        <label className="flex items-center gap-1 text-[10px] text-[var(--muted)]">
+          <span>BPM</span>
+          <input
+            type="number"
+            min={40}
+            max={220}
+            value={pb.bpm}
+            disabled={pb.playing}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              pb.setBpm(Number.isFinite(n) ? Math.min(220, Math.max(40, n)) : 96);
+            }}
+            className="w-14 px-1.5 py-0.5 rounded bg-[var(--background)] border border-[var(--surface-light)] text-xs text-[var(--foreground)]"
+          />
+        </label>
+        {!pb.playing ? (
+          <button
+            type="button"
+            onClick={() => void pb.start()}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--accent)] text-white text-[10px] font-medium"
+          >
+            <IconPlay className="w-3 h-3" />
+            Écouter
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={pb.stop}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--surface-light)] text-[var(--foreground)] text-[10px] border border-[var(--surface-light)]"
+          >
+            <IconPause className="w-3 h-3" />
+            Arrêter
+          </button>
+        )}
+      </div>
+      {audioErr ? <p className="text-[10px] text-red-400 mt-1">{audioErr}</p> : null}
+      <RhythmPatternPreview pattern={pattern} globalPlayhead={pb.playing ? pb.playhead : null} />
     </div>
   );
 }
@@ -341,6 +422,7 @@ function RhythmPatternEditor({
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [syncopeBrushMode, setSyncopeBrushMode] = useState(false);
   const [error, setError] = useState('');
+  const rhythmPb = useRhythmPlayback(pattern, { onAudioError: setError });
 
   useEffect(() => {
     if (!editMode) return;
@@ -537,6 +619,51 @@ function RhythmPatternEditor({
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 mb-4 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/60 px-3 py-2">
+        <span className="text-xs font-medium text-[var(--accent-light)] shrink-0 inline-flex items-center gap-1.5">
+          <IconMusic className="w-4 h-4" />
+          Aperçu audio
+        </span>
+        <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+          <span className="whitespace-nowrap">Tempo</span>
+          <input
+            type="number"
+            min={40}
+            max={220}
+            value={rhythmPb.bpm}
+            disabled={rhythmPb.playing}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              rhythmPb.setBpm(Number.isFinite(n) ? Math.min(220, Math.max(40, n)) : 96);
+            }}
+            className="w-[4.25rem] px-2 py-1 rounded-md bg-[var(--background)] border border-[var(--surface-light)] text-sm text-[var(--foreground)]"
+          />
+          <span>BPM</span>
+        </label>
+        {!rhythmPb.playing ? (
+          <button
+            type="button"
+            onClick={() => void rhythmPb.start()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-medium hover:opacity-95"
+          >
+            <IconPlay className="w-3.5 h-3.5" />
+            Écouter le motif
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={rhythmPb.stop}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--foreground)] text-xs font-medium border border-[var(--surface-light)]"
+          >
+            <IconPause className="w-3.5 h-3.5" />
+            Arrêter
+          </button>
+        )}
+        <span className="text-[10px] text-[var(--muted)] max-w-md">
+          Un bref « bip » par attaque ; la 2ᵉ note d’une syncope (tenue) ne sonne pas.
+        </span>
+      </div>
+
       <div className="mb-4 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/80 p-3 overflow-x-auto">
         {Array.from({ length: pattern.measures }).map((_, measureIdx) => {
           const base = measureIdx * STEPS_PER_MEASURE;
@@ -544,6 +671,10 @@ function RhythmPatternEditor({
           const measurePairs = syncopePairs.filter(
             (p) => Math.floor(p.from.start / STEPS_PER_MEASURE) === measureIdx && Math.floor(p.to.start / STEPS_PER_MEASURE) === measureIdx,
           );
+          const localPlaybackSlot =
+            rhythmPb.playing && rhythmPb.playhead !== null && rhythmPb.playhead >= base && rhythmPb.playhead < base + STEPS_PER_MEASURE
+              ? rhythmPb.playhead - base
+              : null;
           return (
             <div key={measureIdx} className="mb-3 last:mb-0">
               <div className="text-[10px] text-[var(--muted)] mb-1">Mesure {measureIdx + 1}</div>
@@ -553,6 +684,7 @@ function RhythmPatternEditor({
                   measurePairs={measurePairs}
                   measureBase={base}
                   selectedItemId={selectedItemId}
+                  playbackHighlightSlot={localPlaybackSlot}
                   onItemClick={(itemId) => {
                     if (syncopeBrushMode) {
                       setError('En mode pinceau syncope, clique dans l’espace entre deux notes.');
@@ -563,22 +695,25 @@ function RhythmPatternEditor({
                   }}
                 />
                 <div className="absolute inset-0 grid grid-cols-8">
-                  {Array.from({ length: STEPS_PER_MEASURE }).map((__, slot) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => {
-                        const globalSlot = base + slot;
-                        if (syncopeBrushMode) {
-                          paintSyncopeAtGap(globalSlot);
-                          return;
-                        }
-                        placeFigureAt(globalSlot);
-                      }}
-                      className={`border-r border-transparent hover:bg-[var(--accent)]/10 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''}`}
-                      title={syncopeBrushMode ? 'Pinceau syncope: clique entre deux notes' : `Placer ${selectedFigure.label}`}
-                    />
-                  ))}
+                  {Array.from({ length: STEPS_PER_MEASURE }).map((__, slot) => {
+                    const playheadHere = rhythmPb.playing && rhythmPb.playhead === base + slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => {
+                          const globalSlot = base + slot;
+                          if (syncopeBrushMode) {
+                            paintSyncopeAtGap(globalSlot);
+                            return;
+                          }
+                          placeFigureAt(globalSlot);
+                        }}
+                        className={`border-r border-transparent hover:bg-[var(--accent)]/10 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${playheadHere ? 'ring-1 ring-inset ring-[var(--accent)]/45 bg-[var(--accent)]/12' : ''}`}
+                        title={syncopeBrushMode ? 'Pinceau syncope: clique entre deux notes' : `Placer ${selectedFigure.label}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1349,13 +1484,7 @@ export default function KnowledgePage() {
                   </div>
                 );
               }
-              return (
-                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[260px]">
-                  <div className="text-sm font-medium">{rhythmDisplayName(value)}</div>
-                  <p className="text-[11px] text-[var(--muted)] mt-1">{formatRhythmMeta(parsed)}</p>
-                  <RhythmPatternPreview pattern={parsed} />
-                </div>
-              );
+              return <StrumRhythmMenuCard pattern={parsed} />;
             }}
           />
           <Section title="Rythmes" icon={<IconRhythm className="w-5 h-5" />} items={k.rhythms} editMode={editMode}
