@@ -39,13 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# GitAr — personal assets (PDF/MP3)
-/import/*
-!/import/.gitkeep
-/public/assets/tabs/*
-!/public/assets/tabs/.gitkeep
-/public/assets/audio/*
-!/public/assets/audio/.gitkeep
-/public/assets/techniques/*
-!/public/assets/techniques/.gitkeep

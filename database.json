@@ -458,6 +458,59 @@
       ],
       "isSong": true,
       "favorite": false
+    },
+    {
+      "id": "D107",
+      "title": "Talking about revolution – Tracy Chapman",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "G",
+          "Cadd2",
+          "Em",
+          "D",
+          "Dsus4",
+          "Dsus2"
+        ],
+        "techniques": [
+          "changement d’accord sur le contre temps"
+        ],
+        "rhythms": [
+          "croche",
+          "noire",
+          "syncope"
+        ],
+        "strums": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 70,
+            "path": "/assets/audio/D107/PAC_D107_-_Talking_about_a_revolution_-_70bpm.mp3"
+          },
+          {
+            "bpm": 90,
+            "path": "/assets/audio/D107/PAC_D107_-_Talking_about_a_revolution_-_90bpm.mp3"
+          },
+          {
+            "bpm": 110,
+            "path": "/assets/audio/D107/PAC_D107_-_Talking_about_a_revolution_-_110bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D107_PAC_D107_-_Jam_Along_-_Talking_about_a_revolution.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D107_PAC_D107_-_Fiche_paroles_-_Talking_about_a_revolution.pdf"
+          }
+        ]
+      },
+      "progressions": [],
+      "isSong": true,
+      "favorite": true
     }
   ],
   "globalKnowledge": {
@@ -483,7 +536,8 @@
       "embellissement autour du D",
       "s'accompagner en chantant",
       "Embellissement Autour Du C",
-      "Embellissement Autour Du A"
+      "Embellissement Autour Du A",
+      "changement d’accord sur le contre temps"
     ],
     "rhythms": [
       "croche",
