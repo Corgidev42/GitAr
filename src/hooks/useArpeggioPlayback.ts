@@ -1,20 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  getRhythmAttackSteps,
-  rhythmStepDurationSec,
-  scheduleRhythmClicks,
-  type RhythmPlaybackItem,
-} from '@/lib/rhythmPlayback';
+import type { ArpeggioPatternV2 } from '@/lib/arpeggioCodec';
+import { ARPEGGIO_STEPS_PER_MEASURE } from '@/lib/arpeggioCodec';
+import { arpeggioStepDurationSec, scheduleArpeggioPass } from '@/lib/arpeggioPlayback';
 import { claimExclusivePlayback, releaseExclusivePlayback } from '@/lib/playbackCoordinator';
-
-const STEPS_PER_MEASURE = 8;
-
-export type RhythmPatternPlayback = {
-  measures: number;
-  items: RhythmPlaybackItem[];
-};
 
 function createAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -33,8 +23,8 @@ function muteMaster(audioRef: { current: { ctx: AudioContext | null; master: Gai
   }
 }
 
-export function useRhythmPlayback(
-  pattern: RhythmPatternPlayback,
+export function useArpeggioPlayback(
+  pattern: ArpeggioPatternV2,
   options?: { onAudioError?: (message: string) => void },
 ) {
   const patternRef = useRef(pattern);
@@ -65,21 +55,20 @@ export function useRhythmPlayback(
 
   const scheduleOnePass = useCallback(() => {
     const p = patternRef.current;
-    const attacks = getRhythmAttackSteps(p.items);
     const { ctx, master } = audioRef.current;
     if (!ctx || !master) return;
     const now = ctx.currentTime;
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(0.32, now);
     const t0 = now + 0.06;
-    scheduleRhythmClicks(ctx, master, attacks, bpmRef.current, t0);
+    scheduleArpeggioPass(ctx, master, p.notes, p.measures, bpmRef.current, t0);
   }, []);
 
   const startPlayback = useCallback(async () => {
     if (playing) return;
 
     const p = patternRef.current;
-    const totalSteps = p.measures * STEPS_PER_MEASURE;
+    const totalSteps = p.measures * ARPEGGIO_STEPS_PER_MEASURE;
 
     claimExclusivePlayback(instanceTokenRef.current, stop);
 
@@ -93,7 +82,7 @@ export function useRhythmPlayback(
       }
       ctx = nextCtx;
       master = ctx.createGain();
-      master.gain.value = 0.32;
+      master.gain.value = 0.28;
       master.connect(ctx.destination);
       audioRef.current = { ctx, master };
     }
@@ -106,13 +95,11 @@ export function useRhythmPlayback(
       return;
     }
 
-    const secPerStep = rhythmStepDurationSec(bpmRef.current);
     scheduleOnePass();
-
     metaRef.current = {
       startMs: performance.now(),
       totalSteps,
-      secPerStep,
+      secPerStep: arpeggioStepDurationSec(bpmRef.current),
     };
     setPlaying(true);
     setPlayhead(0);
@@ -136,7 +123,7 @@ export function useRhythmPlayback(
           metaRef.current = {
             startMs: performance.now(),
             totalSteps,
-            secPerStep: rhythmStepDurationSec(bpmRef.current),
+            secPerStep: arpeggioStepDurationSec(bpmRef.current),
           };
           setPlayhead(0);
           raf = requestAnimationFrame(tick);
@@ -159,7 +146,7 @@ export function useRhythmPlayback(
   }, [playing, scheduleOnePass]);
 
   const signatureRef = useRef('');
-  const sig = `${pattern.measures}|${pattern.items.map((i) => `${i.id}:${i.start}:${i.length}:${i.syncToStart ?? ''}`).join(',')}`;
+  const sig = `${pattern.measures}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}`).join(',')}`;
   useEffect(() => {
     if (signatureRef.current === sig) return;
     signatureRef.current = sig;

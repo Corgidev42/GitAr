@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       techniques: Array.isArray(body.techniques) ? body.techniques : [],
       rhythms: Array.isArray(body.rhythms) ? body.rhythms : [],
       strums: Array.isArray(body.strums) ? body.strums : [],
+      arpeggios: Array.isArray(body.arpeggios) ? body.arpeggios : [],
     },
     assets: {
       backingTracks: Array.isArray(body.backingTracks) ? body.backingTracks : [],

@@ -13,6 +13,8 @@ export interface Knowledge {
   techniques: string[];
   rhythms: string[];
   strums?: string[];
+  /** Motifs tablature arpège encodés ARPEGGIO_V2:… */
+  arpeggios?: string[];
 }
 
 export interface TechniqueDetail {

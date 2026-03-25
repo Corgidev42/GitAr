@@ -12,7 +12,11 @@ import {
 import { ChordDiagramView } from '@/components/ChordDiagramView';
 import { ChordEditorModal, type ChordEditorOpen } from '@/components/ChordEditorModal';
 import { resolveChordDiagram } from '@/lib/chordDiagrams';
+import { parseArpeggioPattern } from '@/lib/arpeggioCodec';
 import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
+import { ArpeggioMenuCard, ArpeggioPatternEditor } from '@/components/ArpeggioPatternEditor';
+
+type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios';
 
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
@@ -380,6 +384,10 @@ function StrumRhythmMenuCard({ pattern }: { pattern: RhythmPatternV2 }) {
             className="w-14 px-1.5 py-0.5 rounded bg-[var(--background)] border border-[var(--surface-light)] text-xs text-[var(--foreground)]"
           />
         </label>
+        <label className="inline-flex items-center gap-1 text-[10px] text-[var(--muted)] cursor-pointer select-none">
+          <input type="checkbox" checked={pb.loop} disabled={pb.playing} onChange={(e) => pb.setLoop(e.target.checked)} className="rounded" />
+          Boucle
+        </label>
         {!pb.playing ? (
           <button
             type="button"
@@ -640,6 +648,10 @@ function RhythmPatternEditor({
           />
           <span>BPM</span>
         </label>
+        <label className="inline-flex items-center gap-2 text-xs text-[var(--muted)] cursor-pointer select-none">
+          <input type="checkbox" checked={rhythmPb.loop} disabled={rhythmPb.playing} onChange={(e) => rhythmPb.setLoop(e.target.checked)} className="rounded" />
+          Boucle
+        </label>
         {!rhythmPb.playing ? (
           <button
             type="button"
@@ -660,7 +672,7 @@ function RhythmPatternEditor({
           </button>
         )}
         <span className="text-[10px] text-[var(--muted)] max-w-md">
-          Un bref « bip » par attaque ; la 2ᵉ note d’une syncope (tenue) ne sonne pas.
+          Un bref « bip » par attaque ; la 2ᵉ note d’une syncope (tenue) ne sonne pas. Coche Boucle pour répéter le motif.
         </span>
       </div>
 
@@ -1105,6 +1117,7 @@ export default function KnowledgePage() {
   const [editMode, setEditMode] = useState(false);
   const [techInfo, setTechInfo] = useState<string | null>(null);
   const [editingRhythmSource, setEditingRhythmSource] = useState<string | null>(null);
+  const [editingArpeggioSource, setEditingArpeggioSource] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [favFilter, setFavFilter] = useState(false);
   const [editProgression, setEditProgression] = useState<{
@@ -1147,6 +1160,24 @@ export default function KnowledgePage() {
     safeReload();
   }, [safeReload]);
 
+  const saveArpeggioPattern = useCallback(async ({ encoded, source }: { encoded: string; source: string | null }) => {
+    const add = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'knowledge_add', category: 'arpeggios', value: encoded }),
+    });
+    if (!add.ok) return;
+    if (source && source !== encoded) {
+      await fetch('/api/database', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'knowledge', category: 'arpeggios', value: source }),
+      });
+    }
+    setEditingArpeggioSource(null);
+    safeReload();
+  }, [safeReload]);
+
   const toggleFavorite = async (lessonId: string, current: boolean) => {
     const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1165,22 +1196,22 @@ export default function KnowledgePage() {
     if (res.ok) safeReload();
   };
 
-  const addItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', value: string) => {
+  const addItem = async (category: KnowledgeListCategory, value: string) => {
     const res = await fetch('/api/database', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'knowledge_add', category, value: value.trim() }) });
     if (res.ok) safeReload();
   };
 
-  const deleteItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', value: string) => {
+  const deleteItem = async (category: KnowledgeListCategory, value: string) => {
     const res = await fetch('/api/database', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'knowledge', category, value }) });
     if (res.ok) { const updated = await fetch('/api/database').then((r) => r.json()); setDb(updated); }
   };
 
-  const renameItem = async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', from: string, to: string) => {
+  const renameItem = async (category: KnowledgeListCategory, from: string, to: string) => {
     const res = await fetch('/api/database', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'knowledge_rename', category, from, to }) });
     if (res.ok) safeReload();
   };
 
-  const reorderKnowledgeItem = useCallback(async (category: 'chords' | 'techniques' | 'rhythms' | 'strums', items: string[], index: number, direction: -1 | 1) => {
+  const reorderKnowledgeItem = useCallback(async (category: KnowledgeListCategory, items: string[], index: number, direction: -1 | 1) => {
     const j = index + direction;
     if (j < 0 || j >= items.length) return;
     const next = [...items];
@@ -1456,6 +1487,12 @@ export default function KnowledgePage() {
             onSave={saveRhythmPattern}
             onCancelEdit={() => setEditingRhythmSource(null)}
           />
+          <ArpeggioPatternEditor
+            editMode={editMode}
+            source={editingArpeggioSource}
+            onSave={saveArpeggioPattern}
+            onCancelEdit={() => setEditingArpeggioSource(null)}
+          />
           <Section
             title="Rythmiques"
             icon={<IconRhythm className="w-5 h-5" />}
@@ -1485,6 +1522,39 @@ export default function KnowledgePage() {
                 );
               }
               return <StrumRhythmMenuCard pattern={parsed} />;
+            }}
+          />
+          <Section
+            title="Arpèges"
+            icon={<IconRhythm className="w-5 h-5" />}
+            items={k.arpeggios || []}
+            editMode={editMode}
+            onDelete={(v) => deleteItem('arpeggios', v)}
+            orderable
+            onMoveItem={(idx, dir) => reorderKnowledgeItem('arpeggios', k.arpeggios || [], idx, dir)}
+            extraEditActions={(value) => (
+              <button
+                type="button"
+                onClick={() => setEditingArpeggioSource(value)}
+                className="w-6 h-6 rounded-full bg-[var(--surface)] border border-[var(--surface-light)] text-[var(--muted)] flex items-center justify-center hover:text-teal-300 shadow-lg"
+                title="Éditer l’arpège"
+              >
+                <IconPencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+            renderItem={(value) => {
+              const parsed = parseArpeggioPattern(value);
+              if (!parsed) {
+                return (
+                  <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[240px]">
+                    <div className="text-sm font-medium truncate max-w-[220px]" title={value}>
+                      {value.length > 52 ? `${value.slice(0, 52)}…` : value}
+                    </div>
+                    <p className="text-[11px] text-amber-300 mt-1">Format non reconnu.</p>
+                  </div>
+                );
+              }
+              return <ArpeggioMenuCard pattern={parsed} />;
             }}
           />
           <Section title="Rythmes" icon={<IconRhythm className="w-5 h-5" />} items={k.rhythms} editMode={editMode}
