@@ -17,14 +17,24 @@ function noteAtStep(pattern: ArpeggioPatternV2, step: number) {
   return pattern.notes.find((n) => n.step === step) ?? null;
 }
 
+/** Largeur = 100 % du bloc parent (identique à la grille 8×w-9). viewBox 80×20 = 10 u par colonne, tige au centre. */
 function ArpeggioMeasureStems() {
-  const w = ARPEGGIO_STEPS_PER_MEASURE * 20;
+  const n = ARPEGGIO_STEPS_PER_MEASURE;
+  const u = 10;
+  const w = n * u;
   return (
-    <svg width="100%" height={16} viewBox={`0 0 ${w} 16`} preserveAspectRatio="none" className="block text-[var(--foreground)] opacity-80">
-      {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((_, i) => (
-        <line key={i} x1={i * 20 + 10} y1={2} x2={i * 20 + 10} y2={14} stroke="currentColor" strokeWidth={1.2} />
-      ))}
-      <line x1={4} y1={4} x2={w - 4} y2={4} stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" />
+    <svg
+      width="100%"
+      height={20}
+      viewBox={`0 0 ${w} 20`}
+      preserveAspectRatio="none"
+      className="block text-[var(--foreground)] opacity-75 pointer-events-none"
+    >
+      {Array.from({ length: n }).map((_, i) => {
+        const cx = i * u + u / 2;
+        return <line key={i} x1={cx} y1={5} x2={cx} y2={19} stroke="currentColor" strokeWidth={1.1} />;
+      })}
+      <line x1={3} y1={7} x2={w - 3} y2={7} stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" />
     </svg>
   );
 }
@@ -51,8 +61,8 @@ function ArpeggioTabPreview({
           {Array.from({ length: pattern.measures }).map((_, mi) => {
             const base = mi * ARPEGGIO_STEPS_PER_MEASURE;
             return (
-              <div key={mi} className="flex flex-col gap-1">
-                <div className="flex border border-[var(--surface-light)] rounded overflow-hidden w-fit">
+              <div key={mi} className="flex flex-col gap-1.5 w-fit max-w-full">
+                <div className="flex border border-[var(--surface-light)] rounded overflow-hidden">
                   {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => {
                     const step = base + slot;
                     const n = noteAtStep(pattern, step);
@@ -74,7 +84,7 @@ function ArpeggioTabPreview({
                     );
                   })}
                 </div>
-                <div className="w-[180px] max-w-full">
+                <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
                   <ArpeggioMeasureStems />
                 </div>
               </div>
@@ -322,7 +332,7 @@ export function ArpeggioPatternEditor({
           return (
             <div key={mi} className="mb-4 last:mb-0">
               <div className="text-[10px] text-[var(--muted)] mb-1">Mesure {mi + 1}</div>
-              <div className="flex gap-0 min-w-max">
+              <div className="flex gap-0 min-w-max items-start">
                 <div className="flex flex-col justify-around pr-1 text-[10px] text-[var(--muted)] w-5 shrink-0">
                   {STRING_LABELS.map((l) => (
                     <div key={l} className="h-8 flex items-center justify-end font-medium">
@@ -330,38 +340,40 @@ export function ArpeggioPatternEditor({
                     </div>
                   ))}
                 </div>
-                <div className="flex border border-[var(--surface-light)] rounded-md overflow-hidden">
-                  {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => {
-                    const step = base + slot;
-                    const playheadHere = pb.playing && pb.playhead === step;
-                    return (
-                      <div
-                        key={slot}
-                        className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/15' : ''}`}
-                      >
-                        {Array.from({ length: 6 }).map((_, si) => {
-                          const n = noteAtStep(pattern, step);
-                          const active = n?.string === si;
-                          return (
-                            <button
-                              key={si}
-                              type="button"
-                              onClick={() => onCellClick(si, step)}
-                              className={`w-9 h-8 text-xs font-semibold flex items-center justify-center border-b border-[var(--surface-light)]/50 last:border-b-0 hover:bg-[var(--accent)]/15 ${
-                                active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
-                              } ${playheadHere ? 'ring-1 ring-inset ring-teal-500/50 bg-teal-500/10' : ''}`}
-                            >
-                              {active ? n!.fret : ''}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
+                <div className="flex flex-col gap-1.5 w-fit max-w-full">
+                  <div className="flex border border-[var(--surface-light)] rounded-md overflow-hidden">
+                    {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => {
+                      const step = base + slot;
+                      const playheadHere = pb.playing && pb.playhead === step;
+                      return (
+                        <div
+                          key={slot}
+                          className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/15' : ''}`}
+                        >
+                          {Array.from({ length: 6 }).map((_, si) => {
+                            const n = noteAtStep(pattern, step);
+                            const active = n?.string === si;
+                            return (
+                              <button
+                                key={si}
+                                type="button"
+                                onClick={() => onCellClick(si, step)}
+                                className={`w-9 h-8 text-xs font-semibold flex items-center justify-center border-b border-[var(--surface-light)]/50 last:border-b-0 hover:bg-[var(--accent)]/15 ${
+                                  active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
+                                } ${playheadHere ? 'ring-1 ring-inset ring-teal-500/50 bg-teal-500/10' : ''}`}
+                              >
+                                {active ? n!.fret : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
+                    <ArpeggioMeasureStems />
+                  </div>
                 </div>
-              </div>
-              <div className="mt-1 max-w-md pl-6">
-                <ArpeggioMeasureStems />
               </div>
             </div>
           );
