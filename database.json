@@ -19,7 +19,8 @@
         ],
         "techniques": [],
         "rhythms": [],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [],
@@ -54,7 +55,8 @@
           "croche",
           "noire"
         ],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -109,7 +111,8 @@
           "syncope",
           "croche"
         ],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -160,7 +163,8 @@
         ],
         "techniques": [],
         "rhythms": [],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -197,7 +201,8 @@
             "Em7",
             "Cadd2"
           ],
-          "favorite": true
+          "favorite": true,
+          "notes": "Capo 7"
         }
       ],
       "isSong": true,
@@ -217,7 +222,8 @@
         ],
         "techniques": [],
         "rhythms": [],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -258,7 +264,8 @@
             "Am",
             "Em"
           ],
-          "favorite": true
+          "favorite": true,
+          "notes": "Capo 2"
         }
       ],
       "isSong": true,
@@ -282,7 +289,8 @@
           "croche",
           "noire"
         ],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -328,7 +336,8 @@
           "croche",
           "noire"
         ],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -392,7 +401,8 @@
           "blanche",
           "syncope"
         ],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -459,7 +469,8 @@
           "noire",
           "syncope"
         ],
-        "strums": []
+        "strums": [],
+        "arpeggios": []
       },
       "assets": {
         "backingTracks": [
@@ -539,6 +550,9 @@
       "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22La%20Poup%C3%A9e%20qui%20fais%20non%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221774308604553-ca0609908073%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A2%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221774308610766-87beb7e989e148%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308611173-eee3bf9eadd4d8%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308615597-db7bc6d7d208e%22%2C%22start%22%3A4%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308616438-10bfe849d035b%22%2C%22start%22%3A6%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%5D%7D",
       "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22rythme%20feu%20de%20camp%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221774308852993-f217e0c71221d8%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308858192-9ee8bfed5a58f8%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308957780-7c53fd6e110ba8%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A4%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221774308951852-b75fd0bb00055%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308952342-8c4b58a58583a8%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308871775-326e27b0e809b8%22%2C%22start%22%3A6%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%5D%7D",
       "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22rythme%20feu%20de%20camp%20bis%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221774308852993-f217e0c71221d8%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308858192-9ee8bfed5a58f8%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308957780-7c53fd6e110ba8%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A4%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221774308951852-b75fd0bb00055%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308952342-8c4b58a58583a8%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774309032012-b739ea5b38a65%22%2C%22start%22%3A6%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774309032532-c776fc435d2d9%22%2C%22start%22%3A7%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%5D%7D"
+    ],
+    "arpeggios": [
+      "ARPEGGIO_V2:%7B%22v%22%3A2%2C%22name%22%3A%22Arp%C3%A8ges%20La%20sus4%20-%20La%20-%20La%20sus2%20-%20La%22%2C%22measures%22%3A2%2C%22notes%22%3A%5B%7B%22step%22%3A0%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A1%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A2%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A3%2C%22string%22%3A1%2C%22fret%22%3A3%7D%2C%7B%22step%22%3A4%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A5%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A6%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A7%2C%22string%22%3A1%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A8%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A9%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A10%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A11%2C%22string%22%3A1%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A12%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A13%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A14%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A15%2C%22string%22%3A1%2C%22fret%22%3A2%7D%5D%7D"
     ]
   },
   "techniqueDetails": {
