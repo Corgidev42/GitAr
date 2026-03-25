@@ -82,16 +82,8 @@
             "D",
             "Em",
             "C"
-          ]
-        },
-        {
-          "name": "4 accords magiques bis",
-          "chords": [
-            "D",
-            "Em",
-            "C",
-            "G"
-          ]
+          ],
+          "notes": "D → Em → C → G"
         }
       ],
       "isSong": false,
@@ -149,8 +141,7 @@
             "Cadd2",
             "G",
             "D"
-          ],
-          "notes": "Révision des accords G, Cadd2 et D et un nouvel accord : Em7"
+          ]
         }
       ],
       "isSong": false,
@@ -206,7 +197,6 @@
             "Em7",
             "Cadd2"
           ],
-          "notes": "Utilisée pour l'intro, les couplets, les refrains, l'instrumental, le pont et l'interlude.",
           "favorite": true
         }
       ],
@@ -268,7 +258,6 @@
             "Am",
             "Em"
           ],
-          "notes": "Cette suite d'accords se répète tout au long du morceau.",
           "favorite": true
         }
       ],
@@ -377,18 +366,8 @@
             "G",
             "D",
             "C"
-          ]
-        },
-        {
-          "chords": [
-            "Em",
-            "G",
-            "Bm7",
-            "C",
-            "G",
-            "D",
-            "A"
-          ]
+          ],
+          "notes": "Em → G → Bm7 → C → G → D → A"
         }
       ],
       "isSong": true,
@@ -508,7 +487,18 @@
           }
         ]
       },
-      "progressions": [],
+      "progressions": [
+        {
+          "chords": [
+            "G",
+            "Cadd2",
+            "Em",
+            "D"
+          ],
+          "notes": "Cf. Embellissement autour du D",
+          "favorite": true
+        }
+      ],
       "isSong": true,
       "favorite": true
     }
@@ -617,6 +607,15 @@
         "Utiliser des hammer-on sur la corde de mi aigu (2→3) et pull-off (3→2)"
       ],
       "image": "/assets/techniques/embellissement_autour_du_d_1774310661052.png"
+    },
+    "changement d’accord sur le contre temps": {
+      "summary": "",
+      "steps": [
+        "• Réussir à faire le changement d’accord en syncope",
+        "• Réussir à l’intégrer dans une rythmique sans être perturbé",
+        "• Réussir à remplir le vide de la syncope en tapant bien en rythme avec le pied"
+      ],
+      "image": "/assets/techniques/changement_d_accord_sur_le_contre_temps_1774462891239.png"
     }
   },
   "chordDiagrams": {}
