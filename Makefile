@@ -1,10 +1,32 @@
-.PHONY: dev build start lint ingest setup clean reset help
+.PHONY: dev dev-bg dev-stop build start lint ingest setup clean reset help
 
 PORT ?= 3000
 
 # ── Développement ──────────────────────────────
-dev:                   ## Lancer le serveur de dev (ouvre le navigateur)
+dev:                   ## Lancer le serveur de dev (ouvre le navigateur, terminal occupé)
 	@(sleep 3 && (command -v open >/dev/null 2>&1 && open "http://localhost:$(PORT)" || command -v xdg-open >/dev/null 2>&1 && xdg-open "http://localhost:$(PORT)" || true)) & PORT=$(PORT) npm run dev
+
+dev-bg:                ## Même chose en arrière-plan (libère le terminal) + ouvre le navigateur
+	@mkdir -p .next
+	@if [ -f .next/dev-server.pid ] && kill -0 $$(cat .next/dev-server.pid) 2>/dev/null; then \
+	  echo "⚠️  Un serveur tourne déjà (PID $$(cat .next/dev-server.pid)). Arrêt: make dev-stop"; \
+	  exit 1; \
+	fi
+	@rm -f .next/dev-server.pid
+	@(sleep 4 && (command -v open >/dev/null 2>&1 && open "http://localhost:$(PORT)" || command -v xdg-open >/dev/null 2>&1 && xdg-open "http://localhost:$(PORT)" || true)) &
+	@bash -c 'PORT=$(PORT) nohup npm run dev >> .next/dev.log 2>&1 & echo $$! > .next/dev-server.pid'
+	@echo "✅ Next en fond — http://localhost:$(PORT) — PID $$(cat .next/dev-server.pid)"
+	@echo "   Logs: tail -f .next/dev.log   |   Arrêt: make dev-stop"
+
+dev-stop:              ## Arrêter le serveur lancé avec make dev-bg
+	@if [ ! -f .next/dev-server.pid ]; then echo "Aucun serveur enregistré (make dev-bg)."; exit 0; fi
+	@PID=$$(cat .next/dev-server.pid); \
+	if kill -0 $$PID 2>/dev/null; then \
+	  kill $$PID; echo "✅ Serveur arrêté (PID $$PID)"; \
+	else \
+	  echo "Processus $$PID introuvable (déjà arrêté ?)"; \
+	fi
+	@rm -f .next/dev-server.pid
 
 build:                 ## Build production
 	npm run build
