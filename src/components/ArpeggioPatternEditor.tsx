@@ -11,7 +11,7 @@ import {
 import { useArpeggioPlayback } from '@/hooks/useArpeggioPlayback';
 import { IconMusic, IconPause, IconPlay, IconRhythm } from '@/components/Icons';
 
-const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
+const STRING_LABELS = ['E', 'B', 'G', 'D', 'A', 'E'];
 
 function noteAtStep(pattern: ArpeggioPatternV2, step: number) {
   return pattern.notes.find((n) => n.step === step) ?? null;

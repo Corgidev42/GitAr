@@ -12,7 +12,8 @@ import {
 import { useGammePlayback } from '@/hooks/useGammePlayback';
 import { IconGamme, IconMusic, IconPause, IconPlay } from '@/components/Icons';
 
-const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
+/** Mi aigu en haut → Mi grave en bas (les deux en E majuscule à l’affichage). */
+const STRING_LABELS = ['E', 'B', 'G', 'D', 'A', 'E'];
 
 function noteAtStep(pattern: GammePatternV1, step: number): GammeNote | null {
   return pattern.notes.find((n) => n.step === step) ?? null;
