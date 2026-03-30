@@ -1,8 +1,10 @@
 .PHONY: dev build start lint ingest setup clean reset help
 
+PORT ?= 3000
+
 # ── Développement ──────────────────────────────
-dev:                   ## Lancer le serveur de dev
-	npm run dev
+dev:                   ## Lancer le serveur de dev (ouvre le navigateur)
+	@(sleep 3 && (command -v open >/dev/null 2>&1 && open "http://localhost:$(PORT)" || command -v xdg-open >/dev/null 2>&1 && xdg-open "http://localhost:$(PORT)" || true)) & PORT=$(PORT) npm run dev
 
 build:                 ## Build production
 	npm run build
