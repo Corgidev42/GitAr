@@ -12,8 +12,8 @@ import {
 import { useGammePlayback } from '@/hooks/useGammePlayback';
 import { IconGamme, IconMusic, IconPause, IconPlay } from '@/components/Icons';
 
-/** Mi aigu en haut → Mi grave en bas (les deux en E majuscule à l’affichage). */
-const STRING_LABELS = ['E', 'B', 'G', 'D', 'A', 'E'];
+/** Mi aigu en haut (e) → Mi grave en bas (E). Clés React : index de corde, pas le caractère affiché. */
+const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
 
 function noteAtStep(pattern: GammePatternV1, step: number): GammeNote | null {
   return pattern.notes.find((n) => n.step === step) ?? null;
@@ -58,8 +58,8 @@ function GammeTabColumn() {
       <div className="h-[1.125rem] min-h-[1.125rem] flex items-center justify-end text-[9px] font-bold text-[var(--muted)] tracking-tight pr-0.5">
         TAB
       </div>
-      {STRING_LABELS.map((l) => (
-        <div key={l} className="h-8 flex items-center justify-end text-[10px] font-medium text-[var(--muted)] pr-0.5">
+      {STRING_LABELS.map((l, si) => (
+        <div key={si} className="h-8 flex items-center justify-end text-[10px] font-medium text-[var(--muted)] pr-0.5">
           {l}
         </div>
       ))}
