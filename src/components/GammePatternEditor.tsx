@@ -50,14 +50,12 @@ function FretCell({ fret, root }: { fret: number; root?: boolean }) {
   return <span className="text-xs font-semibold">{fret}</span>;
 }
 
-/** Colonne TAB + cordes ; `pt` aligne les lignes de cordes sur la grille (sous la rangée des numéros de mesure). */
+/** Colonne gauche : une seule ligne « TAB » alignée sur la rangée des numéros de mesure, puis 6 lignes = 6 cordes (même hauteur que la grille). */
 function GammeTabColumn() {
   return (
-    <div className="flex flex-col shrink-0 w-7 pt-1 mt-[1.15rem]">
-      <div className="text-[9px] font-bold text-[var(--muted)] tracking-tight mb-1 pl-0.5 flex flex-col leading-tight">
-        <span>T</span>
-        <span>A</span>
-        <span>B</span>
+    <div className="flex flex-col shrink-0 w-7">
+      <div className="h-[1.125rem] min-h-[1.125rem] flex items-center justify-end text-[9px] font-bold text-[var(--muted)] tracking-tight pr-0.5">
+        TAB
       </div>
       {STRING_LABELS.map((l) => (
         <div key={l} className="h-8 flex items-center justify-end text-[10px] font-medium text-[var(--muted)] pr-0.5">
@@ -101,7 +99,7 @@ export function GammeTabPreview({
           const isLast = mi === pattern.measures - 1;
           return (
             <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
-              <div className="flex text-[10px] text-[var(--muted)] pl-1">
+              <div className="flex text-[10px] text-[var(--muted)] pl-1 min-h-[1.125rem] items-center">
                 {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => (
                   <div key={slot} className="w-9 text-center shrink-0">
                     {slot === 0 ? measureNo : ''}
