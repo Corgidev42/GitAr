@@ -42,12 +42,14 @@ export async function PATCH(
       rhythms: string[];
       strums: string[];
       arpeggios: string[];
+      gammes: string[];
     }>;
     if (Array.isArray(k.chords)) db.lessons[idx].knowledge.chords = k.chords;
     if (Array.isArray(k.techniques)) db.lessons[idx].knowledge.techniques = k.techniques;
     if (Array.isArray(k.rhythms)) db.lessons[idx].knowledge.rhythms = k.rhythms;
     if (Array.isArray(k.strums)) db.lessons[idx].knowledge.strums = k.strums;
     if (Array.isArray(k.arpeggios)) db.lessons[idx].knowledge.arpeggios = k.arpeggios;
+    if (Array.isArray(k.gammes)) db.lessons[idx].knowledge.gammes = k.gammes;
   }
 
   if (updates.progressions) {

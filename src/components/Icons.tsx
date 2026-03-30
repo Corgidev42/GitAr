@@ -11,6 +11,7 @@ import {
   Heart,
   LayoutGrid,
   Link2,
+  ListMusic,
   Music,
   Pause,
   Pencil,
@@ -41,6 +42,10 @@ export function IconBook({ title = 'Book', ...props }: IconProps) {
 
 export function IconMusic({ title = 'Music', ...props }: IconProps) {
   return <Music aria-label={title} {...props} />;
+}
+
+export function IconGamme({ title = 'Gamme', ...props }: IconProps) {
+  return <ListMusic aria-label={title} {...props} />;
 }
 
 export function IconLayoutGrid({ title = 'Grille', ...props }: IconProps) {

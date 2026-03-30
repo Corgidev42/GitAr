@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, TabAsset, BackingTrack } from '@/types';
 import {
-  IconDocument, IconHeart, IconLink, IconMusic, IconPause,
+  IconDocument, IconGamme, IconHeart, IconLink, IconMusic, IconPause,
   IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget,
   IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
@@ -16,6 +16,12 @@ function normalizeLesson(l: GuitarLesson): GuitarLesson {
     assets: {
       tabs: Array.isArray(l.assets?.tabs) ? l.assets.tabs : [],
       backingTracks: Array.isArray(l.assets?.backingTracks) ? l.assets.backingTracks : [],
+    },
+    knowledge: {
+      ...l.knowledge,
+      strums: l.knowledge?.strums ?? [],
+      arpeggios: l.knowledge?.arpeggios ?? [],
+      gammes: l.knowledge?.gammes ?? [],
     },
   };
 }
@@ -239,7 +245,7 @@ export default function LessonPage() {
   const [editMode, setEditMode] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftKnowledge, setDraftKnowledge] = useState<GuitarLesson['knowledge'] | null>(null);
-  const [addCat, setAddCat] = useState<'chords' | 'techniques' | 'rhythms' | 'strums'>('chords');
+  const [addCat, setAddCat] = useState<'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes'>('chords');
   const [addValue, setAddValue] = useState('');
   const lastReloadAt = useRef(0);
 
@@ -468,6 +474,14 @@ export default function LessonPage() {
             )}
           </span>
         ))}
+        {(editMode ? draftKnowledge?.gammes || [] : lesson.knowledge.gammes || []).map((g) => (
+          <span key={`gamme-${g}`} className="text-xs px-2 py-1 rounded-lg bg-sky-900/50 text-sky-300">
+            <span className="inline-flex items-center gap-1.5"><IconGamme className="w-3.5 h-3.5" />{g}</span>
+            {editMode && draftKnowledge && (
+              <button onClick={() => setDraftKnowledge({ ...draftKnowledge, gammes: (draftKnowledge.gammes || []).filter((x) => x !== g) })} className="ml-2 text-sky-200/70 hover:text-white" title="Retirer">×</button>
+            )}
+          </span>
+        ))}
         {(editMode ? draftKnowledge?.rhythms || [] : lesson.knowledge.rhythms).map((r) => (
           <span key={`rhythm-${r}`} className="text-xs px-2 py-1 rounded-lg bg-amber-900/50 text-amber-300">
             <span className="inline-flex items-center gap-1.5"><IconRhythm className="w-3.5 h-3.5" />{r}</span>
@@ -491,6 +505,7 @@ export default function LessonPage() {
           <select value={addCat} onChange={(e) => setAddCat(e.target.value as typeof addCat)} className="px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--surface-light)] text-sm">
             <option value="chords">Accord</option>
             <option value="techniques">Technique</option>
+            <option value="gammes">Gamme</option>
             <option value="rhythms">Rythme</option>
             <option value="strums">Rythmique</option>
           </select>

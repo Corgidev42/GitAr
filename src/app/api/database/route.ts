@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest) {
   const db = readDatabase();
 
   if (body.type === 'knowledge_add') {
-    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios';
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
     const value = (body.value as string)?.trim();
     if (!category || !value) {
       return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.type === 'knowledge_rename') {
-    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios';
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
     const from = (body.from as string) || '';
     const to = (body.to as string) || '';
 
@@ -143,7 +143,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.type === 'knowledge_reorder') {
-    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios';
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
     const items = body.items as string[];
     if (!category || !Array.isArray(items)) {
       return NextResponse.json({ error: 'Missing category or items' }, { status: 400 });
@@ -232,7 +232,7 @@ export async function DELETE(req: NextRequest) {
   const db = readDatabase();
 
   if (body.type === 'knowledge') {
-    const cat = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios';
+    const cat = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
     const val = body.value as string;
     if (!cat || !val) {
       return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
@@ -268,7 +268,7 @@ export async function DELETE(req: NextRequest) {
   if (body.type === 'reset') {
     const empty = {
       lessons: [],
-      globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [], arpeggios: [] },
+      globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [], arpeggios: [], gammes: [] },
       techniqueDetails: {},
       chordDiagrams: {},
     };

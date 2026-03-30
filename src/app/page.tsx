@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
-  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic,
+  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGamme, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic,
   IconPencil, IconPlus, IconRefresh, IconRhythm, IconTarget,
   IconPause, IconPlay, IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
@@ -16,7 +16,7 @@ import { parseArpeggioPattern } from '@/lib/arpeggioCodec';
 import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 import { ArpeggioMenuCard, ArpeggioPatternEditor } from '@/components/ArpeggioPatternEditor';
 
-type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios';
+type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
 
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
@@ -917,6 +917,7 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [audioFiles, setAudioFiles] = useState<File[]>([]);
   const [chords, setChords] = useState('');
   const [techniques, setTechniques] = useState('');
+  const [gammes, setGammes] = useState('');
   const [rhythms, setRhythms] = useState('');
   const [strums, setStrums] = useState('');
   const [saving, setSaving] = useState(false);
@@ -983,6 +984,7 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
         isSong,
         chords: split(chords),
         techniques: split(techniques),
+        gammes: split(gammes),
         rhythms: split(rhythms),
         strums: split(strums),
         tabs,
@@ -1039,6 +1041,11 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <div>
             <label className="text-xs text-[var(--muted)] mb-1 block">Techniques (séparées par des virgules)</label>
             <input value={techniques} onChange={(e) => setTechniques(e.target.value)} placeholder="hammer-on, pull-off" className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" />
+          </div>
+
+          <div>
+            <label className="text-xs text-[var(--muted)] mb-1 block">Gammes (séparées par des virgules)</label>
+            <input value={gammes} onChange={(e) => setGammes(e.target.value)} placeholder="pentatonique mineure, majeure" className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1124,7 +1131,7 @@ export default function KnowledgePage() {
     lessonId: string; progressionIndex: number; chordsLine: string; notes: string;
   } | null>(null);
   const [editKnowledge, setEditKnowledge] = useState<{
-    category: 'chords' | 'techniques' | 'rhythms' | 'strums'; from: string; to: string;
+    category: 'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes'; from: string; to: string;
   } | null>(null);
   const [editLessonTitle, setEditLessonTitle] = useState<{ id: string; title: string } | null>(null);
   const [editTechnique, setEditTechnique] = useState<{
@@ -1356,7 +1363,7 @@ export default function KnowledgePage() {
 
   const tabs = [
     { key: 'chords' as const, label: 'Accords', count: k.chords.length, icon: <IconMusic className="w-5 h-5" /> },
-    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length, icon: <IconTarget className="w-5 h-5" /> },
+    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length + (k.gammes?.length ?? 0), icon: <IconTarget className="w-5 h-5" /> },
     { key: 'rhythms' as const, label: 'Rythmes', count: k.rhythms.length, icon: <IconRhythm className="w-5 h-5" /> },
     { key: 'progressions' as const, label: 'Suites', count: progressions.length, icon: <IconLink className="w-5 h-5" /> },
     { key: 'songs' as const, label: 'Morceaux', count: songs.length, icon: <IconGuitar className="w-5 h-5" /> },
@@ -1454,29 +1461,50 @@ export default function KnowledgePage() {
       )}
 
       {tab === 'techniques' && (
-        <Section title="Techniques" icon={<IconTarget className="w-5 h-5" />} items={k.techniques} editMode={editMode}
-          onDelete={(v) => deleteItem('techniques', v)} onEdit={(v) => setEditKnowledge({ category: 'techniques', from: v, to: v })}
-          onAdd={(v) => addItem('techniques', v)} addPlaceholder="Ex: hammer-on, pull-off, tapping"
-          orderable
-          onMoveItem={(idx, dir) => reorderKnowledgeItem('techniques', k.techniques, idx, dir)}
-          renderItem={(tech) => (
-            <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[160px]">
-              <button type="button" onClick={() => setTechInfo(tech)} className="w-full text-left">
-                <span className="text-sm font-medium capitalize">{tech}</span>
-                {editMode && <span className="block text-[10px] text-[var(--muted)] mt-0.5">Clic = fiche</span>}
-              </button>
-              {editMode && (
-                <button
-                  type="button"
-                  onClick={() => openEditTechnique(tech)}
-                  className="mt-2 w-full text-xs px-2 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--accent-light)] hover:bg-[var(--accent)]/20 inline-flex items-center justify-center gap-1.5"
-                >
-                  <IconPencil className="w-3.5 h-3.5" />
-                  Éditer la fiche
+        <>
+          <Section title="Techniques" icon={<IconTarget className="w-5 h-5" />} items={k.techniques} editMode={editMode}
+            onDelete={(v) => deleteItem('techniques', v)} onEdit={(v) => setEditKnowledge({ category: 'techniques', from: v, to: v })}
+            onAdd={(v) => addItem('techniques', v)} addPlaceholder="Ex: hammer-on, pull-off, tapping"
+            orderable
+            onMoveItem={(idx, dir) => reorderKnowledgeItem('techniques', k.techniques, idx, dir)}
+            renderItem={(tech) => (
+              <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-[160px]">
+                <button type="button" onClick={() => setTechInfo(tech)} className="w-full text-left">
+                  <span className="text-sm font-medium capitalize">{tech}</span>
+                  {editMode && <span className="block text-[10px] text-[var(--muted)] mt-0.5">Clic = fiche</span>}
                 </button>
+                {editMode && (
+                  <button
+                    type="button"
+                    onClick={() => openEditTechnique(tech)}
+                    className="mt-2 w-full text-xs px-2 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--accent-light)] hover:bg-[var(--accent)]/20 inline-flex items-center justify-center gap-1.5"
+                  >
+                    <IconPencil className="w-3.5 h-3.5" />
+                    Éditer la fiche
+                  </button>
+                )}
+              </div>
+            )} />
+          <div className="mt-10">
+            <Section
+              title="Gammes"
+              icon={<IconGamme className="w-5 h-5" />}
+              items={k.gammes || []}
+              editMode={editMode}
+              onDelete={(v) => deleteItem('gammes', v)}
+              onEdit={(v) => setEditKnowledge({ category: 'gammes', from: v, to: v })}
+              onAdd={(v) => addItem('gammes', v)}
+              addPlaceholder="Ex: pentatonique mineure, majeure (3e case)"
+              orderable
+              onMoveItem={(idx, dir) => reorderKnowledgeItem('gammes', k.gammes || [], idx, dir)}
+              renderItem={(g) => (
+                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
+                  <span className="text-sm font-medium">{g}</span>
+                </div>
               )}
-            </div>
-          )} />
+            />
+          </div>
+        </>
       )}
 
       {tab === 'rhythms' && (
@@ -1899,7 +1927,7 @@ export default function KnowledgePage() {
         </div>
       )}
 
-      {k.chords.length === 0 && k.techniques.length === 0 && k.rhythms.length === 0 && db.lessons.length === 0 && (
+      {k.chords.length === 0 && k.techniques.length === 0 && (k.gammes || []).length === 0 && k.rhythms.length === 0 && db.lessons.length === 0 && (
         <div className="text-center py-20 text-[var(--muted)]">
           <p>Aucune connaissance enregistrée pour le moment.</p>
           <p className="text-sm mt-2">Crée ta première leçon pour commencer.</p>
