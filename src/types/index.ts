@@ -15,7 +15,7 @@ export interface Knowledge {
   strums?: string[];
   /** Motifs tablature arpège encodés ARPEGGIO_V2:… */
   arpeggios?: string[];
-  /** Noms de gammes (ex. pentatonique mineure, majeure 3e case) — regroupées à l’UI sous Techniques */
+  /** Noms ou motifs encodés `GAMME_V1:…` (tab + audio comme les arpèges) — UI sous Techniques */
   gammes?: string[];
 }
 

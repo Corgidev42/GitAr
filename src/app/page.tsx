@@ -13,8 +13,10 @@ import { ChordDiagramView } from '@/components/ChordDiagramView';
 import { ChordEditorModal, type ChordEditorOpen } from '@/components/ChordEditorModal';
 import { resolveChordDiagram } from '@/lib/chordDiagrams';
 import { parseArpeggioPattern } from '@/lib/arpeggioCodec';
+import { parseGammePattern } from '@/lib/gammeCodec';
 import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 import { ArpeggioMenuCard, ArpeggioPatternEditor } from '@/components/ArpeggioPatternEditor';
+import { GammeMenuCard, GammePatternEditor } from '@/components/GammePatternEditor';
 
 type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
 
@@ -1125,6 +1127,7 @@ export default function KnowledgePage() {
   const [techInfo, setTechInfo] = useState<string | null>(null);
   const [editingRhythmSource, setEditingRhythmSource] = useState<string | null>(null);
   const [editingArpeggioSource, setEditingArpeggioSource] = useState<string | null>(null);
+  const [editingGammeSource, setEditingGammeSource] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [favFilter, setFavFilter] = useState(false);
   const [editProgression, setEditProgression] = useState<{
@@ -1182,6 +1185,24 @@ export default function KnowledgePage() {
       });
     }
     setEditingArpeggioSource(null);
+    safeReload();
+  }, [safeReload]);
+
+  const saveGammePattern = useCallback(async ({ encoded, source }: { encoded: string; source: string | null }) => {
+    const add = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'knowledge_add', category: 'gammes', value: encoded }),
+    });
+    if (!add.ok) return;
+    if (source && source !== encoded) {
+      await fetch('/api/database', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'knowledge', category: 'gammes', value: source }),
+      });
+    }
+    setEditingGammeSource(null);
     safeReload();
   }, [safeReload]);
 
@@ -1486,22 +1507,35 @@ export default function KnowledgePage() {
               </div>
             )} />
           <div className="mt-10">
+            <GammePatternEditor
+              editMode={editMode}
+              source={editingGammeSource}
+              onSave={saveGammePattern}
+              onCancelEdit={() => setEditingGammeSource(null)}
+            />
             <Section
               title="Gammes"
               icon={<IconGamme className="w-5 h-5" />}
               items={k.gammes || []}
               editMode={editMode}
               onDelete={(v) => deleteItem('gammes', v)}
-              onEdit={(v) => setEditKnowledge({ category: 'gammes', from: v, to: v })}
+              onEdit={(v) => {
+                if (parseGammePattern(v)) setEditingGammeSource(v);
+                else setEditKnowledge({ category: 'gammes', from: v, to: v });
+              }}
               onAdd={(v) => addItem('gammes', v)}
-              addPlaceholder="Ex: pentatonique mineure, majeure (3e case)"
+              addPlaceholder="Nom libre ou crée une tab avec l’éditeur ci-dessus"
               orderable
               onMoveItem={(idx, dir) => reorderKnowledgeItem('gammes', k.gammes || [], idx, dir)}
-              renderItem={(g) => (
-                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
-                  <span className="text-sm font-medium">{g}</span>
-                </div>
-              )}
+              renderItem={(g) => {
+                const parsed = parseGammePattern(g);
+                if (parsed) return <GammeMenuCard pattern={parsed} />;
+                return (
+                  <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
+                    <span className="text-sm font-medium">{g}</span>
+                  </div>
+                );
+              }}
             />
           </div>
         </>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, TabAsset, BackingTrack } from '@/types';
+import { parseGammePattern } from '@/lib/gammeCodec';
 import {
   IconDocument, IconGamme, IconHeart, IconLink, IconMusic, IconPause,
   IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget,
@@ -476,7 +477,7 @@ export default function LessonPage() {
         ))}
         {(editMode ? draftKnowledge?.gammes || [] : lesson.knowledge.gammes || []).map((g) => (
           <span key={`gamme-${g}`} className="text-xs px-2 py-1 rounded-lg bg-sky-900/50 text-sky-300">
-            <span className="inline-flex items-center gap-1.5"><IconGamme className="w-3.5 h-3.5" />{g}</span>
+            <span className="inline-flex items-center gap-1.5"><IconGamme className="w-3.5 h-3.5" />{parseGammePattern(g)?.name ?? g}</span>
             {editMode && draftKnowledge && (
               <button onClick={() => setDraftKnowledge({ ...draftKnowledge, gammes: (draftKnowledge.gammes || []).filter((x) => x !== g) })} className="ml-2 text-sky-200/70 hover:text-white" title="Retirer">×</button>
             )}
