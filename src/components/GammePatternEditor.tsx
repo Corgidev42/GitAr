@@ -50,6 +50,35 @@ function FretCell({ fret, root }: { fret: number; root?: boolean }) {
   return <span className="text-xs font-semibold">{fret}</span>;
 }
 
+/** Colonne TAB + cordes ; `pt` aligne les lignes de cordes sur la grille (sous la rangée des numéros de mesure). */
+function GammeTabColumn() {
+  return (
+    <div className="flex flex-col shrink-0 w-7 pt-1 mt-[1.15rem]">
+      <div className="text-[9px] font-bold text-[var(--muted)] tracking-tight mb-1 pl-0.5 flex flex-col leading-tight">
+        <span>T</span>
+        <span>A</span>
+        <span>B</span>
+      </div>
+      {STRING_LABELS.map((l) => (
+        <div key={l} className="h-8 flex items-center justify-end text-[10px] font-medium text-[var(--muted)] pr-0.5">
+          {l}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EndBar() {
+  return (
+    <div className="flex flex-col justify-center shrink-0 pl-1.5 ml-0.5 border-l border-[var(--surface-light)]" title="Fin de phrase" aria-hidden>
+      <div className="flex h-[12rem] items-center gap-px">
+        <div className="w-px self-stretch my-1 bg-[var(--foreground)]/45" />
+        <div className="w-1 self-stretch my-1 bg-[var(--foreground)]/80 rounded-[1px]" />
+      </div>
+    </div>
+  );
+}
+
 export function GammeTabPreview({
   pattern,
   globalPlayhead,
@@ -58,79 +87,58 @@ export function GammeTabPreview({
   globalPlayhead?: number | null;
 }) {
   return (
-    <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 overflow-x-auto">
+    <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 w-full min-w-0">
       <div className="mb-1">
         <div className="text-xs font-bold text-[var(--foreground)]">{pattern.sectionLabel}</div>
         <div className="text-sm font-bold text-[var(--foreground)]">{pattern.name}</div>
       </div>
-      <div className="flex gap-1 min-w-max">
-        <div className="flex flex-col shrink-0 w-7 pt-1">
-          <div className="text-[9px] font-bold text-[var(--muted)] tracking-tight mb-1 pl-0.5 flex flex-col leading-tight">
-            <span>T</span>
-            <span>A</span>
-            <span>B</span>
-          </div>
-          {STRING_LABELS.map((l) => (
-            <div key={l} className="h-8 flex items-center justify-end text-[10px] font-medium text-[var(--muted)] pr-0.5">
-              {l}
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: pattern.measures }).map((_, mi) => {
-            const base = mi * GAMME_STEPS_PER_MEASURE;
-            const measureNo = pattern.firstMeasureNumber + mi;
-            return (
-              <div key={mi} className="flex flex-col gap-1.5 w-fit max-w-full">
-                <div className="flex text-[10px] text-[var(--muted)] pl-1">
-                  {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => (
-                    <div key={slot} className="w-9 text-center shrink-0">
-                      {slot === 0 ? measureNo : ''}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-stretch gap-0 min-w-max">
-                  <div className="flex border border-[var(--surface-light)] rounded overflow-hidden">
-                    {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => {
-                      const step = base + slot;
-                      const n = noteAtStep(pattern, step);
-                      const ph = globalPlayhead !== null && globalPlayhead !== undefined && globalPlayhead === step;
-                      return (
-                        <div
-                          key={slot}
-                          className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${ph ? 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/35' : ''}`}
-                        >
-                          {Array.from({ length: 6 }).map((_, si) => (
-                            <div
-                              key={si}
-                              className="w-9 h-8 flex items-center justify-center border-b border-[var(--surface-light)]/40 last:border-b-0 text-[var(--foreground)]"
-                            >
-                              {n?.string === si ? <FretCell fret={n.fret} root={n.root} /> : null}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
+      <div className="flex gap-2 items-start min-w-0">
+        <GammeTabColumn />
+        <div className="flex flex-wrap gap-x-3 gap-y-5 flex-1 min-w-0 content-start">
+        {Array.from({ length: pattern.measures }).map((_, mi) => {
+          const base = mi * GAMME_STEPS_PER_MEASURE;
+          const measureNo = pattern.firstMeasureNumber + mi;
+          const isLast = mi === pattern.measures - 1;
+          return (
+            <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
+              <div className="flex text-[10px] text-[var(--muted)] pl-1">
+                {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => (
+                  <div key={slot} className="w-9 text-center shrink-0">
+                    {slot === 0 ? measureNo : ''}
                   </div>
-                  {mi === pattern.measures - 1 && (
-                    <div
-                      className="flex flex-col justify-center shrink-0 pl-1.5 ml-0.5 border-l border-[var(--surface-light)]"
-                      title="Fin de phrase"
-                      aria-hidden
-                    >
-                      <div className="flex h-[12rem] items-center gap-px">
-                        <div className="w-px self-stretch my-1 bg-[var(--foreground)]/45" />
-                        <div className="w-1 self-stretch my-1 bg-[var(--foreground)]/80 rounded-[1px]" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                  <GammeMeasureStems />
-                </div>
+                ))}
               </div>
-            );
-          })}
+              <div className="flex items-stretch gap-0 min-w-max">
+                <div className="flex border border-[var(--surface-light)] rounded overflow-hidden">
+                  {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => {
+                    const step = base + slot;
+                    const n = noteAtStep(pattern, step);
+                    const ph = globalPlayhead !== null && globalPlayhead !== undefined && globalPlayhead === step;
+                    return (
+                      <div
+                        key={slot}
+                        className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${ph ? 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/35' : ''}`}
+                      >
+                        {Array.from({ length: 6 }).map((_, si) => (
+                          <div
+                            key={si}
+                            className="w-9 h-8 flex items-center justify-center border-b border-[var(--surface-light)]/40 last:border-b-0 text-[var(--foreground)]"
+                          >
+                            {n?.string === si ? <FretCell fret={n.fret} root={n.root} /> : null}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                {isLast ? <EndBar /> : null}
+              </div>
+              <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
+                <GammeMeasureStems />
+              </div>
+            </div>
+          );
+        })}
         </div>
       </div>
       <p className="text-[10px] text-[var(--muted)] mt-2">Maj + clic sur une note : tonique (cercle). Une seule tonique à la fois.</p>
@@ -143,7 +151,7 @@ export function GammeMenuCard({ pattern }: { pattern: GammePatternV1 }) {
   const pb = useGammePlayback(pattern, { onAudioError: setAudioErr });
 
   return (
-    <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-sky-500/50 transition-colors min-w-[280px]">
+    <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-sky-500/50 transition-colors min-w-0 w-full max-w-full">
       <div className="text-sm font-medium">{pattern.sectionLabel}</div>
       <div className="text-sm font-semibold text-[var(--foreground)]">{pattern.name}</div>
       <p className="text-[11px] text-[var(--muted)] mt-1">
@@ -424,60 +432,63 @@ export function GammePatternEditor({
         )}
       </div>
 
-      <div className="mb-4 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/80 p-3 overflow-x-auto">
-        {Array.from({ length: pattern.measures }).map((_, mi) => {
-          const base = mi * GAMME_STEPS_PER_MEASURE;
-          return (
-            <div key={mi} className="mb-4 last:mb-0">
-              <div className="text-[10px] text-[var(--muted)] mb-1">
-                Mesure {pattern.firstMeasureNumber + mi} (édition · ligne {mi + 1})
-              </div>
-              <div className="flex gap-0 min-w-max items-start">
-                <div className="flex flex-col justify-around pr-1 text-[10px] text-[var(--muted)] w-5 shrink-0">
-                  {STRING_LABELS.map((l) => (
-                    <div key={l} className="h-8 flex items-center justify-end font-medium">
-                      {l}
+      <div className="mb-4 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/80 p-3 w-full min-w-0 overflow-x-auto">
+        <div className="flex gap-2 items-start min-w-0">
+          <GammeTabColumn />
+          <div className="flex flex-wrap gap-x-3 gap-y-5 flex-1 min-w-0 content-start">
+            {Array.from({ length: pattern.measures }).map((_, mi) => {
+              const base = mi * GAMME_STEPS_PER_MEASURE;
+              const measureNo = pattern.firstMeasureNumber + mi;
+              const isLast = mi === pattern.measures - 1;
+              return (
+                <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
+                  <div className="flex text-[10px] text-[var(--muted)] pl-1 min-h-[1.125rem] items-center">
+                    {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => (
+                      <div key={slot} className="w-9 text-center shrink-0">
+                        {slot === 0 ? measureNo : ''}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-stretch gap-0 min-w-max">
+                    <div className="flex border border-[var(--surface-light)] rounded-md overflow-hidden">
+                      {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => {
+                        const step = base + slot;
+                        const playheadHere = pb.playing && pb.playhead === step;
+                        return (
+                          <div
+                            key={slot}
+                            className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/15' : ''}`}
+                          >
+                            {Array.from({ length: 6 }).map((_, si) => {
+                              const n = noteAtStep(pattern, step);
+                              const active = n?.string === si;
+                              return (
+                                <button
+                                  key={si}
+                                  type="button"
+                                  onClick={(e) => onCellClick(si, step, e.shiftKey)}
+                                  className={`w-9 h-8 text-xs font-semibold flex items-center justify-center border-b border-[var(--surface-light)]/50 last:border-b-0 hover:bg-sky-500/15 ${
+                                    active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
+                                  } ${playheadHere ? 'ring-1 ring-inset ring-sky-500/50 bg-sky-500/10' : ''}`}
+                                >
+                                  {active ? <FretCell fret={n!.fret} root={n!.root} /> : ''}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-                <div className="flex flex-col gap-1.5 w-fit max-w-full">
-                  <div className="flex border border-[var(--surface-light)] rounded-md overflow-hidden">
-                    {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => {
-                      const step = base + slot;
-                      const playheadHere = pb.playing && pb.playhead === step;
-                      return (
-                        <div
-                          key={slot}
-                          className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/15' : ''}`}
-                        >
-                          {Array.from({ length: 6 }).map((_, si) => {
-                            const n = noteAtStep(pattern, step);
-                            const active = n?.string === si;
-                            return (
-                              <button
-                                key={si}
-                                type="button"
-                                onClick={(e) => onCellClick(si, step, e.shiftKey)}
-                                className={`w-9 h-8 text-xs font-semibold flex items-center justify-center border-b border-[var(--surface-light)]/50 last:border-b-0 hover:bg-sky-500/15 ${
-                                  active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
-                                } ${playheadHere ? 'ring-1 ring-inset ring-sky-500/50 bg-sky-500/10' : ''}`}
-                              >
-                                {active ? <FretCell fret={n!.fret} root={n!.root} /> : ''}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
+                    {isLast ? <EndBar /> : null}
                   </div>
                   <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
                     <GammeMeasureStems />
                   </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <GammeTabPreview pattern={pattern} globalPlayhead={pb.playing ? pb.playhead : null} />
