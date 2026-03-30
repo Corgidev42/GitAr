@@ -521,6 +521,61 @@
       ],
       "isSong": true,
       "favorite": true
+    },
+    {
+      "id": "D108",
+      "title": "Je te promets – Johnny Halliday",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "C",
+          "Em",
+          "Dm",
+          "G",
+          "Am",
+          "F"
+        ],
+        "techniques": [
+          "gamme C"
+        ],
+        "rhythms": [
+          "noire"
+        ],
+        "strums": [],
+        "arpeggios": [],
+        "gammes": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 55,
+            "path": "/assets/audio/D108/PAC_D108_-_Je_te_promets_-_55bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D108_PAC_D108_-_Jam_Along_-_Je_te_promets.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D108_PAC_D108_-_Fiche_paroles_-_Je_te_promets.pdf"
+          }
+        ]
+      },
+      "progressions": [
+        {
+          "chords": [
+            "C",
+            "Em",
+            "Dm",
+            "F",
+            "G"
+          ]
+        }
+      ],
+      "isSong": true,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -540,14 +595,16 @@
       "D/F#",
       "Asus4",
       "Asus2",
-      "Bm7"
+      "Bm7",
+      "F"
     ],
     "techniques": [
       "embellissement autour du D",
       "s'accompagner en chantant",
       "Embellissement Autour Du C",
       "Embellissement Autour Du A",
-      "changement d’accord sur le contre temps"
+      "changement d’accord sur le contre temps",
+      "gamme C"
     ],
     "rhythms": [
       "croche",
@@ -563,7 +620,9 @@
     "arpeggios": [
       "ARPEGGIO_V2:%7B%22v%22%3A2%2C%22name%22%3A%22Arp%C3%A8ges%20La%20sus4%20-%20La%20-%20La%20sus2%20-%20La%22%2C%22measures%22%3A2%2C%22notes%22%3A%5B%7B%22step%22%3A0%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A1%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A2%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A3%2C%22string%22%3A1%2C%22fret%22%3A3%7D%2C%7B%22step%22%3A4%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A5%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A6%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A7%2C%22string%22%3A1%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A8%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A9%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A10%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A11%2C%22string%22%3A1%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A12%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A13%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A14%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A15%2C%22string%22%3A1%2C%22fret%22%3A2%7D%5D%7D"
     ],
-    "gammes": []
+    "gammes": [
+      "GAMME_V1:%7B%22v%22%3A1%2C%22name%22%3A%22gamme%20de%20Do%22%2C%22sectionLabel%22%3A%22Technique%22%2C%22measures%22%3A4%2C%22firstMeasureNumber%22%3A1%2C%22notes%22%3A%5B%7B%22step%22%3A0%2C%22string%22%3A4%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A1%2C%22string%22%3A3%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A2%2C%22string%22%3A3%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A3%2C%22string%22%3A3%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A4%2C%22string%22%3A2%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A5%2C%22string%22%3A2%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A6%2C%22string%22%3A1%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A7%2C%22string%22%3A1%2C%22fret%22%3A1%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A8%2C%22string%22%3A1%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A9%2C%22string%22%3A2%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A10%2C%22string%22%3A2%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A11%2C%22string%22%3A3%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A12%2C%22string%22%3A3%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A13%2C%22string%22%3A3%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A14%2C%22string%22%3A4%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%5D%7D"
+    ]
   },
   "techniqueDetails": {
     "capo": {
@@ -642,5 +701,19 @@
       "image": "/assets/techniques/changement_d_accord_sur_le_contre_temps_1774462891239.png"
     }
   },
-  "chordDiagrams": {}
+  "chordDiagrams": {
+    "F": {
+      "frets": [
+        1,
+        3,
+        3,
+        2,
+        1,
+        1
+      ],
+      "barres": [
+        1
+      ]
+    }
+  }
 }
