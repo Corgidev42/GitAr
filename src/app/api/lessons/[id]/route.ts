@@ -43,6 +43,7 @@ export async function PATCH(
       strums: string[];
       arpeggios: string[];
       gammes: string[];
+      walkingBass: string[];
     }>;
     if (Array.isArray(k.chords)) db.lessons[idx].knowledge.chords = k.chords;
     if (Array.isArray(k.techniques)) db.lessons[idx].knowledge.techniques = k.techniques;
@@ -50,6 +51,7 @@ export async function PATCH(
     if (Array.isArray(k.strums)) db.lessons[idx].knowledge.strums = k.strums;
     if (Array.isArray(k.arpeggios)) db.lessons[idx].knowledge.arpeggios = k.arpeggios;
     if (Array.isArray(k.gammes)) db.lessons[idx].knowledge.gammes = k.gammes;
+    if (Array.isArray(k.walkingBass)) db.lessons[idx].knowledge.walkingBass = k.walkingBass;
   }
 
   if (updates.progressions) {

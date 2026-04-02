@@ -23,6 +23,7 @@ import {
   Target,
   Trash2,
   Upload,
+  Waves,
   X,
 } from 'lucide-react';
 
@@ -46,6 +47,10 @@ export function IconMusic({ title = 'Music', ...props }: IconProps) {
 
 export function IconGamme({ title = 'Gamme', ...props }: IconProps) {
   return <ListMusic aria-label={title} {...props} />;
+}
+
+export function IconWalkingBass({ title = 'Walking bass', ...props }: IconProps) {
+  return <Waves aria-label={title} {...props} />;
 }
 
 export function IconLayoutGrid({ title = 'Grille', ...props }: IconProps) {

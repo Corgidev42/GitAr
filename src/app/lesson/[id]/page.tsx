@@ -6,7 +6,7 @@ import type { GuitarLesson, TabAsset, BackingTrack } from '@/types';
 import { parseGammePattern } from '@/lib/gammeCodec';
 import {
   IconDocument, IconGamme, IconHeart, IconLink, IconMusic, IconPause,
-  IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget,
+  IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget, IconWalkingBass,
   IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
 
@@ -23,6 +23,7 @@ function normalizeLesson(l: GuitarLesson): GuitarLesson {
       strums: l.knowledge?.strums ?? [],
       arpeggios: l.knowledge?.arpeggios ?? [],
       gammes: l.knowledge?.gammes ?? [],
+      walkingBass: l.knowledge?.walkingBass ?? [],
     },
   };
 }
@@ -246,7 +247,7 @@ export default function LessonPage() {
   const [editMode, setEditMode] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftKnowledge, setDraftKnowledge] = useState<GuitarLesson['knowledge'] | null>(null);
-  const [addCat, setAddCat] = useState<'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes'>('chords');
+  const [addCat, setAddCat] = useState<'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes' | 'walkingBass'>('chords');
   const [addValue, setAddValue] = useState('');
   const lastReloadAt = useRef(0);
 
@@ -483,6 +484,14 @@ export default function LessonPage() {
             )}
           </span>
         ))}
+        {(editMode ? draftKnowledge?.walkingBass || [] : lesson.knowledge.walkingBass || []).map((w) => (
+          <span key={`wb-${w}`} className="text-xs px-2 py-1 rounded-lg bg-emerald-900/50 text-emerald-300">
+            <span className="inline-flex items-center gap-1.5"><IconWalkingBass className="w-3.5 h-3.5" />{w}</span>
+            {editMode && draftKnowledge && (
+              <button onClick={() => setDraftKnowledge({ ...draftKnowledge, walkingBass: (draftKnowledge.walkingBass || []).filter((x) => x !== w) })} className="ml-2 text-emerald-200/70 hover:text-white" title="Retirer">×</button>
+            )}
+          </span>
+        ))}
         {(editMode ? draftKnowledge?.rhythms || [] : lesson.knowledge.rhythms).map((r) => (
           <span key={`rhythm-${r}`} className="text-xs px-2 py-1 rounded-lg bg-amber-900/50 text-amber-300">
             <span className="inline-flex items-center gap-1.5"><IconRhythm className="w-3.5 h-3.5" />{r}</span>
@@ -507,6 +516,7 @@ export default function LessonPage() {
             <option value="chords">Accord</option>
             <option value="techniques">Technique</option>
             <option value="gammes">Gamme</option>
+            <option value="walkingBass">Walking bass</option>
             <option value="rhythms">Rythme</option>
             <option value="strums">Rythmique</option>
           </select>

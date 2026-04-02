@@ -17,6 +17,8 @@ export interface Knowledge {
   arpeggios?: string[];
   /** Noms ou motifs encodés `GAMME_V1:…` (tab + audio comme les arpèges) — UI sous Techniques */
   gammes?: string[];
+  /** Lignes de walking bass (libellés libres) — UI sous Techniques */
+  walkingBass?: string[];
 }
 
 export interface TechniqueDetail {

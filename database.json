@@ -21,7 +21,8 @@
         "rhythms": [],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [],
@@ -58,7 +59,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -115,7 +117,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -168,7 +171,8 @@
         "rhythms": [],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -228,7 +232,8 @@
         "rhythms": [],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -296,7 +301,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -344,7 +350,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -410,7 +417,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -479,7 +487,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -543,7 +552,8 @@
         ],
         "strums": [],
         "arpeggios": [],
-        "gammes": []
+        "gammes": [],
+        "walkingBass": []
       },
       "assets": {
         "backingTracks": [
@@ -576,6 +586,56 @@
       ],
       "isSong": true,
       "favorite": false
+    },
+    {
+      "id": "D109",
+      "title": "Hey Joe – Jimi Hendrix",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "C",
+          "G",
+          "D",
+          "A",
+          "E5"
+        ],
+        "techniques": [
+          "Walking Bass de Jimi Hendrix"
+        ],
+        "rhythms": [
+          "noire",
+          "croche"
+        ],
+        "strums": [],
+        "arpeggios": [],
+        "gammes": [],
+        "walkingBass": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 70,
+            "path": "/assets/audio/D109/PAC_D109_-_Hey_Joe_-_70bpm.mp3"
+          },
+          {
+            "bpm": 83,
+            "path": "/assets/audio/D109/PAC_D109_-_Hey_Joe_-_83bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D109_PAC_D109_-_Jam_Along_-_Hey_Joe.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D109_PAC_D109_-_Fiche_paroles_-_Hey_Joe.pdf"
+          }
+        ]
+      },
+      "progressions": [],
+      "isSong": true,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -596,7 +656,8 @@
       "Asus4",
       "Asus2",
       "Bm7",
-      "F"
+      "F",
+      "E5"
     ],
     "techniques": [
       "embellissement autour du D",
@@ -604,7 +665,8 @@
       "Embellissement Autour Du C",
       "Embellissement Autour Du A",
       "changement d’accord sur le contre temps",
-      "gamme C"
+      "gamme C",
+      "Walking Bass de Jimi Hendrix"
     ],
     "rhythms": [
       "croche",
@@ -622,7 +684,8 @@
     ],
     "gammes": [
       "GAMME_V1:%7B%22v%22%3A1%2C%22name%22%3A%22gamme%20de%20Do%22%2C%22sectionLabel%22%3A%22Technique%22%2C%22measures%22%3A4%2C%22firstMeasureNumber%22%3A1%2C%22notes%22%3A%5B%7B%22step%22%3A0%2C%22string%22%3A4%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A1%2C%22string%22%3A3%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A2%2C%22string%22%3A3%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A3%2C%22string%22%3A3%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A4%2C%22string%22%3A2%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A5%2C%22string%22%3A2%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A6%2C%22string%22%3A1%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A7%2C%22string%22%3A1%2C%22fret%22%3A1%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A8%2C%22string%22%3A1%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A9%2C%22string%22%3A2%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A10%2C%22string%22%3A2%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A11%2C%22string%22%3A3%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A12%2C%22string%22%3A3%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A13%2C%22string%22%3A3%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A14%2C%22string%22%3A4%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%5D%7D"
-    ]
+    ],
+    "walkingBass": []
   },
   "techniqueDetails": {
     "capo": {

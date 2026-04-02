@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
-  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGamme, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic,
+  IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGamme, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic, IconWalkingBass,
   IconPencil, IconPlus, IconRefresh, IconRhythm, IconTarget,
   IconPause, IconPlay, IconTrash, IconUpload, IconX,
 } from '@/components/Icons';
@@ -18,7 +18,7 @@ import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 import { ArpeggioMenuCard, ArpeggioPatternEditor } from '@/components/ArpeggioPatternEditor';
 import { GammeMenuCard, GammePatternEditor } from '@/components/GammePatternEditor';
 
-type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes';
+type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
 
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
@@ -920,6 +920,7 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [chords, setChords] = useState('');
   const [techniques, setTechniques] = useState('');
   const [gammes, setGammes] = useState('');
+  const [walkingBass, setWalkingBass] = useState('');
   const [rhythms, setRhythms] = useState('');
   const [strums, setStrums] = useState('');
   const [saving, setSaving] = useState(false);
@@ -987,6 +988,7 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
         chords: split(chords),
         techniques: split(techniques),
         gammes: split(gammes),
+        walkingBass: split(walkingBass),
         rhythms: split(rhythms),
         strums: split(strums),
         tabs,
@@ -1048,6 +1050,11 @@ function CreateLessonModal({ onClose, onCreated }: { onClose: () => void; onCrea
           <div>
             <label className="text-xs text-[var(--muted)] mb-1 block">Gammes (séparées par des virgules)</label>
             <input value={gammes} onChange={(e) => setGammes(e.target.value)} placeholder="pentatonique mineure, majeure" className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" />
+          </div>
+
+          <div>
+            <label className="text-xs text-[var(--muted)] mb-1 block">Walking bass (séparés par des virgules)</label>
+            <input value={walkingBass} onChange={(e) => setWalkingBass(e.target.value)} placeholder="2-5-1 jazz, blues shuffle" className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1134,7 +1141,7 @@ export default function KnowledgePage() {
     lessonId: string; progressionIndex: number; chordsLine: string; notes: string;
   } | null>(null);
   const [editKnowledge, setEditKnowledge] = useState<{
-    category: 'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes'; from: string; to: string;
+    category: 'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes' | 'walkingBass'; from: string; to: string;
   } | null>(null);
   const [editLessonTitle, setEditLessonTitle] = useState<{ id: string; title: string } | null>(null);
   const [editTechnique, setEditTechnique] = useState<{
@@ -1384,7 +1391,7 @@ export default function KnowledgePage() {
 
   const tabs = [
     { key: 'chords' as const, label: 'Accords', count: k.chords.length, icon: <IconMusic className="w-5 h-5" /> },
-    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length + (k.gammes?.length ?? 0), icon: <IconTarget className="w-5 h-5" /> },
+    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length + (k.gammes?.length ?? 0) + (k.walkingBass?.length ?? 0), icon: <IconTarget className="w-5 h-5" /> },
     { key: 'rhythms' as const, label: 'Rythmes', count: k.rhythms.length, icon: <IconRhythm className="w-5 h-5" /> },
     { key: 'progressions' as const, label: 'Suites', count: progressions.length, icon: <IconLink className="w-5 h-5" /> },
     { key: 'songs' as const, label: 'Morceaux', count: songs.length, icon: <IconGuitar className="w-5 h-5" /> },
@@ -1536,6 +1543,25 @@ export default function KnowledgePage() {
                   </div>
                 );
               }}
+            />
+          </div>
+          <div className="mt-10">
+            <Section
+              title="Walking bass"
+              icon={<IconWalkingBass className="w-5 h-5" />}
+              items={k.walkingBass || []}
+              editMode={editMode}
+              onDelete={(v) => deleteItem('walkingBass', v)}
+              onEdit={(v) => setEditKnowledge({ category: 'walkingBass', from: v, to: v })}
+              onAdd={(v) => addItem('walkingBass', v)}
+              addPlaceholder="Ex: 2-5-1 sur grille jazz, ligne blues"
+              orderable
+              onMoveItem={(idx, dir) => reorderKnowledgeItem('walkingBass', k.walkingBass || [], idx, dir)}
+              renderItem={(w) => (
+                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
+                  <span className="text-sm font-medium">{w}</span>
+                </div>
+              )}
             />
           </div>
         </>
@@ -1961,7 +1987,7 @@ export default function KnowledgePage() {
         </div>
       )}
 
-      {k.chords.length === 0 && k.techniques.length === 0 && (k.gammes || []).length === 0 && k.rhythms.length === 0 && db.lessons.length === 0 && (
+      {k.chords.length === 0 && k.techniques.length === 0 && (k.gammes || []).length === 0 && (k.walkingBass || []).length === 0 && k.rhythms.length === 0 && db.lessons.length === 0 && (
         <div className="text-center py-20 text-[var(--muted)]">
           <p>Aucune connaissance enregistrée pour le moment.</p>
           <p className="text-sm mt-2">Crée ta première leçon pour commencer.</p>
