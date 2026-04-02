@@ -14,9 +14,10 @@ import { ChordEditorModal, type ChordEditorOpen } from '@/components/ChordEditor
 import { resolveChordDiagram } from '@/lib/chordDiagrams';
 import { parseArpeggioPattern } from '@/lib/arpeggioCodec';
 import { parseGammePattern } from '@/lib/gammeCodec';
+import { parseWalkingBassPattern } from '@/lib/walkingBassCodec';
 import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 import { ArpeggioMenuCard, ArpeggioPatternEditor } from '@/components/ArpeggioPatternEditor';
-import { GammeMenuCard, GammePatternEditor } from '@/components/GammePatternEditor';
+import { GammeMenuCard, GammePatternEditor, WalkingBassMenuCard, WalkingBassPatternEditor } from '@/components/GammePatternEditor';
 
 type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
 
@@ -1135,6 +1136,7 @@ export default function KnowledgePage() {
   const [editingRhythmSource, setEditingRhythmSource] = useState<string | null>(null);
   const [editingArpeggioSource, setEditingArpeggioSource] = useState<string | null>(null);
   const [editingGammeSource, setEditingGammeSource] = useState<string | null>(null);
+  const [editingWalkingBassSource, setEditingWalkingBassSource] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [favFilter, setFavFilter] = useState(false);
   const [editProgression, setEditProgression] = useState<{
@@ -1210,6 +1212,24 @@ export default function KnowledgePage() {
       });
     }
     setEditingGammeSource(null);
+    safeReload();
+  }, [safeReload]);
+
+  const saveWalkingBassPattern = useCallback(async ({ encoded, source }: { encoded: string; source: string | null }) => {
+    const add = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'knowledge_add', category: 'walkingBass', value: encoded }),
+    });
+    if (!add.ok) return;
+    if (source && source !== encoded) {
+      await fetch('/api/database', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'knowledge', category: 'walkingBass', value: source }),
+      });
+    }
+    setEditingWalkingBassSource(null);
     safeReload();
   }, [safeReload]);
 
@@ -1546,22 +1566,35 @@ export default function KnowledgePage() {
             />
           </div>
           <div className="mt-10">
+            <WalkingBassPatternEditor
+              editMode={editMode}
+              source={editingWalkingBassSource}
+              onSave={saveWalkingBassPattern}
+              onCancelEdit={() => setEditingWalkingBassSource(null)}
+            />
             <Section
               title="Walking bass"
               icon={<IconWalkingBass className="w-5 h-5" />}
               items={k.walkingBass || []}
               editMode={editMode}
               onDelete={(v) => deleteItem('walkingBass', v)}
-              onEdit={(v) => setEditKnowledge({ category: 'walkingBass', from: v, to: v })}
+              onEdit={(v) => {
+                if (parseWalkingBassPattern(v)) setEditingWalkingBassSource(v);
+                else setEditKnowledge({ category: 'walkingBass', from: v, to: v });
+              }}
               onAdd={(v) => addItem('walkingBass', v)}
-              addPlaceholder="Ex: 2-5-1 sur grille jazz, ligne blues"
+              addPlaceholder="Nom libre ou crée une tab avec l’éditeur ci-dessus"
               orderable
               onMoveItem={(idx, dir) => reorderKnowledgeItem('walkingBass', k.walkingBass || [], idx, dir)}
-              renderItem={(w) => (
-                <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
-                  <span className="text-sm font-medium">{w}</span>
-                </div>
-              )}
+              renderItem={(w) => {
+                const parsed = parseWalkingBassPattern(w);
+                if (parsed) return <WalkingBassMenuCard pattern={parsed} />;
+                return (
+                  <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
+                    <span className="text-sm font-medium">{w}</span>
+                  </div>
+                );
+              }}
             />
           </div>
         </>

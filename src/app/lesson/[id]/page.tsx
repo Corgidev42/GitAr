@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, TabAsset, BackingTrack } from '@/types';
 import { parseGammePattern } from '@/lib/gammeCodec';
+import { parseWalkingBassPattern } from '@/lib/walkingBassCodec';
 import {
   IconDocument, IconGamme, IconHeart, IconLink, IconMusic, IconPause,
   IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget, IconWalkingBass,
@@ -486,7 +487,7 @@ export default function LessonPage() {
         ))}
         {(editMode ? draftKnowledge?.walkingBass || [] : lesson.knowledge.walkingBass || []).map((w) => (
           <span key={`wb-${w}`} className="text-xs px-2 py-1 rounded-lg bg-emerald-900/50 text-emerald-300">
-            <span className="inline-flex items-center gap-1.5"><IconWalkingBass className="w-3.5 h-3.5" />{w}</span>
+            <span className="inline-flex items-center gap-1.5"><IconWalkingBass className="w-3.5 h-3.5" />{parseWalkingBassPattern(w)?.name ?? w}</span>
             {editMode && draftKnowledge && (
               <button onClick={() => setDraftKnowledge({ ...draftKnowledge, walkingBass: (draftKnowledge.walkingBass || []).filter((x) => x !== w) })} className="ml-2 text-emerald-200/70 hover:text-white" title="Retirer">×</button>
             )}

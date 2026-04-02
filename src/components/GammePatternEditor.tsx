@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import {
   GAMME_STEPS_PER_MEASURE,
   type GammeNote,
@@ -10,7 +10,35 @@ import {
   serializeGammePattern,
 } from '@/lib/gammeCodec';
 import { useGammePlayback } from '@/hooks/useGammePlayback';
-import { IconGamme, IconMusic, IconPause, IconPlay } from '@/components/Icons';
+import {
+  makeEmptyWalkingBassPattern,
+  parseWalkingBassPattern,
+  serializeWalkingBassPattern,
+} from '@/lib/walkingBassCodec';
+import { IconGamme, IconMusic, IconPause, IconPlay, IconWalkingBass } from '@/components/Icons';
+
+export type GammeEditorVariant = 'gamme' | 'walkingBass';
+
+const ACCENT: Record<GammeEditorVariant, { playhead: string; hoverCell: string; ring: string; btn: string; title: string; dashed: string; menuHover: string }> = {
+  gamme: {
+    playhead: 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/35',
+    hoverCell: 'hover:bg-sky-500/15',
+    ring: 'ring-sky-500/50 bg-sky-500/10',
+    btn: 'bg-sky-600 hover:bg-sky-500 text-white',
+    title: 'text-sky-300',
+    dashed: 'border-sky-500/40',
+    menuHover: 'hover:border-sky-500/50',
+  },
+  walkingBass: {
+    playhead: 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/35',
+    hoverCell: 'hover:bg-emerald-500/15',
+    ring: 'ring-emerald-500/50 bg-emerald-500/10',
+    btn: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+    title: 'text-emerald-300',
+    dashed: 'border-emerald-500/40',
+    menuHover: 'hover:border-emerald-500/50',
+  },
+};
 
 /** Mi aigu en haut (e) → Mi grave en bas (E). Clés React : index de corde, pas le caractère affiché. */
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
@@ -81,10 +109,13 @@ function EndBar() {
 export function GammeTabPreview({
   pattern,
   globalPlayhead,
+  variant = 'gamme',
 }: {
   pattern: GammePatternV1;
   globalPlayhead?: number | null;
+  variant?: GammeEditorVariant;
 }) {
+  const a = ACCENT[variant];
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 w-full min-w-0">
       <div className="mb-1">
@@ -116,7 +147,7 @@ export function GammeTabPreview({
                     return (
                       <div
                         key={slot}
-                        className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${ph ? 'bg-sky-500/15 ring-1 ring-inset ring-sky-500/35' : ''}`}
+                        className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${ph ? a.playhead : ''}`}
                       >
                         {Array.from({ length: 6 }).map((_, si) => (
                           <div
@@ -145,12 +176,13 @@ export function GammeTabPreview({
   );
 }
 
-export function GammeMenuCard({ pattern }: { pattern: GammePatternV1 }) {
+export function GammeMenuCard({ pattern, variant = 'gamme' }: { pattern: GammePatternV1; variant?: GammeEditorVariant }) {
   const [audioErr, setAudioErr] = useState('');
   const pb = useGammePlayback(pattern, { onAudioError: setAudioErr });
+  const a = ACCENT[variant];
 
   return (
-    <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-sky-500/50 transition-colors min-w-0 w-full max-w-full">
+    <div className={`px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] transition-colors min-w-0 w-full max-w-full ${a.menuHover}`}>
       <div className="text-sm font-medium">{pattern.sectionLabel}</div>
       <div className="text-sm font-semibold text-[var(--foreground)]">{pattern.name}</div>
       <p className="text-[11px] text-[var(--muted)] mt-1">
@@ -181,7 +213,7 @@ export function GammeMenuCard({ pattern }: { pattern: GammePatternV1 }) {
           <button
             type="button"
             onClick={() => void pb.start()}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-sky-600 text-white text-[10px] font-medium"
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-white text-[10px] font-medium ${a.btn}`}
           >
             <IconPlay className="w-3 h-3" />
             Écouter
@@ -198,7 +230,7 @@ export function GammeMenuCard({ pattern }: { pattern: GammePatternV1 }) {
         )}
       </div>
       {audioErr ? <p className="text-[10px] text-red-400 mt-1">{audioErr}</p> : null}
-      <GammeTabPreview pattern={pattern} globalPlayhead={pb.playing ? pb.playhead : null} />
+      <GammeTabPreview pattern={pattern} globalPlayhead={pb.playing ? pb.playhead : null} variant={variant} />
     </div>
   );
 }
@@ -208,33 +240,44 @@ export function GammePatternEditor({
   source,
   onSave,
   onCancelEdit,
+  variant = 'gamme',
 }: {
   editMode: boolean;
   source: string | null;
   onSave: (payload: { encoded: string; source: string | null }) => void;
   onCancelEdit: () => void;
+  variant?: GammeEditorVariant;
 }) {
-  const [pattern, setPattern] = useState<GammePatternV1>(makeEmptyGammePattern());
+  const isWb = variant === 'walkingBass';
+  const a = ACCENT[variant];
+  const serialize = isWb ? serializeWalkingBassPattern : serializeGammePattern;
+  const IconHeader = isWb ? IconWalkingBass : IconGamme;
+
+  const [pattern, setPattern] = useState<GammePatternV1>(() =>
+    variant === 'walkingBass' ? makeEmptyWalkingBassPattern() : makeEmptyGammePattern(),
+  );
   const [error, setError] = useState('');
   const [paintFret, setPaintFret] = useState(0);
   const pb = useGammePlayback(pattern, { onAudioError: setError });
 
   useEffect(() => {
     if (!editMode) return;
+    const parse = variant === 'walkingBass' ? parseWalkingBassPattern : parseGammePattern;
+    const freshEmpty = variant === 'walkingBass' ? makeEmptyWalkingBassPattern : makeEmptyGammePattern;
     if (!source) {
-      setPattern(makeEmptyGammePattern());
+      setPattern(freshEmpty());
       setError('');
       return;
     }
-    const parsed = parseGammePattern(source);
+    const parsed = parse(source);
     if (parsed) {
       setPattern(parsed);
       setError('');
       return;
     }
-    setPattern(makeEmptyGammePattern());
-    setError('Impossible de charger cette gamme.');
-  }, [editMode, source]);
+    setPattern(freshEmpty());
+    setError(variant === 'walkingBass' ? 'Impossible de charger cette ligne de basse.' : 'Impossible de charger cette gamme.');
+  }, [editMode, source, variant]);
 
   if (!editMode) return null;
 
@@ -294,7 +337,7 @@ export function GammePatternEditor({
   const handleSave = () => {
     const name = pattern.name.trim();
     if (!name) {
-      setError('Donne un titre à la gamme.');
+      setError(isWb ? 'Donne un titre à la ligne.' : 'Donne un titre à la gamme.');
       return;
     }
     if (pattern.notes.length === 0) {
@@ -305,22 +348,28 @@ export function GammePatternEditor({
     const clean: GammePatternV1 = {
       ...pattern,
       name,
-      sectionLabel: pattern.sectionLabel.trim() || 'Technique',
+      sectionLabel: pattern.sectionLabel.trim() || (isWb ? 'Walking bass' : 'Technique'),
       firstMeasureNumber: Math.min(999, Math.max(1, pattern.firstMeasureNumber)),
       notes: [...pattern.notes].sort((a, b) => a.step - b.step),
     };
-    onSave({ encoded: serializeGammePattern(clean), source });
+    onSave({ encoded: serialize(clean), source });
   };
 
   return (
-    <div className="mb-10 p-5 rounded-xl border-2 border-dashed border-sky-500/40 bg-[var(--surface)]/50">
-      <h3 className="text-sm font-bold text-sky-300 mb-3 inline-flex items-center gap-2">
-        <IconGamme className="w-4 h-4" />
-        {source ? 'Éditer une gamme (tablature)' : 'Créer une gamme (tablature)'}
+    <div className={`mb-10 p-5 rounded-xl border-2 border-dashed bg-[var(--surface)]/50 ${a.dashed}`}>
+      <h3 className={`text-sm font-bold mb-3 inline-flex items-center gap-2 ${a.title}`}>
+        <IconHeader className="w-4 h-4" />
+        {isWb
+          ? source
+            ? 'Éditer un walking bass (tablature)'
+            : 'Créer un walking bass (tablature)'
+          : source
+            ? 'Éditer une gamme (tablature)'
+            : 'Créer une gamme (tablature)'}
       </h3>
       <p className="text-xs text-[var(--muted)] mb-4">
         Une note par temps (noire), 4 temps par mesure. Clic : place la case choisie ; reclic sur la même corde efface.{' '}
-        <span className="text-sky-300/90">Maj + clic</span> sur une note : marque la tonique (cercle).
+        <span className={isWb ? 'text-emerald-300/90' : 'text-sky-300/90'}>Maj + clic</span> sur une note : marque la tonique (cercle).
       </p>
 
       <div className="grid md:grid-cols-2 gap-3 mb-3">
@@ -329,16 +378,16 @@ export function GammePatternEditor({
           <input
             value={pattern.sectionLabel}
             onChange={(e) => setPattern((p) => ({ ...p, sectionLabel: e.target.value }))}
-            placeholder="Technique"
+            placeholder={isWb ? 'Walking bass' : 'Technique'}
             className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
           />
         </div>
         <div className="space-y-2">
-          <label className="block text-[10px] text-[var(--muted)]">Titre de la gamme</label>
+          <label className="block text-[10px] text-[var(--muted)]">{isWb ? 'Titre de la ligne' : 'Titre de la gamme'}</label>
           <input
             value={pattern.name}
             onChange={(e) => setPattern((p) => ({ ...p, name: e.target.value }))}
-            placeholder="La gamme de Do"
+            placeholder={isWb ? '2-5-1 sur II-V-I' : 'La gamme de Do'}
             className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
           />
         </div>
@@ -390,7 +439,7 @@ export function GammePatternEditor({
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/60 px-3 py-2">
-        <span className="text-xs font-medium text-sky-300 shrink-0 inline-flex items-center gap-1.5">
+        <span className={`text-xs font-medium shrink-0 inline-flex items-center gap-1.5 ${a.title}`}>
           <IconMusic className="w-4 h-4" />
           Aperçu audio
         </span>
@@ -418,7 +467,7 @@ export function GammePatternEditor({
           <button
             type="button"
             onClick={() => void pb.start()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-medium"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium ${a.btn}`}
           >
             <IconPlay className="w-3.5 h-3.5" />
             Écouter
@@ -466,9 +515,9 @@ export function GammePatternEditor({
                                   key={si}
                                   type="button"
                                   onClick={(e) => onCellClick(si, step, e.shiftKey)}
-                                  className={`w-9 h-8 text-xs font-semibold flex items-center justify-center border-b border-[var(--surface-light)]/50 last:border-b-0 hover:bg-sky-500/15 ${
+                                  className={`w-9 h-8 text-xs font-semibold flex items-center justify-center border-b border-[var(--surface-light)]/50 last:border-b-0 ${a.hoverCell} ${
                                     active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
-                                  } ${playheadHere ? 'ring-1 ring-inset ring-sky-500/50 bg-sky-500/10' : ''}`}
+                                  } ${playheadHere ? `ring-1 ring-inset ${a.ring}` : ''}`}
                                 >
                                   {active ? <FretCell fret={n!.fret} root={n!.root} /> : ''}
                                 </button>
@@ -490,10 +539,16 @@ export function GammePatternEditor({
         </div>
       </div>
 
-      <GammeTabPreview pattern={pattern} globalPlayhead={pb.playing ? pb.playhead : null} />
+      <GammeTabPreview pattern={pattern} globalPlayhead={pb.playing ? pb.playhead : null} variant={variant} />
 
       <div className="flex flex-wrap items-center gap-2 mt-4">
-        <button type="button" onClick={() => setPattern(makeEmptyGammePattern())} className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs">
+        <button
+          type="button"
+          onClick={() =>
+            setPattern(variant === 'walkingBass' ? makeEmptyWalkingBassPattern() : makeEmptyGammePattern())
+          }
+          className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs"
+        >
           Nouveau motif
         </button>
         {source && (
@@ -501,11 +556,21 @@ export function GammePatternEditor({
             Quitter l’édition
           </button>
         )}
-        <button type="button" onClick={handleSave} className="ml-auto px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs">
-          {source ? 'Mettre à jour la gamme' : 'Enregistrer la gamme'}
+        <button type="button" onClick={handleSave} className={`ml-auto px-3 py-1.5 rounded-lg text-white text-xs ${a.btn}`}>
+          {isWb ? (source ? 'Mettre à jour la ligne' : 'Enregistrer la ligne') : source ? 'Mettre à jour la gamme' : 'Enregistrer la gamme'}
         </button>
       </div>
       {error ? <p className="text-xs text-red-400 mt-2">{error}</p> : null}
     </div>
   );
+}
+
+export function WalkingBassPatternEditor(
+  props: Omit<ComponentProps<typeof GammePatternEditor>, 'variant'>,
+) {
+  return <GammePatternEditor {...props} variant="walkingBass" />;
+}
+
+export function WalkingBassMenuCard({ pattern }: { pattern: GammePatternV1 }) {
+  return <GammeMenuCard pattern={pattern} variant="walkingBass" />;
 }
