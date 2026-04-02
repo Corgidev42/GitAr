@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ArpeggioPatternV2 } from '@/lib/arpeggioCodec';
-import { ARPEGGIO_STEPS_PER_MEASURE } from '@/lib/arpeggioCodec';
+import { resolveArpeggioStepsPerMeasure } from '@/lib/arpeggioCodec';
 import { arpeggioStepDurationSec, scheduleArpeggioPass } from '@/lib/arpeggioPlayback';
 import { claimExclusivePlayback, releaseExclusivePlayback } from '@/lib/playbackCoordinator';
 
@@ -61,14 +61,16 @@ export function useArpeggioPlayback(
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(0.32, now);
     const t0 = now + 0.06;
-    scheduleArpeggioPass(ctx, master, p.notes, p.measures, bpmRef.current, t0);
+    const spm = resolveArpeggioStepsPerMeasure(p);
+    scheduleArpeggioPass(ctx, master, p.notes, p.measures, bpmRef.current, t0, spm);
   }, []);
 
   const startPlayback = useCallback(async () => {
     if (playing) return;
 
     const p = patternRef.current;
-    const totalSteps = p.measures * ARPEGGIO_STEPS_PER_MEASURE;
+    const spm = resolveArpeggioStepsPerMeasure(p);
+    const totalSteps = p.measures * spm;
 
     claimExclusivePlayback(instanceTokenRef.current, stop);
 
@@ -99,7 +101,7 @@ export function useArpeggioPlayback(
     metaRef.current = {
       startMs: performance.now(),
       totalSteps,
-      secPerStep: arpeggioStepDurationSec(bpmRef.current),
+      secPerStep: arpeggioStepDurationSec(bpmRef.current, spm),
     };
     setPlaying(true);
     setPlayhead(0);
@@ -120,10 +122,12 @@ export function useArpeggioPlayback(
       if (elapsed >= durationMs) {
         if (loopRef.current) {
           scheduleOnePass();
+          const p = patternRef.current;
+          const spm = resolveArpeggioStepsPerMeasure(p);
           metaRef.current = {
             startMs: performance.now(),
-            totalSteps,
-            secPerStep: arpeggioStepDurationSec(bpmRef.current),
+            totalSteps: p.measures * spm,
+            secPerStep: arpeggioStepDurationSec(bpmRef.current, spm),
           };
           setPlayhead(0);
           raf = requestAnimationFrame(tick);
@@ -146,7 +150,7 @@ export function useArpeggioPlayback(
   }, [playing, scheduleOnePass]);
 
   const signatureRef = useRef('');
-  const sig = `${pattern.measures}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}`).join(',')}`;
+  const sig = `${pattern.measures}|${resolveArpeggioStepsPerMeasure(pattern)}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}`).join(',')}`;
   useEffect(() => {
     if (signatureRef.current === sig) return;
     signatureRef.current = sig;

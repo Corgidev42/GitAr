@@ -1,4 +1,3 @@
-import { GAMME_STEPS_PER_MEASURE } from '@/lib/gammeCodec';
 import { hzForFret } from '@/lib/arpeggioPlayback';
 
 function schedulePluck(ctx: AudioContext, dest: AudioNode, freq: number, when: number): void {
@@ -15,8 +14,9 @@ function schedulePluck(ctx: AudioContext, dest: AudioNode, freq: number, when: n
   osc.stop(when + 0.32);
 }
 
-export function gammeStepDurationSec(bpm: number): number {
-  return 60 / bpm;
+/** Durée d’un pas de grille en 4/4 : (noire BPM) × (4 / stepsPerMeasure). */
+export function gammeStepDurationSec(bpm: number, stepsPerMeasure: number): number {
+  return (60 / bpm) * (4 / stepsPerMeasure);
 }
 
 export function scheduleGammePass(
@@ -26,10 +26,13 @@ export function scheduleGammePass(
   measures: number,
   bpm: number,
   startAtAudioTime: number,
+  stepsPerMeasure: number,
 ): void {
-  const sec = gammeStepDurationSec(bpm);
-  const maxStep = measures * GAMME_STEPS_PER_MEASURE;
-  const sorted = [...notes].filter((n) => n.step >= 0 && n.step < maxStep).sort((a, b) => a.step - b.step);
+  const sec = gammeStepDurationSec(bpm, stepsPerMeasure);
+  const maxStep = measures * stepsPerMeasure;
+  const sorted = [...notes]
+    .filter((n) => n.step >= 0 && n.step < maxStep)
+    .sort((a, b) => a.step - b.step || a.string - b.string);
   for (const n of sorted) {
     const when = startAtAudioTime + n.step * sec;
     schedulePluck(ctx, dest, hzForFret(n.string, n.fret), when);

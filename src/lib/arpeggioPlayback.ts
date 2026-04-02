@@ -9,8 +9,9 @@ export function hzForFret(stringIndex: number, fret: number): number {
   return open * 2 ** (fret / 12);
 }
 
-export function arpeggioStepDurationSec(bpm: number): number {
-  return 60 / bpm / 2;
+/** Durée d’un pas de grille en 4/4 (identique à la gamme). */
+export function arpeggioStepDurationSec(bpm: number, stepsPerMeasure: number): number {
+  return (60 / bpm) * (4 / stepsPerMeasure);
 }
 
 function schedulePluck(ctx: AudioContext, dest: AudioNode, freq: number, when: number): void {
@@ -34,10 +35,13 @@ export function scheduleArpeggioPass(
   measures: number,
   bpm: number,
   startAtAudioTime: number,
+  stepsPerMeasure: number = ARPEGGIO_STEPS_PER_MEASURE,
 ): void {
-  const sec = arpeggioStepDurationSec(bpm);
-  const maxStep = measures * ARPEGGIO_STEPS_PER_MEASURE;
-  const sorted = [...notes].filter((n) => n.step >= 0 && n.step < maxStep).sort((a, b) => a.step - b.step);
+  const sec = arpeggioStepDurationSec(bpm, stepsPerMeasure);
+  const maxStep = measures * stepsPerMeasure;
+  const sorted = [...notes]
+    .filter((n) => n.step >= 0 && n.step < maxStep)
+    .sort((a, b) => a.step - b.step || a.string - b.string);
   for (const n of sorted) {
     const when = startAtAudioTime + n.step * sec;
     schedulePluck(ctx, dest, hzForFret(n.string, n.fret), when);

@@ -1,12 +1,11 @@
 import {
-  GAMME_STEPS_PER_MEASURE,
+  parseGammeNotesArray,
+  resolveGammeStepsPerMeasure,
   type GammeNote,
   type GammePatternV1,
 } from '@/lib/gammeCodec';
 
 export const WALKING_BASS_V1_PREFIX = 'WALKING_BASS_V1:';
-
-export { GAMME_STEPS_PER_MEASURE };
 
 export type WalkingBassPatternV1 = GammePatternV1;
 
@@ -36,31 +35,15 @@ export function parseWalkingBassPattern(raw: string): GammePatternV1 | null {
       Number.isInteger(parsed.firstMeasureNumber) && parsed.firstMeasureNumber >= 1 && parsed.firstMeasureNumber <= 999
         ? parsed.firstMeasureNumber
         : 1;
-    if (!Array.isArray(parsed.notes)) return null;
-    const maxSlots = parsed.measures * GAMME_STEPS_PER_MEASURE;
-    const seen = new Set<number>();
-    const notes: GammeNote[] = [];
-    for (const n of parsed.notes) {
-      if (!Number.isInteger(n.step) || !Number.isInteger(n.string) || !Number.isInteger(n.fret)) continue;
-      if (n.step < 0 || n.step >= maxSlots) continue;
-      if (n.string < 0 || n.string > 5) continue;
-      if (n.fret < 0 || n.fret > 24) continue;
-      if (seen.has(n.step)) continue;
-      seen.add(n.step);
-      notes.push({
-        step: n.step,
-        string: n.string,
-        fret: n.fret,
-        root: n.root === true,
-      });
-    }
-    notes.sort((a, b) => a.step - b.step);
+    const stepsPerMeasure = resolveGammeStepsPerMeasure(parsed);
+    const notes = parseGammeNotesArray(parsed.notes, parsed.measures, stepsPerMeasure);
     return {
       v: 1,
       name: parsed.name,
       sectionLabel: parsed.sectionLabel.trim() || 'Walking bass',
       measures: parsed.measures,
       firstMeasureNumber: firstN,
+      stepsPerMeasure,
       notes,
     };
   } catch {

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import {
-  ARPEGGIO_STEPS_PER_MEASURE,
   type ArpeggioPatternV2,
+  type ArpeggioStepsPerMeasure,
   makeEmptyArpeggioPattern,
   parseArpeggioPattern,
+  resolveArpeggioStepsPerMeasure,
   serializeArpeggioPattern,
 } from '@/lib/arpeggioCodec';
 import { useArpeggioPlayback } from '@/hooks/useArpeggioPlayback';
@@ -13,8 +14,8 @@ import { IconMusic, IconPause, IconPlay, IconRhythm } from '@/components/Icons';
 
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
 
-function noteAtStep(pattern: ArpeggioPatternV2, step: number) {
-  return pattern.notes.find((n) => n.step === step) ?? null;
+function noteAtCell(pattern: ArpeggioPatternV2, step: number, stringIndex: number) {
+  return pattern.notes.find((n) => n.step === step && n.string === stringIndex) ?? null;
 }
 
 function ArpeggioTabColumn() {
@@ -43,11 +44,10 @@ function ArpeggioEndBar() {
   );
 }
 
-/** Largeur = 100 % du bloc parent (identique à la grille 8×w-9). viewBox 80×20 = 10 u par colonne, tige au centre. */
-function ArpeggioMeasureStems() {
-  const n = ARPEGGIO_STEPS_PER_MEASURE;
-  const u = 10;
-  const w = n * u;
+function ArpeggioMeasureStems({ stepsPerMeasure }: { stepsPerMeasure: number }) {
+  const n = stepsPerMeasure;
+  const w = 80;
+  const u = w / n;
   return (
     <svg
       width="100%"
@@ -72,19 +72,20 @@ function ArpeggioTabPreview({
   pattern: ArpeggioPatternV2;
   globalPlayhead?: number | null;
 }) {
+  const spm = resolveArpeggioStepsPerMeasure(pattern);
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 w-full min-w-0">
       <div className="flex gap-2 items-start min-w-0">
         <ArpeggioTabColumn />
         <div className="flex flex-wrap gap-x-3 gap-y-5 flex-1 min-w-0 content-start">
           {Array.from({ length: pattern.measures }).map((_, mi) => {
-            const base = mi * ARPEGGIO_STEPS_PER_MEASURE;
+            const base = mi * spm;
             const measureNo = mi + 1;
             const isLast = mi === pattern.measures - 1;
             return (
               <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
                 <div className="flex text-[10px] text-[var(--muted)] pl-1 min-h-[1.125rem] items-center">
-                  {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => (
+                  {Array.from({ length: spm }).map((__, slot) => (
                     <div key={slot} className="w-9 text-center shrink-0">
                       {slot === 0 ? measureNo : ''}
                     </div>
@@ -92,23 +93,25 @@ function ArpeggioTabPreview({
                 </div>
                 <div className="flex items-stretch gap-0 min-w-max">
                   <div className="flex border border-[var(--surface-light)] rounded overflow-hidden">
-                    {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => {
+                    {Array.from({ length: spm }).map((__, slot) => {
                       const step = base + slot;
-                      const n = noteAtStep(pattern, step);
                       const ph = globalPlayhead !== null && globalPlayhead !== undefined && globalPlayhead === step;
                       return (
                         <div
                           key={slot}
                           className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${ph ? 'bg-[var(--accent)]/15 ring-1 ring-inset ring-[var(--accent)]/35' : ''}`}
                         >
-                          {Array.from({ length: 6 }).map((_, si) => (
-                            <div
-                              key={si}
-                              className="w-9 h-8 flex items-center justify-center text-xs font-semibold border-b border-[var(--surface-light)]/40 last:border-b-0 text-[var(--foreground)]"
-                            >
-                              {n?.string === si ? n.fret : ''}
-                            </div>
-                          ))}
+                          {Array.from({ length: 6 }).map((_, si) => {
+                            const n = noteAtCell(pattern, step, si);
+                            return (
+                              <div
+                                key={si}
+                                className="w-9 h-8 flex items-center justify-center text-xs font-semibold border-b border-[var(--surface-light)]/40 last:border-b-0 text-[var(--foreground)]"
+                              >
+                                {n ? n.fret : ''}
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}
@@ -116,7 +119,7 @@ function ArpeggioTabPreview({
                   {isLast ? <ArpeggioEndBar /> : null}
                 </div>
                 <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                  <ArpeggioMeasureStems />
+                  <ArpeggioMeasureStems stepsPerMeasure={spm} />
                 </div>
               </div>
             );
@@ -219,31 +222,33 @@ export function ArpeggioPatternEditor({
 
   if (!editMode) return null;
 
+  const spm = resolveArpeggioStepsPerMeasure(pattern);
+
   const setMeasures = (m: number) => {
-    const maxSlots = m * ARPEGGIO_STEPS_PER_MEASURE;
-    setPattern((prev) => ({
-      ...prev,
-      measures: m,
-      notes: prev.notes.filter((n) => n.step < maxSlots),
-    }));
+    setPattern((prev) => {
+      const s = resolveArpeggioStepsPerMeasure(prev);
+      const maxSlots = m * s;
+      return {
+        ...prev,
+        measures: m,
+        notes: prev.notes.filter((n) => n.step < maxSlots),
+      };
+    });
   };
 
   const onCellClick = (stringIndex: number, globalStep: number) => {
     setPattern((prev) => {
-      const cur = noteAtStep(prev, globalStep);
+      const cur = prev.notes.find((n) => n.step === globalStep && n.string === stringIndex);
       if (cur) {
-        if (cur.string === stringIndex) {
-          return { ...prev, notes: prev.notes.filter((n) => n.step !== globalStep) };
-        }
         return {
           ...prev,
-          notes: prev.notes.map((n) => (n.step === globalStep ? { ...n, string: stringIndex } : n)),
+          notes: prev.notes.filter((n) => !(n.step === globalStep && n.string === stringIndex)),
         };
       }
       return {
         ...prev,
-        notes: [...prev.notes.filter((n) => n.step !== globalStep), { step: globalStep, string: stringIndex, fret: paintFret }].sort(
-          (a, b) => a.step - b.step,
+        notes: [...prev.notes, { step: globalStep, string: stringIndex, fret: paintFret }].sort(
+          (a, b) => a.step - b.step || a.string - b.string,
         ),
       };
     });
@@ -263,7 +268,7 @@ export function ArpeggioPatternEditor({
     const clean: ArpeggioPatternV2 = {
       ...pattern,
       name,
-      notes: [...pattern.notes].sort((a, b) => a.step - b.step),
+      notes: [...pattern.notes].sort((a, b) => a.step - b.step || a.string - b.string),
     };
     onSave({ encoded: serializeArpeggioPattern(clean), source });
   };
@@ -275,7 +280,7 @@ export function ArpeggioPatternEditor({
         {source ? 'Éditer un arpège' : 'Créer un arpège (tablature)'}
       </h3>
       <p className="text-xs text-[var(--muted)] mb-4">
-        Une note par colonne (croche). Clic : place la case choisie, reclic sur la même corde efface. Corde différente sur la même colonne = déplace la note.
+        Subdivision au choix (noires, croches…). Plusieurs notes au même instant : une par corde. Clic : pose ou efface la case sur cette corde.
       </p>
 
       <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-3">
@@ -285,7 +290,7 @@ export function ArpeggioPatternEditor({
           placeholder="Nom de l’arpège"
           className="px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
         />
-        <div className="inline-flex items-center gap-2">
+        <div className="inline-flex flex-wrap items-center gap-2">
           <span className="text-xs text-[var(--muted)]">Mesures</span>
           <select
             value={pattern.measures}
@@ -297,6 +302,26 @@ export function ArpeggioPatternEditor({
                 {m}
               </option>
             ))}
+          </select>
+          <span className="text-xs text-[var(--muted)]">Grille</span>
+          <select
+            value={spm}
+            onChange={(e) => {
+              const next = Number(e.target.value) as ArpeggioStepsPerMeasure;
+              setPattern((prev) => {
+                const maxSlots = prev.measures * next;
+                return {
+                  ...prev,
+                  stepsPerMeasure: next,
+                  notes: prev.notes.filter((n) => n.step < maxSlots),
+                };
+              });
+            }}
+            className="px-2 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm max-w-[11rem]"
+          >
+            <option value={4}>Noires (4 / mesure)</option>
+            <option value={8}>Croches (8 / mesure)</option>
+            <option value={16}>Doubles croches (16)</option>
           </select>
         </div>
       </div>
@@ -362,13 +387,13 @@ export function ArpeggioPatternEditor({
           <ArpeggioTabColumn />
           <div className="flex flex-wrap gap-x-3 gap-y-5 flex-1 min-w-0 content-start">
             {Array.from({ length: pattern.measures }).map((_, mi) => {
-              const base = mi * ARPEGGIO_STEPS_PER_MEASURE;
+              const base = mi * spm;
               const measureNo = mi + 1;
               const isLast = mi === pattern.measures - 1;
               return (
                 <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
                   <div className="flex text-[10px] text-[var(--muted)] pl-1 min-h-[1.125rem] items-center">
-                    {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => (
+                    {Array.from({ length: spm }).map((__, slot) => (
                       <div key={slot} className="w-9 text-center shrink-0">
                         {slot === 0 ? measureNo : ''}
                       </div>
@@ -376,7 +401,7 @@ export function ArpeggioPatternEditor({
                   </div>
                   <div className="flex items-stretch gap-0 min-w-max">
                     <div className="flex border border-[var(--surface-light)] rounded-md overflow-hidden">
-                      {Array.from({ length: ARPEGGIO_STEPS_PER_MEASURE }).map((__, slot) => {
+                      {Array.from({ length: spm }).map((__, slot) => {
                         const step = base + slot;
                         const playheadHere = pb.playing && pb.playhead === step;
                         return (
@@ -385,8 +410,8 @@ export function ArpeggioPatternEditor({
                             className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/15' : ''}`}
                           >
                             {Array.from({ length: 6 }).map((_, si) => {
-                              const n = noteAtStep(pattern, step);
-                              const active = n?.string === si;
+                              const n = noteAtCell(pattern, step, si);
+                              const active = !!n;
                               return (
                                 <button
                                   key={si}
@@ -396,7 +421,7 @@ export function ArpeggioPatternEditor({
                                     active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
                                   } ${playheadHere ? 'ring-1 ring-inset ring-teal-500/50 bg-teal-500/10' : ''}`}
                                 >
-                                  {active ? n!.fret : ''}
+                                  {active && n ? n.fret : ''}
                                 </button>
                               );
                             })}
@@ -407,7 +432,7 @@ export function ArpeggioPatternEditor({
                     {isLast ? <ArpeggioEndBar /> : null}
                   </div>
                   <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                    <ArpeggioMeasureStems />
+                    <ArpeggioMeasureStems stepsPerMeasure={spm} />
                   </div>
                 </div>
               );

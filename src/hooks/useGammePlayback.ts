@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GammePatternV1 } from '@/lib/gammeCodec';
-import { GAMME_STEPS_PER_MEASURE } from '@/lib/gammeCodec';
+import { resolveGammeStepsPerMeasure } from '@/lib/gammeCodec';
 import { gammeStepDurationSec, scheduleGammePass } from '@/lib/gammePlayback';
 import { claimExclusivePlayback, releaseExclusivePlayback } from '@/lib/playbackCoordinator';
 
@@ -58,14 +58,16 @@ export function useGammePlayback(pattern: GammePatternV1, options?: { onAudioErr
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(0.32, now);
     const t0 = now + 0.06;
-    scheduleGammePass(ctx, master, p.notes, p.measures, bpmRef.current, t0);
+    const spm = resolveGammeStepsPerMeasure(p);
+    scheduleGammePass(ctx, master, p.notes, p.measures, bpmRef.current, t0, spm);
   }, []);
 
   const startPlayback = useCallback(async () => {
     if (playing) return;
 
     const p = patternRef.current;
-    const totalSteps = p.measures * GAMME_STEPS_PER_MEASURE;
+    const spm = resolveGammeStepsPerMeasure(p);
+    const totalSteps = p.measures * spm;
 
     claimExclusivePlayback(instanceTokenRef.current, stop);
 
@@ -96,7 +98,7 @@ export function useGammePlayback(pattern: GammePatternV1, options?: { onAudioErr
     metaRef.current = {
       startMs: performance.now(),
       totalSteps,
-      secPerStep: gammeStepDurationSec(bpmRef.current),
+      secPerStep: gammeStepDurationSec(bpmRef.current, spm),
     };
     setPlaying(true);
     setPlayhead(0);
@@ -117,10 +119,12 @@ export function useGammePlayback(pattern: GammePatternV1, options?: { onAudioErr
       if (elapsed >= durationMs) {
         if (loopRef.current) {
           scheduleOnePass();
+          const p = patternRef.current;
+          const spm = resolveGammeStepsPerMeasure(p);
           metaRef.current = {
             startMs: performance.now(),
-            totalSteps,
-            secPerStep: gammeStepDurationSec(bpmRef.current),
+            totalSteps: p.measures * spm,
+            secPerStep: gammeStepDurationSec(bpmRef.current, spm),
           };
           setPlayhead(0);
           raf = requestAnimationFrame(tick);
@@ -143,7 +147,7 @@ export function useGammePlayback(pattern: GammePatternV1, options?: { onAudioErr
   }, [playing, scheduleOnePass]);
 
   const signatureRef = useRef('');
-  const sig = `${pattern.measures}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}:${n.root ? 1 : 0}`).join(',')}`;
+  const sig = `${pattern.measures}|${resolveGammeStepsPerMeasure(pattern)}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}:${n.root ? 1 : 0}`).join(',')}`;
   useEffect(() => {
     if (signatureRef.current === sig) return;
     signatureRef.current = sig;

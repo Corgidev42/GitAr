@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type ComponentProps } from 'react';
 import {
-  GAMME_STEPS_PER_MEASURE,
   type GammeNote,
   type GammePatternV1,
+  type StepsPerMeasure,
   makeEmptyGammePattern,
   parseGammePattern,
+  resolveGammeStepsPerMeasure,
   serializeGammePattern,
 } from '@/lib/gammeCodec';
 import { useGammePlayback } from '@/hooks/useGammePlayback';
@@ -43,14 +44,14 @@ const ACCENT: Record<GammeEditorVariant, { playhead: string; hoverCell: string; 
 /** Mi aigu en haut (e) → Mi grave en bas (E). Clés React : index de corde, pas le caractère affiché. */
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
 
-function noteAtStep(pattern: GammePatternV1, step: number): GammeNote | null {
-  return pattern.notes.find((n) => n.step === step) ?? null;
+function noteAtCell(pattern: GammePatternV1, step: number, stringIndex: number): GammeNote | null {
+  return pattern.notes.find((n) => n.step === step && n.string === stringIndex) ?? null;
 }
 
-function GammeMeasureStems() {
-  const n = GAMME_STEPS_PER_MEASURE;
-  const u = 20;
-  const w = n * u;
+function GammeMeasureStems({ stepsPerMeasure }: { stepsPerMeasure: number }) {
+  const n = stepsPerMeasure;
+  const w = 80;
+  const u = w / n;
   return (
     <svg
       width="100%"
@@ -63,7 +64,7 @@ function GammeMeasureStems() {
         const cx = i * u + u / 2;
         return <line key={i} x1={cx} y1={5} x2={cx} y2={19} stroke="currentColor" strokeWidth={1.1} />;
       })}
-      <line x1={4} y1={7} x2={w - 4} y2={7} stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" />
+      <line x1={3} y1={7} x2={w - 3} y2={7} stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" />
     </svg>
   );
 }
@@ -116,6 +117,7 @@ export function GammeTabPreview({
   variant?: GammeEditorVariant;
 }) {
   const a = ACCENT[variant];
+  const spm = resolveGammeStepsPerMeasure(pattern);
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 w-full min-w-0">
       <div className="mb-1">
@@ -126,13 +128,13 @@ export function GammeTabPreview({
         <GammeTabColumn />
         <div className="flex flex-wrap gap-x-3 gap-y-5 flex-1 min-w-0 content-start">
         {Array.from({ length: pattern.measures }).map((_, mi) => {
-          const base = mi * GAMME_STEPS_PER_MEASURE;
+          const base = mi * spm;
           const measureNo = pattern.firstMeasureNumber + mi;
           const isLast = mi === pattern.measures - 1;
           return (
             <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
               <div className="flex text-[10px] text-[var(--muted)] pl-1 min-h-[1.125rem] items-center">
-                {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => (
+                {Array.from({ length: spm }).map((__, slot) => (
                   <div key={slot} className="w-9 text-center shrink-0">
                     {slot === 0 ? measureNo : ''}
                   </div>
@@ -140,23 +142,25 @@ export function GammeTabPreview({
               </div>
               <div className="flex items-stretch gap-0 min-w-max">
                 <div className="flex border border-[var(--surface-light)] rounded overflow-hidden">
-                  {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => {
+                  {Array.from({ length: spm }).map((__, slot) => {
                     const step = base + slot;
-                    const n = noteAtStep(pattern, step);
                     const ph = globalPlayhead !== null && globalPlayhead !== undefined && globalPlayhead === step;
                     return (
                       <div
                         key={slot}
                         className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/10' : ''} ${ph ? a.playhead : ''}`}
                       >
-                        {Array.from({ length: 6 }).map((_, si) => (
-                          <div
-                            key={si}
-                            className="w-9 h-8 flex items-center justify-center border-b border-[var(--surface-light)]/40 last:border-b-0 text-[var(--foreground)]"
-                          >
-                            {n?.string === si ? <FretCell fret={n.fret} root={n.root} /> : null}
-                          </div>
-                        ))}
+                        {Array.from({ length: 6 }).map((_, si) => {
+                          const n = noteAtCell(pattern, step, si);
+                          return (
+                            <div
+                              key={si}
+                              className="w-9 h-8 flex items-center justify-center border-b border-[var(--surface-light)]/40 last:border-b-0 text-[var(--foreground)]"
+                            >
+                              {n ? <FretCell fret={n.fret} root={n.root} /> : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
@@ -164,7 +168,7 @@ export function GammeTabPreview({
                 {isLast ? <EndBar /> : null}
               </div>
               <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                <GammeMeasureStems />
+                <GammeMeasureStems stepsPerMeasure={spm} />
               </div>
             </div>
           );
@@ -281,32 +285,37 @@ export function GammePatternEditor({
 
   if (!editMode) return null;
 
+  const spm = resolveGammeStepsPerMeasure(pattern);
+
   const setMeasures = (m: number) => {
-    const maxSlots = m * GAMME_STEPS_PER_MEASURE;
-    setPattern((prev) => ({
-      ...prev,
-      measures: m,
-      notes: prev.notes.filter((n) => n.step < maxSlots),
-    }));
+    setPattern((prev) => {
+      const s = resolveGammeStepsPerMeasure(prev);
+      const maxSlots = m * s;
+      return {
+        ...prev,
+        measures: m,
+        notes: prev.notes.filter((n) => n.step < maxSlots),
+      };
+    });
   };
 
   const onCellClick = (stringIndex: number, globalStep: number, shiftKey: boolean) => {
     if (shiftKey) {
       setPattern((prev) => {
-        const cur = noteAtStep(prev, globalStep);
-        if (!cur || cur.string !== stringIndex) return prev;
+        const cur = prev.notes.find((n) => n.step === globalStep && n.string === stringIndex);
+        if (!cur) return prev;
         const nextRoot = !cur.root;
         if (!nextRoot) {
           return {
             ...prev,
-            notes: prev.notes.map((n) => (n.step === globalStep ? { ...n, root: false } : n)),
+            notes: prev.notes.map((n) => (n.step === globalStep && n.string === stringIndex ? { ...n, root: false } : n)),
           };
         }
         return {
           ...prev,
           notes: prev.notes.map((n) => ({
             ...n,
-            root: n.step === globalStep,
+            root: n.step === globalStep && n.string === stringIndex,
           })),
         };
       });
@@ -314,22 +323,18 @@ export function GammePatternEditor({
     }
 
     setPattern((prev) => {
-      const cur = noteAtStep(prev, globalStep);
+      const cur = prev.notes.find((n) => n.step === globalStep && n.string === stringIndex);
       if (cur) {
-        if (cur.string === stringIndex) {
-          return { ...prev, notes: prev.notes.filter((n) => n.step !== globalStep) };
-        }
         return {
           ...prev,
-          notes: prev.notes.map((n) => (n.step === globalStep ? { ...n, string: stringIndex } : n)),
+          notes: prev.notes.filter((n) => !(n.step === globalStep && n.string === stringIndex)),
         };
       }
       return {
         ...prev,
-        notes: [
-          ...prev.notes.filter((n) => n.step !== globalStep),
-          { step: globalStep, string: stringIndex, fret: paintFret, root: false },
-        ].sort((a, b) => a.step - b.step),
+        notes: [...prev.notes, { step: globalStep, string: stringIndex, fret: paintFret, root: false }].sort(
+          (a, b) => a.step - b.step || a.string - b.string,
+        ),
       };
     });
   };
@@ -350,7 +355,7 @@ export function GammePatternEditor({
       name,
       sectionLabel: pattern.sectionLabel.trim() || (isWb ? 'Walking bass' : 'Technique'),
       firstMeasureNumber: Math.min(999, Math.max(1, pattern.firstMeasureNumber)),
-      notes: [...pattern.notes].sort((a, b) => a.step - b.step),
+      notes: [...pattern.notes].sort((a, b) => a.step - b.step || a.string - b.string),
     };
     onSave({ encoded: serialize(clean), source });
   };
@@ -368,8 +373,8 @@ export function GammePatternEditor({
             : 'Créer une gamme (tablature)'}
       </h3>
       <p className="text-xs text-[var(--muted)] mb-4">
-        Une note par temps (noire), 4 temps par mesure. Clic : place la case choisie ; reclic sur la même corde efface.{' '}
-        <span className={isWb ? 'text-emerald-300/90' : 'text-sky-300/90'}>Maj + clic</span> sur une note : marque la tonique (cercle).
+        Choisis la subdivision (noires, croches…). Plusieurs notes au même instant : une par corde. Clic : pose ou efface la case sur cette corde.{' '}
+        <span className={isWb ? 'text-emerald-300/90' : 'text-sky-300/90'}>Maj + clic</span> sur une note : tonique (cercle), une seule à la fois.
       </p>
 
       <div className="grid md:grid-cols-2 gap-3 mb-3">
@@ -408,7 +413,7 @@ export function GammePatternEditor({
             className="w-full max-w-[8rem] px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
           />
         </div>
-        <div className="inline-flex items-end gap-2 pb-0.5">
+        <div className="inline-flex flex-wrap items-end gap-2 pb-0.5">
           <span className="text-xs text-[var(--muted)]">Mesures</span>
           <select
             value={pattern.measures}
@@ -420,6 +425,26 @@ export function GammePatternEditor({
                 {m}
               </option>
             ))}
+          </select>
+          <span className="text-xs text-[var(--muted)]">Grille</span>
+          <select
+            value={spm}
+            onChange={(e) => {
+              const next = Number(e.target.value) as StepsPerMeasure;
+              setPattern((prev) => {
+                const maxSlots = prev.measures * next;
+                return {
+                  ...prev,
+                  stepsPerMeasure: next,
+                  notes: prev.notes.filter((n) => n.step < maxSlots),
+                };
+              });
+            }}
+            className="px-2 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm max-w-[11rem]"
+          >
+            <option value={4}>Noires (4 / mesure)</option>
+            <option value={8}>Croches (8 / mesure)</option>
+            <option value={16}>Doubles croches (16)</option>
           </select>
         </div>
       </div>
@@ -485,13 +510,13 @@ export function GammePatternEditor({
           <GammeTabColumn />
           <div className="flex flex-wrap gap-x-3 gap-y-5 flex-1 min-w-0 content-start">
             {Array.from({ length: pattern.measures }).map((_, mi) => {
-              const base = mi * GAMME_STEPS_PER_MEASURE;
+              const base = mi * spm;
               const measureNo = pattern.firstMeasureNumber + mi;
               const isLast = mi === pattern.measures - 1;
               return (
                 <div key={mi} className="flex flex-col gap-1.5 w-fit shrink-0">
                   <div className="flex text-[10px] text-[var(--muted)] pl-1 min-h-[1.125rem] items-center">
-                    {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => (
+                    {Array.from({ length: spm }).map((__, slot) => (
                       <div key={slot} className="w-9 text-center shrink-0">
                         {slot === 0 ? measureNo : ''}
                       </div>
@@ -499,7 +524,7 @@ export function GammePatternEditor({
                   </div>
                   <div className="flex items-stretch gap-0 min-w-max">
                     <div className="flex border border-[var(--surface-light)] rounded-md overflow-hidden">
-                      {Array.from({ length: GAMME_STEPS_PER_MEASURE }).map((__, slot) => {
+                      {Array.from({ length: spm }).map((__, slot) => {
                         const step = base + slot;
                         const playheadHere = pb.playing && pb.playhead === step;
                         return (
@@ -508,8 +533,8 @@ export function GammePatternEditor({
                             className={`flex flex-col border-r border-[var(--surface-light)] last:border-r-0 ${slot % 2 === 0 ? 'bg-[var(--surface)]/15' : ''}`}
                           >
                             {Array.from({ length: 6 }).map((_, si) => {
-                              const n = noteAtStep(pattern, step);
-                              const active = n?.string === si;
+                              const n = noteAtCell(pattern, step, si);
+                              const active = !!n;
                               return (
                                 <button
                                   key={si}
@@ -519,7 +544,7 @@ export function GammePatternEditor({
                                     active ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'
                                   } ${playheadHere ? `ring-1 ring-inset ${a.ring}` : ''}`}
                                 >
-                                  {active ? <FretCell fret={n!.fret} root={n!.root} /> : ''}
+                                  {active && n ? <FretCell fret={n.fret} root={n.root} /> : ''}
                                 </button>
                               );
                             })}
@@ -530,7 +555,7 @@ export function GammePatternEditor({
                     {isLast ? <EndBar /> : null}
                   </div>
                   <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                    <GammeMeasureStems />
+                    <GammeMeasureStems stepsPerMeasure={spm} />
                   </div>
                 </div>
               );
