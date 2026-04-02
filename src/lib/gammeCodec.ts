@@ -32,6 +32,20 @@ export function resolveGammeStepsPerMeasure(p: Pick<GammePatternV1, 'stepsPerMea
   return 4;
 }
 
+/** Libellé pour la ligne rythmique sous la tab (même sens que les arpèges : 4/8/16 pas par mesure). */
+export function tabRhythmSubdivisionLabel(stepsPerMeasure: StepsPerMeasure): string {
+  switch (stepsPerMeasure) {
+    case 4:
+      return 'Noires';
+    case 8:
+      return 'Croches';
+    case 16:
+      return 'Doubles croches';
+    default:
+      return 'Noires';
+  }
+}
+
 export function parseGammeNotesArray(rawNotes: unknown, measures: number, stepsPerMeasure: StepsPerMeasure): GammeNote[] {
   if (!Array.isArray(rawNotes)) return [];
   const maxSlots = measures * stepsPerMeasure;

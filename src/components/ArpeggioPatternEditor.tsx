@@ -10,6 +10,7 @@ import {
   serializeArpeggioPattern,
 } from '@/lib/arpeggioCodec';
 import { useArpeggioPlayback } from '@/hooks/useArpeggioPlayback';
+import { tabRhythmSubdivisionLabel } from '@/lib/gammeCodec';
 import { IconMusic, IconPause, IconPlay, IconRhythm } from '@/components/Icons';
 
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
@@ -62,6 +63,22 @@ function ArpeggioMeasureStems({ stepsPerMeasure }: { stepsPerMeasure: number }) 
       })}
       <line x1={3} y1={7} x2={w - 3} y2={7} stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" />
     </svg>
+  );
+}
+
+function ArpeggioRhythmStemsRow({ stepsPerMeasure }: { stepsPerMeasure: ArpeggioStepsPerMeasure }) {
+  return (
+    <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5 flex items-center gap-2">
+      <span
+        className="text-[9px] font-semibold text-[var(--muted)] shrink-0 leading-none"
+        title="Figure par colonne (mesure en 4/4)"
+      >
+        {tabRhythmSubdivisionLabel(stepsPerMeasure)}
+      </span>
+      <div className="flex-1 min-w-0">
+        <ArpeggioMeasureStems stepsPerMeasure={stepsPerMeasure} />
+      </div>
+    </div>
   );
 }
 
@@ -118,9 +135,7 @@ function ArpeggioTabPreview({
                   </div>
                   {isLast ? <ArpeggioEndBar /> : null}
                 </div>
-                <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                  <ArpeggioMeasureStems stepsPerMeasure={spm} />
-                </div>
+                <ArpeggioRhythmStemsRow stepsPerMeasure={spm} />
               </div>
             );
           })}
@@ -138,7 +153,8 @@ export function ArpeggioMenuCard({ pattern }: { pattern: ArpeggioPatternV2 }) {
     <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] hover:border-[var(--accent)] transition-colors min-w-0 w-full max-w-full">
       <div className="text-sm font-medium">{pattern.name}</div>
       <p className="text-[11px] text-[var(--muted)] mt-1">
-        {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.notes.length} note{pattern.notes.length > 1 ? 's' : ''}
+        {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.notes.length} note{pattern.notes.length > 1 ? 's' : ''} ·{' '}
+        {tabRhythmSubdivisionLabel(resolveArpeggioStepsPerMeasure(pattern))}
       </p>
       <div className="flex flex-wrap items-center gap-2 mt-2 rounded-md border border-[var(--surface-light)] bg-[var(--background)]/50 px-2 py-1.5">
         <span className="text-[10px] text-[var(--muted)] shrink-0">Lecture</span>
@@ -431,9 +447,7 @@ export function ArpeggioPatternEditor({
                     </div>
                     {isLast ? <ArpeggioEndBar /> : null}
                   </div>
-                  <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                    <ArpeggioMeasureStems stepsPerMeasure={spm} />
-                  </div>
+                  <ArpeggioRhythmStemsRow stepsPerMeasure={spm} />
                 </div>
               );
             })}

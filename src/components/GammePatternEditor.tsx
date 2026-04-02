@@ -9,6 +9,7 @@ import {
   parseGammePattern,
   resolveGammeStepsPerMeasure,
   serializeGammePattern,
+  tabRhythmSubdivisionLabel,
 } from '@/lib/gammeCodec';
 import { useGammePlayback } from '@/hooks/useGammePlayback';
 import {
@@ -66,6 +67,22 @@ function GammeMeasureStems({ stepsPerMeasure }: { stepsPerMeasure: number }) {
       })}
       <line x1={3} y1={7} x2={w - 3} y2={7} stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" />
     </svg>
+  );
+}
+
+function GammeRhythmStemsRow({ stepsPerMeasure }: { stepsPerMeasure: StepsPerMeasure }) {
+  return (
+    <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5 flex items-center gap-2">
+      <span
+        className="text-[9px] font-semibold text-[var(--muted)] shrink-0 leading-none"
+        title="Figure par colonne (mesure en 4/4)"
+      >
+        {tabRhythmSubdivisionLabel(stepsPerMeasure)}
+      </span>
+      <div className="flex-1 min-w-0">
+        <GammeMeasureStems stepsPerMeasure={stepsPerMeasure} />
+      </div>
+    </div>
   );
 }
 
@@ -167,9 +184,7 @@ export function GammeTabPreview({
                 </div>
                 {isLast ? <EndBar /> : null}
               </div>
-              <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                <GammeMeasureStems stepsPerMeasure={spm} />
-              </div>
+              <GammeRhythmStemsRow stepsPerMeasure={spm} />
             </div>
           );
         })}
@@ -190,7 +205,8 @@ export function GammeMenuCard({ pattern, variant = 'gamme' }: { pattern: GammePa
       <div className="text-sm font-medium">{pattern.sectionLabel}</div>
       <div className="text-sm font-semibold text-[var(--foreground)]">{pattern.name}</div>
       <p className="text-[11px] text-[var(--muted)] mt-1">
-        {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.notes.length} note{pattern.notes.length > 1 ? 's' : ''}
+        {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.notes.length} note{pattern.notes.length > 1 ? 's' : ''} ·{' '}
+        {tabRhythmSubdivisionLabel(resolveGammeStepsPerMeasure(pattern))}
       </p>
       <div className="flex flex-wrap items-center gap-2 mt-2 rounded-md border border-[var(--surface-light)] bg-[var(--background)]/50 px-2 py-1.5">
         <span className="text-[10px] text-[var(--muted)] shrink-0">Lecture</span>
@@ -554,9 +570,7 @@ export function GammePatternEditor({
                     </div>
                     {isLast ? <EndBar /> : null}
                   </div>
-                  <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5">
-                    <GammeMeasureStems stepsPerMeasure={spm} />
-                  </div>
+                  <GammeRhythmStemsRow stepsPerMeasure={spm} />
                 </div>
               );
             })}
