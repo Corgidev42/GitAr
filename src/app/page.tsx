@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import type { Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
+import type { ChordProgression, Database, GuitarLesson, BackingTrack, TabAsset } from '@/types';
 import {
   IconBook, IconCheck, IconChevronDown, IconChevronUp, IconGamme, IconGuitar, IconHeart, IconLayoutGrid, IconLink, IconMusic, IconWalkingBass,
   IconPencil, IconPlus, IconRefresh, IconRhythm, IconTarget,
@@ -17,9 +17,18 @@ import { parseGammePattern } from '@/lib/gammeCodec';
 import { parseWalkingBassPattern } from '@/lib/walkingBassCodec';
 import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 import { ArpeggioMenuCard, ArpeggioPatternEditor } from '@/components/ArpeggioPatternEditor';
-import { GammeMenuCard, GammePatternEditor, WalkingBassMenuCard, WalkingBassPatternEditor } from '@/components/GammePatternEditor';
+import {
+  GammeMenuCard,
+  GammePatternEditor,
+  RiffMenuCard,
+  RiffPatternEditor,
+  WalkingBassMenuCard,
+  WalkingBassPatternEditor,
+} from '@/components/GammePatternEditor';
 
-type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
+const KB_GLOBAL_PROGRESSIONS = '__kb_global__';
+
+type KnowledgeListCategory = 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass' | 'riffs';
 
 // Symboles : ronde/blanche en SVG pour lisibilité, autres en Unicode
 const RHYTHM_VISUALS: Record<string, { label: string; beats: number; symbol: string; symbolSvg?: boolean; description: string }> = {
@@ -1137,13 +1146,16 @@ export default function KnowledgePage() {
   const [editingArpeggioSource, setEditingArpeggioSource] = useState<string | null>(null);
   const [editingGammeSource, setEditingGammeSource] = useState<string | null>(null);
   const [editingWalkingBassSource, setEditingWalkingBassSource] = useState<string | null>(null);
+  const [editingRiffSource, setEditingRiffSource] = useState<string | null>(null);
+  const [globalProgLine, setGlobalProgLine] = useState('');
+  const [globalProgNotes, setGlobalProgNotes] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [favFilter, setFavFilter] = useState(false);
   const [editProgression, setEditProgression] = useState<{
     lessonId: string; progressionIndex: number; chordsLine: string; notes: string;
   } | null>(null);
   const [editKnowledge, setEditKnowledge] = useState<{
-    category: 'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes' | 'walkingBass'; from: string; to: string;
+    category: 'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes' | 'walkingBass' | 'riffs'; from: string; to: string;
   } | null>(null);
   const [editLessonTitle, setEditLessonTitle] = useState<{ id: string; title: string } | null>(null);
   const [editTechnique, setEditTechnique] = useState<{
@@ -1233,6 +1245,24 @@ export default function KnowledgePage() {
     safeReload();
   }, [safeReload]);
 
+  const saveRiffPattern = useCallback(async ({ encoded, source }: { encoded: string; source: string | null }) => {
+    const add = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'knowledge_add', category: 'riffs', value: encoded }),
+    });
+    if (!add.ok) return;
+    if (source && source !== encoded) {
+      await fetch('/api/database', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'knowledge', category: 'riffs', value: source }),
+      });
+    }
+    setEditingRiffSource(null);
+    safeReload();
+  }, [safeReload]);
+
   const toggleFavorite = async (lessonId: string, current: boolean) => {
     const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -1241,11 +1271,25 @@ export default function KnowledgePage() {
     if (res.ok) safeReload();
   };
 
-  const toggleProgressionFavorite = async (lessonId: string, progressions: GuitarLesson['progressions'], idx: number) => {
+  const toggleProgressionFavorite = async (lessonId: string, progressions: GuitarLesson['progressions'] | undefined, idx: number) => {
+    if (lessonId === KB_GLOBAL_PROGRESSIONS) {
+      const list = [...(db?.globalProgressions || [])];
+      const cur = list[idx];
+      if (!cur) return;
+      list[idx] = { ...cur, favorite: !cur.favorite };
+      const res = await fetch('/api/database', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'global_progressions', progressions: list }),
+      });
+      if (res.ok) safeReload();
+      return;
+    }
     if (!progressions) return;
-    const next = progressions.map((p, i) => i === idx ? { ...p, favorite: !p.favorite } : p);
+    const next = progressions.map((p, i) => (i === idx ? { ...p, favorite: !p.favorite } : p));
     const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ progressions: next }),
     });
     if (res.ok) safeReload();
@@ -1282,13 +1326,31 @@ export default function KnowledgePage() {
 
   const moveProgression = useCallback(async (lessonId: string, progressionIndex: number, direction: -1 | 1) => {
     if (!db) return;
+    if (lessonId === KB_GLOBAL_PROGRESSIONS) {
+      const progs = [...(db.globalProgressions || [])];
+      if (progs.length < 2) return;
+      const to = progressionIndex + direction;
+      if (to < 0 || to >= progs.length) return;
+      [progs[progressionIndex], progs[to]] = [progs[to], progs[progressionIndex]];
+      const res = await fetch('/api/database', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'global_progressions', progressions: progs }),
+      });
+      if (res.ok) safeReload();
+      return;
+    }
     const lesson = db.lessons.find((l) => l.id === lessonId);
     const progs = [...(lesson?.progressions || [])];
     if (progs.length < 2) return;
     const to = progressionIndex + direction;
     if (to < 0 || to >= progs.length) return;
     [progs[progressionIndex], progs[to]] = [progs[to], progs[progressionIndex]];
-    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: progs }) });
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progressions: progs }),
+    });
     if (res.ok) safeReload();
   }, [db, safeReload]);
 
@@ -1363,23 +1425,81 @@ export default function KnowledgePage() {
 
   const deleteProgression = async (lessonId: string, progressionIndex: number) => {
     if (!db) return;
+    if (lessonId === KB_GLOBAL_PROGRESSIONS) {
+      const next = (db.globalProgressions || []).filter((_, i) => i !== progressionIndex);
+      const res = await fetch('/api/database', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'global_progressions', progressions: next }),
+      });
+      if (res.ok) safeReload();
+      return;
+    }
     const lesson = db.lessons.find((l) => l.id === lessonId);
     if (!lesson) return;
     const next = (lesson.progressions || []).filter((_, i) => i !== progressionIndex);
-    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: next }) });
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progressions: next }),
+    });
     if (res.ok) safeReload();
   };
 
   const saveProgression = async () => {
     if (!db || !editProgression) return;
     const { lessonId, progressionIndex, chordsLine, notes } = editProgression;
-    const lesson = db.lessons.find((l) => l.id === lessonId);
-    if (!lesson) return;
     const chords = chordsLine.replace(/[-–→>|,]/g, ' ').split(/\s+/).map((s) => s.trim()).filter(Boolean);
     if (chords.length < 3) return;
-    const next = (lesson.progressions || []).map((p, i) => i === progressionIndex ? { ...p, chords, notes: notes.trim() || undefined } : p);
-    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: next }) });
-    if (res.ok) { setEditProgression(null); safeReload(); }
+    if (lessonId === KB_GLOBAL_PROGRESSIONS) {
+      const list = [...(db.globalProgressions || [])];
+      const prev = list[progressionIndex];
+      if (!prev) return;
+      list[progressionIndex] = { ...prev, chords, notes: notes.trim() || undefined };
+      const res = await fetch('/api/database', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'global_progressions', progressions: list }),
+      });
+      if (res.ok) {
+        setEditProgression(null);
+        safeReload();
+      }
+      return;
+    }
+    const lesson = db.lessons.find((l) => l.id === lessonId);
+    if (!lesson) return;
+    const next = (lesson.progressions || []).map((p, i) =>
+      i === progressionIndex ? { ...p, chords, notes: notes.trim() || undefined } : p,
+    );
+    const res = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progressions: next }),
+    });
+    if (res.ok) {
+      setEditProgression(null);
+      safeReload();
+    }
+  };
+
+  const addGlobalProgression = async () => {
+    if (!db) return;
+    const line = globalProgLine.trim();
+    if (!line) return;
+    const chords = line.split(/[-–→>|,]/).map((s) => s.trim()).filter(Boolean);
+    if (chords.length < 3) return;
+    const next = [...(db.globalProgressions || []), { chords, notes: globalProgNotes.trim() || undefined } satisfies ChordProgression];
+    const res = await fetch('/api/database', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'global_progressions', progressions: next }),
+    });
+    if (res.ok) {
+      setGlobalProgLine('');
+      setGlobalProgNotes('');
+      safeReload();
+    }
   };
 
   useEffect(() => {
@@ -1398,11 +1518,25 @@ export default function KnowledgePage() {
   if (!db) return null;
 
   const k = db.globalKnowledge;
-  const progressions = db.lessons.flatMap((lesson) =>
-    (lesson.progressions || []).filter((p) => (p.chords || []).length >= 3).map((p, progressionIndex) => ({
-      ...p, lessonId: lesson.id, lessonTitle: lesson.title, progressionIndex,
-    }))
+  const globalProgressionsList = (db.globalProgressions || [])
+    .filter((p) => (p.chords || []).length >= 3)
+    .map((p, progressionIndex) => ({
+      ...p,
+      lessonId: KB_GLOBAL_PROGRESSIONS,
+      lessonTitle: 'Bibliothèque',
+      progressionIndex,
+    }));
+  const lessonProgressionsList = db.lessons.flatMap((lesson) =>
+    (lesson.progressions || [])
+      .filter((p) => (p.chords || []).length >= 3)
+      .map((p, progressionIndex) => ({
+        ...p,
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        progressionIndex,
+      })),
   );
+  const progressions = [...globalProgressionsList, ...lessonProgressionsList];
   const songs = db.lessons.filter((l) => l.isSong);
   const lessons = db.lessons.filter((l) => !l.isSong);
 
@@ -1411,7 +1545,12 @@ export default function KnowledgePage() {
 
   const tabs = [
     { key: 'chords' as const, label: 'Accords', count: k.chords.length, icon: <IconMusic className="w-5 h-5" /> },
-    { key: 'techniques' as const, label: 'Techniques', count: k.techniques.length + (k.gammes?.length ?? 0) + (k.walkingBass?.length ?? 0), icon: <IconTarget className="w-5 h-5" /> },
+    {
+      key: 'techniques' as const,
+      label: 'Techniques',
+      count: k.techniques.length + (k.gammes?.length ?? 0) + (k.walkingBass?.length ?? 0) + (k.riffs?.length ?? 0),
+      icon: <IconTarget className="w-5 h-5" />,
+    },
     { key: 'rhythms' as const, label: 'Rythmes', count: k.rhythms.length, icon: <IconRhythm className="w-5 h-5" /> },
     { key: 'progressions' as const, label: 'Suites', count: progressions.length, icon: <IconLink className="w-5 h-5" /> },
     { key: 'songs' as const, label: 'Morceaux', count: songs.length, icon: <IconGuitar className="w-5 h-5" /> },
@@ -1597,6 +1736,38 @@ export default function KnowledgePage() {
               }}
             />
           </div>
+          <div className="mt-10">
+            <RiffPatternEditor
+              editMode={editMode}
+              source={editingRiffSource}
+              onSave={saveRiffPattern}
+              onCancelEdit={() => setEditingRiffSource(null)}
+            />
+            <Section
+              title="Riffs"
+              icon={<IconGuitar className="w-5 h-5" />}
+              items={k.riffs || []}
+              editMode={editMode}
+              onDelete={(v) => deleteItem('riffs', v)}
+              onEdit={(v) => {
+                if (parseWalkingBassPattern(v)) setEditingRiffSource(v);
+                else setEditKnowledge({ category: 'riffs', from: v, to: v });
+              }}
+              onAdd={(v) => addItem('riffs', v)}
+              addPlaceholder="Nom ou motif encodé (même format que walking bass)"
+              orderable
+              onMoveItem={(idx, dir) => reorderKnowledgeItem('riffs', k.riffs || [], idx, dir)}
+              renderItem={(w) => {
+                const parsed = parseWalkingBassPattern(w);
+                if (parsed) return <RiffMenuCard pattern={parsed} />;
+                return (
+                  <div className="px-4 py-3 bg-[var(--surface)] rounded-lg border border-[var(--surface-light)] min-w-[160px]">
+                    <span className="text-sm font-medium">{w}</span>
+                  </div>
+                );
+              }}
+            />
+          </div>
         </>
       )}
 
@@ -1699,12 +1870,42 @@ export default function KnowledgePage() {
               <IconHeart className="w-4 h-4" />{favFilter ? 'Tous' : 'Favoris'}
             </button>
           </div>
+          {editMode && (
+            <div className="mb-6 p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] space-y-2">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">Ajouter une suite sans leçon</h3>
+              <p className="text-xs text-[var(--muted)]">Enregistrée dans la bibliothèque globale (pas besoin de créer une leçon).</p>
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  value={globalProgLine}
+                  onChange={(e) => setGlobalProgLine(e.target.value)}
+                  placeholder="Accords (ex: D - A - Bm - G)"
+                  className="flex-1 px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm min-w-0"
+                />
+                <input
+                  value={globalProgNotes}
+                  onChange={(e) => setGlobalProgNotes(e.target.value)}
+                  placeholder="Notes (optionnel)"
+                  className="flex-1 px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm min-w-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => void addGlobalProgression()}
+                  className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm shrink-0"
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          )}
           {filteredProgressions.length === 0 ? (
             <div className="text-sm text-[var(--muted)]">{favFilter ? 'Aucun favori pour le moment.' : 'Aucune suite détectée pour le moment.'}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProgressions.map((p) => {
-                const progCount = db.lessons.find((l) => l.id === p.lessonId)?.progressions?.length ?? 0;
+                const progCount =
+                  p.lessonId === KB_GLOBAL_PROGRESSIONS
+                    ? (db.globalProgressions?.length ?? 0)
+                    : (db.lessons.find((l) => l.id === p.lessonId)?.progressions?.length ?? 0);
                 return (
                 <div key={`${p.lessonId}-${p.progressionIndex}`} className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--surface-light)] flex gap-2">
                   {editMode && progCount > 1 && (
@@ -1723,8 +1924,17 @@ export default function KnowledgePage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="text-sm font-semibold">{p.chords.join(' → ')}</div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => toggleProgressionFavorite(p.lessonId, db.lessons.find((l) => l.id === p.lessonId)?.progressions, p.progressionIndex)}
-                        className={`transition-colors ${p.favorite ? 'text-pink-400' : 'text-[var(--muted)] hover:text-pink-400'}`} title="Favori">
+                      <button
+                        onClick={() =>
+                          toggleProgressionFavorite(
+                            p.lessonId,
+                            p.lessonId === KB_GLOBAL_PROGRESSIONS ? undefined : db.lessons.find((l) => l.id === p.lessonId)?.progressions,
+                            p.progressionIndex,
+                          )
+                        }
+                        className={`transition-colors ${p.favorite ? 'text-pink-400' : 'text-[var(--muted)] hover:text-pink-400'}`}
+                        title="Favori"
+                      >
                         <IconHeart className="w-4 h-4" style={p.favorite ? { fill: 'currentColor' } : {}} />
                       </button>
                       {editMode && (
@@ -1735,10 +1945,16 @@ export default function KnowledgePage() {
                             className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-500/20 text-red-300 hover:text-red-200"><IconTrash className="w-4 h-4" /></button>
                         </>
                       )}
-                      <Link href={`/lesson/${encodeURIComponent(p.lessonId)}`} className="text-xs text-[var(--accent-light)] hover:text-[var(--foreground)]">Voir</Link>
+                      {p.lessonId !== KB_GLOBAL_PROGRESSIONS ? (
+                        <Link href={`/lesson/${encodeURIComponent(p.lessonId)}`} className="text-xs text-[var(--accent-light)] hover:text-[var(--foreground)]">Voir</Link>
+                      ) : (
+                        <span className="text-xs text-[var(--muted)]">Bibliothèque</span>
+                      )}
                     </div>
                   </div>
-                  <div className="text-xs text-[var(--muted)] mt-2">{p.lessonId} — {p.lessonTitle}</div>
+                  <div className="text-xs text-[var(--muted)] mt-2">
+                    {p.lessonId === KB_GLOBAL_PROGRESSIONS ? 'Hors leçon' : `${p.lessonId} — ${p.lessonTitle}`}
+                  </div>
                   {p.notes && <div className="text-xs text-[var(--muted)] mt-2">{p.notes}</div>}
                   </div>
                 </div>
@@ -2020,7 +2236,7 @@ export default function KnowledgePage() {
         </div>
       )}
 
-      {k.chords.length === 0 && k.techniques.length === 0 && (k.gammes || []).length === 0 && (k.walkingBass || []).length === 0 && k.rhythms.length === 0 && db.lessons.length === 0 && (
+      {k.chords.length === 0 && k.techniques.length === 0 && (k.gammes || []).length === 0 && (k.walkingBass || []).length === 0 && (k.riffs || []).length === 0 && k.rhythms.length === 0 && db.lessons.length === 0 && (
         <div className="text-center py-20 text-[var(--muted)]">
           <p>Aucune connaissance enregistrée pour le moment.</p>
           <p className="text-sm mt-2">Crée ta première leçon pour commencer.</p>

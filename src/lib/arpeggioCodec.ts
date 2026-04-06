@@ -17,6 +17,8 @@ export type ArpeggioPatternV2 = {
    * Absent en données anciennes → 8.
    */
   stepsPerMeasure?: ArpeggioStepsPerMeasure;
+  /** Swing / triolet (grille 8 uniquement), comme pour les gammes. */
+  tripletFeel?: boolean;
   notes: ArpeggioNote[];
 };
 
@@ -24,6 +26,10 @@ export function resolveArpeggioStepsPerMeasure(p: Pick<ArpeggioPatternV2, 'steps
   const s = p.stepsPerMeasure;
   if (s === 4 || s === 8 || s === 16) return s;
   return 8;
+}
+
+export function resolveArpeggioTripletFeel(p: Pick<ArpeggioPatternV2, 'tripletFeel'>): boolean {
+  return p.tripletFeel === true;
 }
 
 export function parseArpeggioNotesArray(rawNotes: unknown, measures: number, stepsPerMeasure: ArpeggioStepsPerMeasure): ArpeggioNote[] {
@@ -63,7 +69,15 @@ export function parseArpeggioPattern(raw: string): ArpeggioPatternV2 | null {
     if (parsed.v !== 2 || !parsed.name || !Number.isInteger(parsed.measures) || parsed.measures < 1 || parsed.measures > 16) return null;
     const stepsPerMeasure = resolveArpeggioStepsPerMeasure(parsed);
     const notes = parseArpeggioNotesArray(parsed.notes, parsed.measures, stepsPerMeasure);
-    return { v: 2, name: parsed.name, measures: parsed.measures, stepsPerMeasure, notes };
+    const tripletFeel = parsed.tripletFeel === true;
+    return {
+      v: 2,
+      name: parsed.name,
+      measures: parsed.measures,
+      stepsPerMeasure,
+      ...(tripletFeel ? { tripletFeel: true } : {}),
+      notes,
+    };
   } catch {
     return null;
   }

@@ -29,6 +29,14 @@ export function readDatabase(): Database {
     db.globalKnowledge.walkingBass = [];
     changed = true;
   }
+  if (!db.globalKnowledge.riffs) {
+    db.globalKnowledge.riffs = [];
+    changed = true;
+  }
+  if (!db.globalProgressions) {
+    db.globalProgressions = [];
+    changed = true;
+  }
   if (!db.lessons) {
     db.lessons = [];
     changed = true;
@@ -99,6 +107,10 @@ export function readDatabase(): Database {
     }
     if (!lesson.knowledge.walkingBass) {
       lesson.knowledge.walkingBass = [];
+      changed = true;
+    }
+    if (!lesson.knowledge.riffs) {
+      lesson.knowledge.riffs = [];
       changed = true;
     }
   }
@@ -209,6 +221,24 @@ export function syncGlobalKnowledgeFromLessons(db: Database): void {
     }
   }
   db.globalKnowledge.walkingBass = nextW;
+
+  const riffCurrent = db.globalKnowledge.riffs || [];
+  const seenR = new Set<string>();
+  const nextR: string[] = [];
+  for (const x of riffCurrent) {
+    if (seenR.has(x)) continue;
+    seenR.add(x);
+    nextR.push(x);
+  }
+  for (const lesson of db.lessons) {
+    for (const x of lesson.knowledge.riffs || []) {
+      if (!seenR.has(x)) {
+        seenR.add(x);
+        nextR.push(x);
+      }
+    }
+  }
+  db.globalKnowledge.riffs = nextR;
 }
 
 export function upsertLesson(lesson: GuitarLesson): void {
@@ -261,6 +291,12 @@ function mergeGlobalKnowledge(db: Database, k: Knowledge): void {
     if (!db.globalKnowledge.walkingBass) db.globalKnowledge.walkingBass = [];
     if (!db.globalKnowledge.walkingBass.includes(w)) {
       db.globalKnowledge.walkingBass.push(w);
+    }
+  }
+  for (const r of k.riffs || []) {
+    if (!db.globalKnowledge.riffs) db.globalKnowledge.riffs = [];
+    if (!db.globalKnowledge.riffs.includes(r)) {
+      db.globalKnowledge.riffs.push(r);
     }
   }
 }

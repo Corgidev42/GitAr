@@ -1,4 +1,5 @@
 import { hzForFret } from '@/lib/arpeggioPlayback';
+import { tabGridStepStartSec } from '@/lib/tabGridTiming';
 
 function schedulePluck(ctx: AudioContext, dest: AudioNode, freq: number, when: number): void {
   const osc = ctx.createOscillator();
@@ -14,7 +15,7 @@ function schedulePluck(ctx: AudioContext, dest: AudioNode, freq: number, when: n
   osc.stop(when + 0.32);
 }
 
-/** Durée d’un pas de grille en 4/4 : (noire BPM) × (4 / stepsPerMeasure). */
+/** Durée d’un pas de grille en 4/4 (lecture droite, sans swing). */
 export function gammeStepDurationSec(bpm: number, stepsPerMeasure: number): number {
   return (60 / bpm) * (4 / stepsPerMeasure);
 }
@@ -27,14 +28,15 @@ export function scheduleGammePass(
   bpm: number,
   startAtAudioTime: number,
   stepsPerMeasure: number,
+  tripletFeel: boolean,
 ): void {
-  const sec = gammeStepDurationSec(bpm, stepsPerMeasure);
   const maxStep = measures * stepsPerMeasure;
   const sorted = [...notes]
     .filter((n) => n.step >= 0 && n.step < maxStep)
     .sort((a, b) => a.step - b.step || a.string - b.string);
   for (const n of sorted) {
-    const when = startAtAudioTime + n.step * sec;
+    const when =
+      startAtAudioTime + tabGridStepStartSec(n.step, measures, stepsPerMeasure, bpm, tripletFeel);
     schedulePluck(ctx, dest, hzForFret(n.string, n.fret), when);
   }
 }

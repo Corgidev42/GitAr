@@ -19,6 +19,8 @@ export interface Knowledge {
   gammes?: string[];
   /** Noms ou motifs `WALKING_BASS_V1:…` (même éditeur tab que les gammes) — UI sous Techniques */
   walkingBass?: string[];
+  /** Même format que walking bass (lignes riff / blues, shuffle) */
+  riffs?: string[];
 }
 
 export interface TechniqueDetail {
@@ -71,4 +73,6 @@ export interface Database {
   techniqueDetails?: Record<string, TechniqueDetail>;
   /** Surcharges / accords créés à la main (clé = nom exact comme dans la KB) */
   chordDiagrams?: Record<string, ChordDiagramData>;
+  /** Suites d’accords hors leçon (répertoire global) */
+  globalProgressions?: ChordProgression[];
 }

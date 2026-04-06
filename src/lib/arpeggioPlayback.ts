@@ -1,4 +1,5 @@
 import { ARPEGGIO_STEPS_PER_MEASURE } from '@/lib/arpeggioCodec';
+import { tabGridStepStartSec } from '@/lib/tabGridTiming';
 
 /** Mi aigu → Mi grave, Hz à vide. */
 const OPEN_STRING_HZ = [329.63, 246.94, 196.0, 146.83, 110.0, 82.41];
@@ -9,7 +10,7 @@ export function hzForFret(stringIndex: number, fret: number): number {
   return open * 2 ** (fret / 12);
 }
 
-/** Durée d’un pas de grille en 4/4 (identique à la gamme). */
+/** Durée d’un pas de grille en 4/4 (lecture droite). */
 export function arpeggioStepDurationSec(bpm: number, stepsPerMeasure: number): number {
   return (60 / bpm) * (4 / stepsPerMeasure);
 }
@@ -36,14 +37,15 @@ export function scheduleArpeggioPass(
   bpm: number,
   startAtAudioTime: number,
   stepsPerMeasure: number = ARPEGGIO_STEPS_PER_MEASURE,
+  tripletFeel = false,
 ): void {
-  const sec = arpeggioStepDurationSec(bpm, stepsPerMeasure);
   const maxStep = measures * stepsPerMeasure;
   const sorted = [...notes]
     .filter((n) => n.step >= 0 && n.step < maxStep)
     .sort((a, b) => a.step - b.step || a.string - b.string);
   for (const n of sorted) {
-    const when = startAtAudioTime + n.step * sec;
+    const when =
+      startAtAudioTime + tabGridStepStartSec(n.step, measures, stepsPerMeasure, bpm, tripletFeel);
     schedulePluck(ctx, dest, hzForFret(n.string, n.fret), when);
   }
 }

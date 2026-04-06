@@ -8,8 +8,9 @@ import {
   makeEmptyGammePattern,
   parseGammePattern,
   resolveGammeStepsPerMeasure,
+  resolveGammeTripletFeel,
   serializeGammePattern,
-  tabRhythmSubdivisionLabel,
+  tabRhythmLineLabel,
 } from '@/lib/gammeCodec';
 import { useGammePlayback } from '@/hooks/useGammePlayback';
 import {
@@ -17,9 +18,10 @@ import {
   parseWalkingBassPattern,
   serializeWalkingBassPattern,
 } from '@/lib/walkingBassCodec';
-import { IconGamme, IconMusic, IconPause, IconPlay, IconWalkingBass } from '@/components/Icons';
+import { IconGamme, IconGuitar, IconMusic, IconPause, IconPlay, IconWalkingBass } from '@/components/Icons';
+import { SwingTripletEquationSvg } from '@/components/SwingTripletEquation';
 
-export type GammeEditorVariant = 'gamme' | 'walkingBass';
+export type GammeEditorVariant = 'gamme' | 'walkingBass' | 'riff';
 
 const ACCENT: Record<GammeEditorVariant, { playhead: string; hoverCell: string; ring: string; btn: string; title: string; dashed: string; menuHover: string }> = {
   gamme: {
@@ -39,6 +41,15 @@ const ACCENT: Record<GammeEditorVariant, { playhead: string; hoverCell: string; 
     title: 'text-emerald-300',
     dashed: 'border-emerald-500/40',
     menuHover: 'hover:border-emerald-500/50',
+  },
+  riff: {
+    playhead: 'bg-amber-500/15 ring-1 ring-inset ring-amber-500/35',
+    hoverCell: 'hover:bg-amber-500/15',
+    ring: 'ring-amber-500/50 bg-amber-500/10',
+    btn: 'bg-amber-600 hover:bg-amber-500 text-white',
+    title: 'text-amber-300',
+    dashed: 'border-amber-500/40',
+    menuHover: 'hover:border-amber-500/50',
   },
 };
 
@@ -70,17 +81,24 @@ function GammeMeasureStems({ stepsPerMeasure }: { stepsPerMeasure: number }) {
   );
 }
 
-function GammeRhythmStemsRow({ stepsPerMeasure }: { stepsPerMeasure: StepsPerMeasure }) {
+function GammeRhythmStemsRow({ stepsPerMeasure, tripletFeel }: { stepsPerMeasure: StepsPerMeasure; tripletFeel: boolean }) {
   return (
-    <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5 flex items-center gap-2">
-      <span
-        className="text-[9px] font-semibold text-[var(--muted)] shrink-0 leading-none"
-        title="Figure par colonne (mesure en 4/4)"
-      >
-        {tabRhythmSubdivisionLabel(stepsPerMeasure)}
-      </span>
-      <div className="flex-1 min-w-0">
-        <GammeMeasureStems stepsPerMeasure={stepsPerMeasure} />
+    <div className="w-full border-t border-[var(--surface-light)]/30 pt-0.5 flex flex-col gap-1">
+      {stepsPerMeasure === 8 && tripletFeel ? (
+        <div className="pl-0.5 overflow-x-auto">
+          <SwingTripletEquationSvg className="text-[var(--foreground)] opacity-90 max-w-full h-auto" />
+        </div>
+      ) : null}
+      <div className="min-h-[20px] flex items-center gap-2">
+        <span
+          className="text-[9px] font-semibold text-[var(--muted)] shrink-0 leading-none max-w-[7rem]"
+          title="Figure par colonne (mesure en 4/4)"
+        >
+          {tabRhythmLineLabel(stepsPerMeasure, tripletFeel)}
+        </span>
+        <div className="flex-1 min-w-0">
+          <GammeMeasureStems stepsPerMeasure={stepsPerMeasure} />
+        </div>
       </div>
     </div>
   );
@@ -135,6 +153,7 @@ export function GammeTabPreview({
 }) {
   const a = ACCENT[variant];
   const spm = resolveGammeStepsPerMeasure(pattern);
+  const tripletFeel = resolveGammeTripletFeel(pattern);
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 w-full min-w-0">
       <div className="mb-1">
@@ -184,7 +203,7 @@ export function GammeTabPreview({
                 </div>
                 {isLast ? <EndBar /> : null}
               </div>
-              <GammeRhythmStemsRow stepsPerMeasure={spm} />
+              <GammeRhythmStemsRow stepsPerMeasure={spm} tripletFeel={tripletFeel} />
             </div>
           );
         })}
@@ -206,7 +225,7 @@ export function GammeMenuCard({ pattern, variant = 'gamme' }: { pattern: GammePa
       <div className="text-sm font-semibold text-[var(--foreground)]">{pattern.name}</div>
       <p className="text-[11px] text-[var(--muted)] mt-1">
         {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.notes.length} note{pattern.notes.length > 1 ? 's' : ''} ·{' '}
-        {tabRhythmSubdivisionLabel(resolveGammeStepsPerMeasure(pattern))}
+        {tabRhythmLineLabel(resolveGammeStepsPerMeasure(pattern), resolveGammeTripletFeel(pattern))}
       </p>
       <div className="flex flex-wrap items-center gap-2 mt-2 rounded-md border border-[var(--surface-light)] bg-[var(--background)]/50 px-2 py-1.5">
         <span className="text-[10px] text-[var(--muted)] shrink-0">Lecture</span>
@@ -269,12 +288,18 @@ export function GammePatternEditor({
   variant?: GammeEditorVariant;
 }) {
   const isWb = variant === 'walkingBass';
+  const isRiff = variant === 'riff';
+  const isWbOrRiff = isWb || isRiff;
   const a = ACCENT[variant];
-  const serialize = isWb ? serializeWalkingBassPattern : serializeGammePattern;
-  const IconHeader = isWb ? IconWalkingBass : IconGamme;
+  const serialize = isWbOrRiff ? serializeWalkingBassPattern : serializeGammePattern;
+  const IconHeader = isRiff ? IconGuitar : isWb ? IconWalkingBass : IconGamme;
 
   const [pattern, setPattern] = useState<GammePatternV1>(() =>
-    variant === 'walkingBass' ? makeEmptyWalkingBassPattern() : makeEmptyGammePattern(),
+    isWb
+      ? makeEmptyWalkingBassPattern()
+      : isRiff
+        ? { ...makeEmptyWalkingBassPattern(), name: 'Mon riff', sectionLabel: 'Riff' }
+        : makeEmptyGammePattern(),
   );
   const [error, setError] = useState('');
   const [paintFret, setPaintFret] = useState(0);
@@ -282,8 +307,13 @@ export function GammePatternEditor({
 
   useEffect(() => {
     if (!editMode) return;
-    const parse = variant === 'walkingBass' ? parseWalkingBassPattern : parseGammePattern;
-    const freshEmpty = variant === 'walkingBass' ? makeEmptyWalkingBassPattern : makeEmptyGammePattern;
+    const parse = isWbOrRiff ? parseWalkingBassPattern : parseGammePattern;
+    const freshEmpty = () =>
+      isWb
+        ? makeEmptyWalkingBassPattern()
+        : isRiff
+          ? { ...makeEmptyWalkingBassPattern(), name: 'Mon riff', sectionLabel: 'Riff' }
+          : makeEmptyGammePattern();
     if (!source) {
       setPattern(freshEmpty());
       setError('');
@@ -296,12 +326,15 @@ export function GammePatternEditor({
       return;
     }
     setPattern(freshEmpty());
-    setError(variant === 'walkingBass' ? 'Impossible de charger cette ligne de basse.' : 'Impossible de charger cette gamme.');
-  }, [editMode, source, variant]);
+    setError(
+      isWb ? 'Impossible de charger cette ligne de basse.' : isRiff ? 'Impossible de charger ce riff.' : 'Impossible de charger cette gamme.',
+    );
+  }, [editMode, source, variant, isWb, isRiff, isWbOrRiff]);
 
   if (!editMode) return null;
 
   const spm = resolveGammeStepsPerMeasure(pattern);
+  const tripletFeel = resolveGammeTripletFeel(pattern);
 
   const setMeasures = (m: number) => {
     setPattern((prev) => {
@@ -358,7 +391,7 @@ export function GammePatternEditor({
   const handleSave = () => {
     const name = pattern.name.trim();
     if (!name) {
-      setError(isWb ? 'Donne un titre à la ligne.' : 'Donne un titre à la gamme.');
+      setError(isWb ? 'Donne un titre à la ligne.' : isRiff ? 'Donne un titre au riff.' : 'Donne un titre à la gamme.');
       return;
     }
     if (pattern.notes.length === 0) {
@@ -366,11 +399,16 @@ export function GammePatternEditor({
       return;
     }
     setError('');
+    const sp = resolveGammeStepsPerMeasure(pattern);
+    const tf = resolveGammeTripletFeel(pattern);
+    const { tripletFeel: _strip, ...restPattern } = pattern;
     const clean: GammePatternV1 = {
-      ...pattern,
+      ...restPattern,
       name,
-      sectionLabel: pattern.sectionLabel.trim() || (isWb ? 'Walking bass' : 'Technique'),
+      sectionLabel: pattern.sectionLabel.trim() || (isWb ? 'Walking bass' : isRiff ? 'Riff' : 'Technique'),
       firstMeasureNumber: Math.min(999, Math.max(1, pattern.firstMeasureNumber)),
+      stepsPerMeasure: sp,
+      ...(tf && sp === 8 ? { tripletFeel: true as const } : {}),
       notes: [...pattern.notes].sort((a, b) => a.step - b.step || a.string - b.string),
     };
     onSave({ encoded: serialize(clean), source });
@@ -380,17 +418,21 @@ export function GammePatternEditor({
     <div className={`mb-10 p-5 rounded-xl border-2 border-dashed bg-[var(--surface)]/50 ${a.dashed}`}>
       <h3 className={`text-sm font-bold mb-3 inline-flex items-center gap-2 ${a.title}`}>
         <IconHeader className="w-4 h-4" />
-        {isWb
+        {isRiff
           ? source
-            ? 'Éditer un walking bass (tablature)'
-            : 'Créer un walking bass (tablature)'
-          : source
-            ? 'Éditer une gamme (tablature)'
-            : 'Créer une gamme (tablature)'}
+            ? 'Éditer un riff (tablature)'
+            : 'Créer un riff (tablature)'
+          : isWb
+            ? source
+              ? 'Éditer un walking bass (tablature)'
+              : 'Créer un walking bass (tablature)'
+            : source
+              ? 'Éditer une gamme (tablature)'
+              : 'Créer une gamme (tablature)'}
       </h3>
       <p className="text-xs text-[var(--muted)] mb-4">
-        Choisis la subdivision (noires, croches…). Plusieurs notes au même instant : une par corde. Clic : pose ou efface la case sur cette corde.{' '}
-        <span className={isWb ? 'text-emerald-300/90' : 'text-sky-300/90'}>Maj + clic</span> sur une note : tonique (cercle), une seule à la fois.
+        Choisis la subdivision (noires, croches…). En croches, active le swing/triolet pour le blues (2/3 + 1/3 par temps). Plusieurs notes au même instant : une par corde.{' '}
+        <span className={isRiff ? 'text-amber-300/90' : isWb ? 'text-emerald-300/90' : 'text-sky-300/90'}>Maj + clic</span> sur une note : tonique (cercle), une seule à la fois.
       </p>
 
       <div className="grid md:grid-cols-2 gap-3 mb-3">
@@ -399,16 +441,16 @@ export function GammePatternEditor({
           <input
             value={pattern.sectionLabel}
             onChange={(e) => setPattern((p) => ({ ...p, sectionLabel: e.target.value }))}
-            placeholder={isWb ? 'Walking bass' : 'Technique'}
+            placeholder={isRiff ? 'Riff' : isWb ? 'Walking bass' : 'Technique'}
             className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
           />
         </div>
         <div className="space-y-2">
-          <label className="block text-[10px] text-[var(--muted)]">{isWb ? 'Titre de la ligne' : 'Titre de la gamme'}</label>
+          <label className="block text-[10px] text-[var(--muted)]">{isRiff ? 'Titre du riff' : isWb ? 'Titre de la ligne' : 'Titre de la gamme'}</label>
           <input
             value={pattern.name}
             onChange={(e) => setPattern((p) => ({ ...p, name: e.target.value }))}
-            placeholder={isWb ? '2-5-1 sur II-V-I' : 'La gamme de Do'}
+            placeholder={isRiff ? 'Blues en La' : isWb ? '2-5-1 sur II-V-I' : 'La gamme de Do'}
             className="w-full px-3 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm"
           />
         </div>
@@ -449,11 +491,16 @@ export function GammePatternEditor({
               const next = Number(e.target.value) as StepsPerMeasure;
               setPattern((prev) => {
                 const maxSlots = prev.measures * next;
-                return {
+                const base = {
                   ...prev,
                   stepsPerMeasure: next,
                   notes: prev.notes.filter((n) => n.step < maxSlots),
                 };
+                if (next !== 8 && prev.tripletFeel) {
+                  const { tripletFeel: _t, ...rest } = base;
+                  return rest;
+                }
+                return base;
               });
             }}
             className="px-2 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm max-w-[11rem]"
@@ -464,6 +511,29 @@ export function GammePatternEditor({
           </select>
         </div>
       </div>
+
+      {spm === 8 ? (
+        <label className="flex items-start gap-2 mb-3 text-xs text-[var(--muted)] cursor-pointer select-none max-w-xl">
+          <input
+            type="checkbox"
+            checked={tripletFeel}
+            onChange={(e) =>
+              setPattern((p) => {
+                const on = e.target.checked;
+                if (!on) {
+                  const { tripletFeel: _x, ...rest } = p;
+                  return rest;
+                }
+                return { ...p, tripletFeel: true };
+              })
+            }
+            className="rounded mt-0.5"
+          />
+          <span>
+            Swing / triolet (shuffle) : chaque temps est joué long–court (♪♪ équivalent au triolet ♩♪ sous le 3). Utile pour blues et lignes binaire ternaire.
+          </span>
+        </label>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
@@ -570,7 +640,7 @@ export function GammePatternEditor({
                     </div>
                     {isLast ? <EndBar /> : null}
                   </div>
-                  <GammeRhythmStemsRow stepsPerMeasure={spm} />
+                  <GammeRhythmStemsRow stepsPerMeasure={spm} tripletFeel={tripletFeel} />
                 </div>
               );
             })}
@@ -584,7 +654,13 @@ export function GammePatternEditor({
         <button
           type="button"
           onClick={() =>
-            setPattern(variant === 'walkingBass' ? makeEmptyWalkingBassPattern() : makeEmptyGammePattern())
+            setPattern(
+              isWb
+                ? makeEmptyWalkingBassPattern()
+                : isRiff
+                  ? { ...makeEmptyWalkingBassPattern(), name: 'Mon riff', sectionLabel: 'Riff' }
+                  : makeEmptyGammePattern(),
+            )
           }
           className="px-3 py-1.5 rounded-lg bg-[var(--surface-light)] text-[var(--muted)] text-xs"
         >
@@ -596,7 +672,17 @@ export function GammePatternEditor({
           </button>
         )}
         <button type="button" onClick={handleSave} className={`ml-auto px-3 py-1.5 rounded-lg text-white text-xs ${a.btn}`}>
-          {isWb ? (source ? 'Mettre à jour la ligne' : 'Enregistrer la ligne') : source ? 'Mettre à jour la gamme' : 'Enregistrer la gamme'}
+          {isRiff
+            ? source
+              ? 'Mettre à jour le riff'
+              : 'Enregistrer le riff'
+            : isWb
+              ? source
+                ? 'Mettre à jour la ligne'
+                : 'Enregistrer la ligne'
+              : source
+                ? 'Mettre à jour la gamme'
+                : 'Enregistrer la gamme'}
         </button>
       </div>
       {error ? <p className="text-xs text-red-400 mt-2">{error}</p> : null}
@@ -612,4 +698,12 @@ export function WalkingBassPatternEditor(
 
 export function WalkingBassMenuCard({ pattern }: { pattern: GammePatternV1 }) {
   return <GammeMenuCard pattern={pattern} variant="walkingBass" />;
+}
+
+export function RiffPatternEditor(props: Omit<ComponentProps<typeof GammePatternEditor>, 'variant'>) {
+  return <GammePatternEditor {...props} variant="riff" />;
+}
+
+export function RiffMenuCard({ pattern }: { pattern: GammePatternV1 }) {
+  return <GammeMenuCard pattern={pattern} variant="riff" />;
 }

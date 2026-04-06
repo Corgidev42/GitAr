@@ -135,11 +135,12 @@ GitAr/
 - Edition/suppression interactive
 - Commande `make reset` ajoutée
 
-## Feature à venir
-- Pouvoir ajouter des suites d'accords sans avoir besoin de crèer une leçon.
-- Ajouter les triolet en tant que rythme possible ce qui divise un temps en 3, et une croche = 1/3, donc un triolet = 3 croche. Ici une noir vaut mainteannt 2/3 du temps. L'ajouter avec juste au debut l'image de croche = noir + crohce lie par un 3 (cf. voir MyGuitar)
-- Ajouter une categorie RIFF, et faut que ca puisse prendre blues en prenant donc le decoupage en triolet 
-- Pouvoir ajouter un visuel sur un triolet (pour le shuffle)
+## Feature récentes (v2 suite)
+
+- **Suites d’accords hors leçon** : onglet « Suites » → bloc « Ajouter une suite sans leçon » (bibliothèque globale dans `database.json`).
+- **Swing / triolet** : sur les grilles en **croches (8)**, option « Swing / triolet » — lecture long–court (2/3 + 1/3 du temps par noire), avec équation `(♪♪ = triolet ♩♪…)` en SVG sous la ligne des tiges.
+- **Catégorie Riffs** : sous Techniques, même éditeur tab que le walking bass ; idéal pour lignes blues avec swing.
+- Les **arpèges** supportent la même option swing en grille 8.
 
 ## Licence
 

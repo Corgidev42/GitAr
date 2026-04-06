@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { readDatabase, writeDatabase, syncGlobalKnowledgeFromLessons } from '@/lib/database';
-import type { ChordDiagramData } from '@/types';
+import type { ChordDiagramData, ChordProgression } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +28,23 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const db = readDatabase();
 
+  if (body.type === 'global_progressions') {
+    const list = body.progressions as ChordProgression[];
+    if (!Array.isArray(list)) {
+      return NextResponse.json({ error: 'progressions doit être un tableau' }, { status: 400 });
+    }
+    for (const p of list) {
+      if (!p || !Array.isArray(p.chords) || p.chords.length < 2) {
+        return NextResponse.json({ error: 'Chaque suite doit avoir au moins 2 accords' }, { status: 400 });
+      }
+    }
+    db.globalProgressions = list;
+    writeDatabase(db);
+    return NextResponse.json({ ok: true, globalProgressions: db.globalProgressions });
+  }
+
   if (body.type === 'knowledge_add') {
-    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass' | 'riffs';
     const value = (body.value as string)?.trim();
     if (!category || !value) {
       return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
@@ -44,7 +59,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.type === 'knowledge_rename') {
-    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass' | 'riffs';
     const from = (body.from as string) || '';
     const to = (body.to as string) || '';
 
@@ -143,7 +158,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.type === 'knowledge_reorder') {
-    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
+    const category = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass' | 'riffs';
     const items = body.items as string[];
     if (!category || !Array.isArray(items)) {
       return NextResponse.json({ error: 'Missing category or items' }, { status: 400 });
@@ -232,7 +247,7 @@ export async function DELETE(req: NextRequest) {
   const db = readDatabase();
 
   if (body.type === 'knowledge') {
-    const cat = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass';
+    const cat = body.category as 'chords' | 'techniques' | 'rhythms' | 'strums' | 'arpeggios' | 'gammes' | 'walkingBass' | 'riffs';
     const val = body.value as string;
     if (!cat || !val) {
       return NextResponse.json({ error: 'Missing category or value' }, { status: 400 });
@@ -268,7 +283,8 @@ export async function DELETE(req: NextRequest) {
   if (body.type === 'reset') {
     const empty = {
       lessons: [],
-      globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [], arpeggios: [], gammes: [], walkingBass: [] },
+      globalKnowledge: { chords: [], techniques: [], rhythms: [], strums: [], arpeggios: [], gammes: [], walkingBass: [], riffs: [] },
+      globalProgressions: [] as ChordProgression[],
       techniqueDetails: {},
       chordDiagrams: {},
     };

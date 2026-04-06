@@ -23,6 +23,11 @@ export type GammePatternV1 = {
    * Absent en données anciennes → 4.
    */
   stepsPerMeasure?: StepsPerMeasure;
+  /**
+   * Si true avec grille en croches (8) : lecture type shuffle / triolet —
+   * chaque temps est 2/3 + 1/3 (équivalent ♪♪ = triolet ♩+♪).
+   */
+  tripletFeel?: boolean;
   notes: GammeNote[];
 };
 
@@ -30,6 +35,10 @@ export function resolveGammeStepsPerMeasure(p: Pick<GammePatternV1, 'stepsPerMea
   const s = p.stepsPerMeasure;
   if (s === 4 || s === 8 || s === 16) return s;
   return 4;
+}
+
+export function resolveGammeTripletFeel(p: Pick<GammePatternV1, 'tripletFeel'>): boolean {
+  return p.tripletFeel === true;
 }
 
 /** Libellé pour la ligne rythmique sous la tab (même sens que les arpèges : 4/8/16 pas par mesure). */
@@ -44,6 +53,13 @@ export function tabRhythmSubdivisionLabel(stepsPerMeasure: StepsPerMeasure): str
     default:
       return 'Noires';
   }
+}
+
+/** Libellé rythmique incluant swing si applicable. */
+export function tabRhythmLineLabel(stepsPerMeasure: StepsPerMeasure, tripletFeel: boolean): string {
+  const base = tabRhythmSubdivisionLabel(stepsPerMeasure);
+  if (tripletFeel && stepsPerMeasure === 8) return `${base} (swing / triolet)`;
+  return base;
 }
 
 export function parseGammeNotesArray(rawNotes: unknown, measures: number, stepsPerMeasure: StepsPerMeasure): GammeNote[] {
@@ -100,6 +116,7 @@ export function parseGammePattern(raw: string): GammePatternV1 | null {
         : 1;
     const stepsPerMeasure = resolveGammeStepsPerMeasure(parsed);
     const notes = parseGammeNotesArray(parsed.notes, parsed.measures, stepsPerMeasure);
+    const tripletFeel = parsed.tripletFeel === true;
     return {
       v: 1,
       name: parsed.name,
@@ -107,6 +124,7 @@ export function parseGammePattern(raw: string): GammePatternV1 | null {
       measures: parsed.measures,
       firstMeasureNumber: firstN,
       stepsPerMeasure,
+      ...(tripletFeel ? { tripletFeel: true } : {}),
       notes,
     };
   } catch {

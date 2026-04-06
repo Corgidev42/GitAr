@@ -37,6 +37,7 @@ export function parseWalkingBassPattern(raw: string): GammePatternV1 | null {
         : 1;
     const stepsPerMeasure = resolveGammeStepsPerMeasure(parsed);
     const notes = parseGammeNotesArray(parsed.notes, parsed.measures, stepsPerMeasure);
+    const tripletFeel = parsed.tripletFeel === true;
     return {
       v: 1,
       name: parsed.name,
@@ -44,6 +45,7 @@ export function parseWalkingBassPattern(raw: string): GammePatternV1 | null {
       measures: parsed.measures,
       firstMeasureNumber: firstN,
       stepsPerMeasure,
+      ...(tripletFeel ? { tripletFeel: true } : {}),
       notes,
     };
   } catch {

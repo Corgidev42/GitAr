@@ -22,7 +22,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [],
@@ -60,7 +61,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -118,7 +120,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -172,7 +175,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -233,7 +237,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -302,7 +307,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -351,7 +357,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -418,7 +425,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -488,7 +496,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -553,7 +562,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -609,7 +619,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -669,7 +680,8 @@
         "strums": [],
         "arpeggios": [],
         "gammes": [],
-        "walkingBass": []
+        "walkingBass": [],
+        "riffs": []
       },
       "assets": {
         "backingTracks": [
@@ -761,7 +773,8 @@
     ],
     "walkingBass": [
       "WALKING_BASS_V1:%7B%22v%22%3A1%2C%22name%22%3A%22La%20Walking%20Bass%20de%20Jimi%20Hendrix%22%2C%22sectionLabel%22%3A%22Walking%20bass%22%2C%22measures%22%3A3%2C%22firstMeasureNumber%22%3A1%2C%22stepsPerMeasure%22%3A8%2C%22notes%22%3A%5B%7B%22step%22%3A0%2C%22string%22%3A4%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A1%2C%22string%22%3A5%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A2%2C%22string%22%3A5%2C%22fret%22%3A1%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A3%2C%22string%22%3A5%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A4%2C%22string%22%3A5%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A5%2C%22string%22%3A4%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A6%2C%22string%22%3A4%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A7%2C%22string%22%3A4%2C%22fret%22%3A4%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A8%2C%22string%22%3A4%2C%22fret%22%3A5%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A9%2C%22string%22%3A5%2C%22fret%22%3A2%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A10%2C%22string%22%3A5%2C%22fret%22%3A3%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A11%2C%22string%22%3A5%2C%22fret%22%3A4%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A12%2C%22string%22%3A5%2C%22fret%22%3A5%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A13%2C%22string%22%3A4%2C%22fret%22%3A4%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A14%2C%22string%22%3A4%2C%22fret%22%3A5%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A15%2C%22string%22%3A4%2C%22fret%22%3A6%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A16%2C%22string%22%3A4%2C%22fret%22%3A7%2C%22root%22%3Afalse%7D%2C%7B%22step%22%3A16%2C%22string%22%3A5%2C%22fret%22%3A0%2C%22root%22%3Afalse%7D%5D%7D"
-    ]
+    ],
+    "riffs": []
   },
   "techniqueDetails": {
     "capo": {
@@ -859,5 +872,6 @@
         1
       ]
     }
-  }
+  },
+  "globalProgressions": []
 }

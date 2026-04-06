@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       arpeggios: Array.isArray(body.arpeggios) ? body.arpeggios : [],
       gammes: Array.isArray(body.gammes) ? body.gammes : [],
       walkingBass: Array.isArray(body.walkingBass) ? body.walkingBass : [],
+      riffs: Array.isArray(body.riffs) ? body.riffs : [],
     },
     assets: {
       backingTracks: Array.isArray(body.backingTracks) ? body.backingTracks : [],

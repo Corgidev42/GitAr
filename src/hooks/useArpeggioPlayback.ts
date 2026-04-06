@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ArpeggioPatternV2 } from '@/lib/arpeggioCodec';
-import { resolveArpeggioStepsPerMeasure } from '@/lib/arpeggioCodec';
-import { arpeggioStepDurationSec, scheduleArpeggioPass } from '@/lib/arpeggioPlayback';
+import { resolveArpeggioStepsPerMeasure, resolveArpeggioTripletFeel } from '@/lib/arpeggioCodec';
+import { scheduleArpeggioPass } from '@/lib/arpeggioPlayback';
 import { claimExclusivePlayback, releaseExclusivePlayback } from '@/lib/playbackCoordinator';
+import { tabGridStepFromElapsed, tabGridTotalDurationSec } from '@/lib/tabGridTiming';
 
 function createAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -44,7 +45,7 @@ export function useArpeggioPlayback(
   loopRef.current = loop;
 
   const audioRef = useRef<{ ctx: AudioContext | null; master: GainNode | null }>({ ctx: null, master: null });
-  const metaRef = useRef({ startMs: 0, totalSteps: 8, secPerStep: 0.25 });
+  const metaRef = useRef({ startMs: 0 });
 
   const stop = useCallback(() => {
     setPlaying(false);
@@ -62,15 +63,14 @@ export function useArpeggioPlayback(
     master.gain.setValueAtTime(0.32, now);
     const t0 = now + 0.06;
     const spm = resolveArpeggioStepsPerMeasure(p);
-    scheduleArpeggioPass(ctx, master, p.notes, p.measures, bpmRef.current, t0, spm);
+    const tripletFeel = resolveArpeggioTripletFeel(p);
+    scheduleArpeggioPass(ctx, master, p.notes, p.measures, bpmRef.current, t0, spm, tripletFeel);
   }, []);
 
   const startPlayback = useCallback(async () => {
     if (playing) return;
 
     const p = patternRef.current;
-    const spm = resolveArpeggioStepsPerMeasure(p);
-    const totalSteps = p.measures * spm;
 
     claimExclusivePlayback(instanceTokenRef.current, stop);
 
@@ -98,11 +98,7 @@ export function useArpeggioPlayback(
     }
 
     scheduleOnePass();
-    metaRef.current = {
-      startMs: performance.now(),
-      totalSteps,
-      secPerStep: arpeggioStepDurationSec(bpmRef.current, spm),
-    };
+    metaRef.current = { startMs: performance.now() };
     setPlaying(true);
     setPlayhead(0);
     errCbRef.current?.('');
@@ -116,19 +112,16 @@ export function useArpeggioPlayback(
 
     const tick = () => {
       if (cancelled) return;
-      const { startMs, totalSteps, secPerStep } = metaRef.current;
-      const durationMs = totalSteps * secPerStep * 1000;
-      const elapsed = performance.now() - startMs;
+      const p = patternRef.current;
+      const spm = resolveArpeggioStepsPerMeasure(p);
+      const tripletFeel = resolveArpeggioTripletFeel(p);
+      const totalSteps = p.measures * spm;
+      const durationMs = tabGridTotalDurationSec(p.measures, bpmRef.current) * 1000;
+      const elapsed = performance.now() - metaRef.current.startMs;
       if (elapsed >= durationMs) {
         if (loopRef.current) {
           scheduleOnePass();
-          const p = patternRef.current;
-          const spm = resolveArpeggioStepsPerMeasure(p);
-          metaRef.current = {
-            startMs: performance.now(),
-            totalSteps: p.measures * spm,
-            secPerStep: arpeggioStepDurationSec(bpmRef.current, spm),
-          };
+          metaRef.current = { startMs: performance.now() };
           setPlayhead(0);
           raf = requestAnimationFrame(tick);
           return;
@@ -138,7 +131,10 @@ export function useArpeggioPlayback(
         releaseExclusivePlayback(token);
         return;
       }
-      const step = Math.min(Math.floor(elapsed / (secPerStep * 1000)), totalSteps - 1);
+      const step = Math.min(
+        tabGridStepFromElapsed(elapsed / 1000, p.measures, spm, bpmRef.current, tripletFeel),
+        totalSteps - 1,
+      );
       setPlayhead((prev) => (prev === step ? prev : step));
       raf = requestAnimationFrame(tick);
     };
@@ -150,7 +146,7 @@ export function useArpeggioPlayback(
   }, [playing, scheduleOnePass]);
 
   const signatureRef = useRef('');
-  const sig = `${pattern.measures}|${resolveArpeggioStepsPerMeasure(pattern)}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}`).join(',')}`;
+  const sig = `${pattern.measures}|${resolveArpeggioStepsPerMeasure(pattern)}|${resolveArpeggioTripletFeel(pattern) ? 1 : 0}|${pattern.notes.map((n) => `${n.step}:${n.string}:${n.fret}`).join(',')}`;
   useEffect(() => {
     if (signatureRef.current === sig) return;
     signatureRef.current = sig;

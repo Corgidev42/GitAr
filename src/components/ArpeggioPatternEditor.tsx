@@ -7,10 +7,13 @@ import {
   makeEmptyArpeggioPattern,
   parseArpeggioPattern,
   resolveArpeggioStepsPerMeasure,
+  resolveArpeggioTripletFeel,
   serializeArpeggioPattern,
 } from '@/lib/arpeggioCodec';
 import { useArpeggioPlayback } from '@/hooks/useArpeggioPlayback';
-import { tabRhythmSubdivisionLabel } from '@/lib/gammeCodec';
+import type { StepsPerMeasure } from '@/lib/gammeCodec';
+import { tabRhythmLineLabel } from '@/lib/gammeCodec';
+import { SwingTripletEquationSvg } from '@/components/SwingTripletEquation';
 import { IconMusic, IconPause, IconPlay, IconRhythm } from '@/components/Icons';
 
 const STRING_LABELS = ['e', 'B', 'G', 'D', 'A', 'E'];
@@ -66,17 +69,31 @@ function ArpeggioMeasureStems({ stepsPerMeasure }: { stepsPerMeasure: number }) 
   );
 }
 
-function ArpeggioRhythmStemsRow({ stepsPerMeasure }: { stepsPerMeasure: ArpeggioStepsPerMeasure }) {
+function ArpeggioRhythmStemsRow({
+  stepsPerMeasure,
+  tripletFeel,
+}: {
+  stepsPerMeasure: ArpeggioStepsPerMeasure;
+  tripletFeel: boolean;
+}) {
+  const labelSp = stepsPerMeasure as StepsPerMeasure;
   return (
-    <div className="w-full min-h-[20px] border-t border-[var(--surface-light)]/30 pt-0.5 flex items-center gap-2">
-      <span
-        className="text-[9px] font-semibold text-[var(--muted)] shrink-0 leading-none"
-        title="Figure par colonne (mesure en 4/4)"
-      >
-        {tabRhythmSubdivisionLabel(stepsPerMeasure)}
-      </span>
-      <div className="flex-1 min-w-0">
-        <ArpeggioMeasureStems stepsPerMeasure={stepsPerMeasure} />
+    <div className="w-full border-t border-[var(--surface-light)]/30 pt-0.5 flex flex-col gap-1">
+      {stepsPerMeasure === 8 && tripletFeel ? (
+        <div className="pl-0.5 overflow-x-auto">
+          <SwingTripletEquationSvg className="text-[var(--foreground)] opacity-90 max-w-full h-auto" />
+        </div>
+      ) : null}
+      <div className="min-h-[20px] flex items-center gap-2">
+        <span
+          className="text-[9px] font-semibold text-[var(--muted)] shrink-0 leading-none max-w-[7rem]"
+          title="Figure par colonne (mesure en 4/4)"
+        >
+          {tabRhythmLineLabel(labelSp, tripletFeel)}
+        </span>
+        <div className="flex-1 min-w-0">
+          <ArpeggioMeasureStems stepsPerMeasure={stepsPerMeasure} />
+        </div>
       </div>
     </div>
   );
@@ -90,6 +107,7 @@ function ArpeggioTabPreview({
   globalPlayhead?: number | null;
 }) {
   const spm = resolveArpeggioStepsPerMeasure(pattern);
+  const tripletFeel = resolveArpeggioTripletFeel(pattern);
   return (
     <div className="mt-2 rounded-lg border border-[var(--surface-light)] bg-[var(--background)]/70 p-2 w-full min-w-0">
       <div className="flex gap-2 items-start min-w-0">
@@ -135,7 +153,7 @@ function ArpeggioTabPreview({
                   </div>
                   {isLast ? <ArpeggioEndBar /> : null}
                 </div>
-                <ArpeggioRhythmStemsRow stepsPerMeasure={spm} />
+                <ArpeggioRhythmStemsRow stepsPerMeasure={spm} tripletFeel={tripletFeel} />
               </div>
             );
           })}
@@ -154,7 +172,10 @@ export function ArpeggioMenuCard({ pattern }: { pattern: ArpeggioPatternV2 }) {
       <div className="text-sm font-medium">{pattern.name}</div>
       <p className="text-[11px] text-[var(--muted)] mt-1">
         {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.notes.length} note{pattern.notes.length > 1 ? 's' : ''} ·{' '}
-        {tabRhythmSubdivisionLabel(resolveArpeggioStepsPerMeasure(pattern))}
+        {tabRhythmLineLabel(
+          resolveArpeggioStepsPerMeasure(pattern) as StepsPerMeasure,
+          resolveArpeggioTripletFeel(pattern),
+        )}
       </p>
       <div className="flex flex-wrap items-center gap-2 mt-2 rounded-md border border-[var(--surface-light)] bg-[var(--background)]/50 px-2 py-1.5">
         <span className="text-[10px] text-[var(--muted)] shrink-0">Lecture</span>
@@ -239,6 +260,7 @@ export function ArpeggioPatternEditor({
   if (!editMode) return null;
 
   const spm = resolveArpeggioStepsPerMeasure(pattern);
+  const tripletFeel = resolveArpeggioTripletFeel(pattern);
 
   const setMeasures = (m: number) => {
     setPattern((prev) => {
@@ -281,9 +303,14 @@ export function ArpeggioPatternEditor({
       return;
     }
     setError('');
+    const sp = resolveArpeggioStepsPerMeasure(pattern);
+    const tf = resolveArpeggioTripletFeel(pattern);
+    const { tripletFeel: _strip, ...restPattern } = pattern;
     const clean: ArpeggioPatternV2 = {
-      ...pattern,
+      ...restPattern,
       name,
+      stepsPerMeasure: sp,
+      ...(tf && sp === 8 ? { tripletFeel: true as const } : {}),
       notes: [...pattern.notes].sort((a, b) => a.step - b.step || a.string - b.string),
     };
     onSave({ encoded: serializeArpeggioPattern(clean), source });
@@ -296,7 +323,7 @@ export function ArpeggioPatternEditor({
         {source ? 'Éditer un arpège' : 'Créer un arpège (tablature)'}
       </h3>
       <p className="text-xs text-[var(--muted)] mb-4">
-        Subdivision au choix (noires, croches…). Plusieurs notes au même instant : une par corde. Clic : pose ou efface la case sur cette corde.
+        Subdivision au choix (noires, croches…). En croches, active le swing/triolet pour un jeu long–court. Plusieurs notes au même instant : une par corde.
       </p>
 
       <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-3">
@@ -326,11 +353,16 @@ export function ArpeggioPatternEditor({
               const next = Number(e.target.value) as ArpeggioStepsPerMeasure;
               setPattern((prev) => {
                 const maxSlots = prev.measures * next;
-                return {
+                const base = {
                   ...prev,
                   stepsPerMeasure: next,
                   notes: prev.notes.filter((n) => n.step < maxSlots),
                 };
+                if (next !== 8 && prev.tripletFeel) {
+                  const { tripletFeel: _t, ...rest } = base;
+                  return rest;
+                }
+                return base;
               });
             }}
             className="px-2 py-2 rounded-lg bg-[var(--background)] border border-[var(--surface-light)] text-sm max-w-[11rem]"
@@ -341,6 +373,26 @@ export function ArpeggioPatternEditor({
           </select>
         </div>
       </div>
+
+      {spm === 8 ? (
+        <label className="flex items-start gap-2 mb-3 text-xs text-[var(--muted)] cursor-pointer select-none max-w-xl">
+          <input
+            type="checkbox"
+            checked={tripletFeel}
+            onChange={(e) =>
+              setPattern((p) => {
+                if (!e.target.checked) {
+                  const { tripletFeel: _x, ...rest } = p;
+                  return rest;
+                }
+                return { ...p, tripletFeel: true };
+              })
+            }
+            className="rounded mt-0.5"
+          />
+          <span>Swing / triolet (shuffle) : croches inégales par temps (2/3 + 1/3).</span>
+        </label>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
@@ -447,7 +499,7 @@ export function ArpeggioPatternEditor({
                     </div>
                     {isLast ? <ArpeggioEndBar /> : null}
                   </div>
-                  <ArpeggioRhythmStemsRow stepsPerMeasure={spm} />
+                  <ArpeggioRhythmStemsRow stepsPerMeasure={spm} tripletFeel={tripletFeel} />
                 </div>
               );
             })}
