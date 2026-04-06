@@ -718,6 +718,59 @@
       ],
       "isSong": true,
       "favorite": true
+    },
+    {
+      "id": "D111",
+      "title": "Love me do – The Beatles",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "G",
+          "C",
+          "D"
+        ],
+        "techniques": [],
+        "rhythms": [
+          "croche",
+          "noire",
+          "triolet",
+          "syncope"
+        ],
+        "strums": [],
+        "arpeggios": [],
+        "gammes": [],
+        "walkingBass": [],
+        "riffs": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 80,
+            "path": "/assets/audio/D111/PAC_D111_-_Love_me_do_-_80bpm.mp3"
+          },
+          {
+            "bpm": 100,
+            "path": "/assets/audio/D111/PAC_D111_-_Love_me_do_-_100bpm.mp3"
+          },
+          {
+            "bpm": 120,
+            "path": "/assets/audio/D111/PAC_D111_-_Love_me_do_-_120bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D111_PAC_D111_-_Jam_Along_-_Love_me_do.pdf"
+          },
+          {
+            "name": "Parole",
+            "path": "/assets/tabs/D111_PAC_D111_-_Fiche_paroles_-_Love_me_do.pdf"
+          }
+        ]
+      },
+      "progressions": [],
+      "isSong": true,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -739,7 +792,9 @@
       "Asus2",
       "Bm7",
       "F",
-      "E5"
+      "E5",
+      "G classic",
+      "C classic"
     ],
     "techniques": [
       "embellissement autour du D",
@@ -763,7 +818,8 @@
       "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22La%20Poup%C3%A9e%20qui%20fais%20non%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221774308604553-ca0609908073%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A2%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221774308610766-87beb7e989e148%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308611173-eee3bf9eadd4d8%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308615597-db7bc6d7d208e%22%2C%22start%22%3A4%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308616438-10bfe849d035b%22%2C%22start%22%3A6%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%5D%7D",
       "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22rythme%20feu%20de%20camp%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221774308852993-f217e0c71221d8%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308858192-9ee8bfed5a58f8%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308957780-7c53fd6e110ba8%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A4%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221774308951852-b75fd0bb00055%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308952342-8c4b58a58583a8%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308871775-326e27b0e809b8%22%2C%22start%22%3A6%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%5D%7D",
       "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22rythme%20feu%20de%20camp%20bis%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221774308852993-f217e0c71221d8%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308858192-9ee8bfed5a58f8%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221774308957780-7c53fd6e110ba8%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A4%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221774308951852-b75fd0bb00055%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774308952342-8c4b58a58583a8%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774309032012-b739ea5b38a65%22%2C%22start%22%3A6%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221774309032532-c776fc435d2d9%22%2C%22start%22%3A7%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%5D%7D",
-      "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22Le%20Lion%20est%20mort%20ce%20soir%20-%20En%20triolet%20!%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221775307179925-c89cefba848cf8%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775307181521-935458fd115cb%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775307181924-f643dbd799183%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775307185867-ea0c7ae26c5508%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775307182900-5586d4d4f0cee%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775307183350-955d64ebef32b%22%2C%22start%22%3A6%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775307186866-1acc606bf33fe8%22%2C%22start%22%3A7%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%5D%7D"
+      "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22Le%20Lion%20est%20mort%20ce%20soir%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221775307179925-c89cefba848cf8%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775307181521-935458fd115cb%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775307181924-f643dbd799183%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775307185867-ea0c7ae26c5508%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775307182900-5586d4d4f0cee%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775307183350-955d64ebef32b%22%2C%22start%22%3A6%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775307186866-1acc606bf33fe8%22%2C%22start%22%3A7%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%5D%2C%22tripletFeel%22%3Atrue%7D",
+      "RHYTHM_V2:%7B%22v%22%3A2%2C%22name%22%3A%22Rythme%20feu%20de%20camp%20shuffle%22%2C%22measures%22%3A1%2C%22items%22%3A%5B%7B%22id%22%3A%221775491182806-2c6789fe4bc4%22%2C%22start%22%3A0%2C%22length%22%3A2%2C%22symbol%22%3A%22%E2%99%A9%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775491184165-d89207c0f2c12%22%2C%22start%22%3A2%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncopated%22%3Afalse%7D%2C%7B%22id%22%3A%221775491188648-1e9314de8e3b38%22%2C%22start%22%3A3%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%2C%22syncToStart%22%3A4%2C%22syncopated%22%3Atrue%7D%2C%7B%22id%22%3A%221775491195664-ee35743266e%22%2C%22start%22%3A4%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775491196039-eea137bdfdbc58%22%2C%22start%22%3A5%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775491210943-e87b1befddef38%22%2C%22start%22%3A6%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%2C%7B%22id%22%3A%221775491226782-4ab3511da91b9%22%2C%22start%22%3A7%2C%22length%22%3A1%2C%22symbol%22%3A%22%E2%99%AA%22%2C%22isRest%22%3Afalse%7D%5D%2C%22tripletFeel%22%3Atrue%7D"
     ],
     "arpeggios": [
       "ARPEGGIO_V2:%7B%22v%22%3A2%2C%22name%22%3A%22Arp%C3%A8ges%20La%20sus4%20-%20La%20-%20La%20sus2%20-%20La%22%2C%22measures%22%3A2%2C%22notes%22%3A%5B%7B%22step%22%3A0%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A1%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A2%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A3%2C%22string%22%3A1%2C%22fret%22%3A3%7D%2C%7B%22step%22%3A4%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A5%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A6%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A7%2C%22string%22%3A1%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A8%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A9%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A10%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A11%2C%22string%22%3A1%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A12%2C%22string%22%3A4%2C%22fret%22%3A0%7D%2C%7B%22step%22%3A13%2C%22string%22%3A3%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A14%2C%22string%22%3A2%2C%22fret%22%3A2%7D%2C%7B%22step%22%3A15%2C%22string%22%3A1%2C%22fret%22%3A2%7D%5D%7D"
@@ -870,6 +926,52 @@
       ],
       "barres": [
         1
+      ]
+    },
+    "G": {
+      "frets": [
+        3,
+        2,
+        0,
+        0,
+        3,
+        3
+      ]
+    },
+    "G classic": {
+      "frets": [
+        3,
+        2,
+        0,
+        0,
+        0,
+        3
+      ],
+      "fingers": [
+        3,
+        2,
+        null,
+        null,
+        null,
+        4
+      ]
+    },
+    "C classic": {
+      "frets": [
+        -1,
+        3,
+        2,
+        0,
+        1,
+        3
+      ],
+      "fingers": [
+        null,
+        3,
+        2,
+        null,
+        1,
+        4
       ]
     }
   },
