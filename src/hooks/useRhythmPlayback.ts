@@ -1,12 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  getRhythmAttackSteps,
-  rhythmStepDurationSec,
-  scheduleRhythmClicks,
-  type RhythmPlaybackItem,
-} from '@/lib/rhythmPlayback';
+import { getRhythmAttackSteps, scheduleRhythmClicks, type RhythmPlaybackItem } from '@/lib/rhythmPlayback';
+import { tabGridStepFromElapsed, tabGridTotalDurationSec } from '@/lib/tabGridTiming';
 import { claimExclusivePlayback, releaseExclusivePlayback } from '@/lib/playbackCoordinator';
 
 const STEPS_PER_MEASURE = 8;
@@ -14,6 +10,7 @@ const STEPS_PER_MEASURE = 8;
 export type RhythmPatternPlayback = {
   measures: number;
   items: RhythmPlaybackItem[];
+  tripletFeel?: boolean;
 };
 
 function createAudioContext(): AudioContext | null {
@@ -54,7 +51,7 @@ export function useRhythmPlayback(
   loopRef.current = loop;
 
   const audioRef = useRef<{ ctx: AudioContext | null; master: GainNode | null }>({ ctx: null, master: null });
-  const metaRef = useRef({ startMs: 0, totalSteps: 8, secPerStep: 0.25 });
+  const metaRef = useRef({ startMs: 0 });
 
   const stop = useCallback(() => {
     setPlaying(false);
@@ -72,14 +69,13 @@ export function useRhythmPlayback(
     master.gain.cancelScheduledValues(now);
     master.gain.setValueAtTime(0.32, now);
     const t0 = now + 0.06;
-    scheduleRhythmClicks(ctx, master, attacks, bpmRef.current, t0);
+    scheduleRhythmClicks(ctx, master, attacks, bpmRef.current, t0, p.measures, p.tripletFeel === true);
   }, []);
 
   const startPlayback = useCallback(async () => {
     if (playing) return;
 
     const p = patternRef.current;
-    const totalSteps = p.measures * STEPS_PER_MEASURE;
 
     claimExclusivePlayback(instanceTokenRef.current, stop);
 
@@ -106,14 +102,9 @@ export function useRhythmPlayback(
       return;
     }
 
-    const secPerStep = rhythmStepDurationSec(bpmRef.current);
     scheduleOnePass();
 
-    metaRef.current = {
-      startMs: performance.now(),
-      totalSteps,
-      secPerStep,
-    };
+    metaRef.current = { startMs: performance.now() };
     setPlaying(true);
     setPlayhead(0);
     errCbRef.current?.('');
@@ -127,17 +118,16 @@ export function useRhythmPlayback(
 
     const tick = () => {
       if (cancelled) return;
-      const { startMs, totalSteps, secPerStep } = metaRef.current;
-      const durationMs = totalSteps * secPerStep * 1000;
-      const elapsed = performance.now() - startMs;
-      if (elapsed >= durationMs) {
+      const p = patternRef.current;
+      const measures = p.measures;
+      const tripletFeel = p.tripletFeel === true;
+      const bpmVal = bpmRef.current;
+      const elapsedSec = (performance.now() - metaRef.current.startMs) / 1000;
+      const totalDur = tabGridTotalDurationSec(measures, bpmVal);
+      if (elapsedSec >= totalDur - 1e-6) {
         if (loopRef.current) {
           scheduleOnePass();
-          metaRef.current = {
-            startMs: performance.now(),
-            totalSteps,
-            secPerStep: rhythmStepDurationSec(bpmRef.current),
-          };
+          metaRef.current = { startMs: performance.now() };
           setPlayhead(0);
           raf = requestAnimationFrame(tick);
           return;
@@ -147,7 +137,7 @@ export function useRhythmPlayback(
         releaseExclusivePlayback(token);
         return;
       }
-      const step = Math.min(Math.floor(elapsed / (secPerStep * 1000)), totalSteps - 1);
+      const step = tabGridStepFromElapsed(elapsedSec, measures, STEPS_PER_MEASURE, bpmVal, tripletFeel);
       setPlayhead((prev) => (prev === step ? prev : step));
       raf = requestAnimationFrame(tick);
     };
@@ -159,7 +149,7 @@ export function useRhythmPlayback(
   }, [playing, scheduleOnePass]);
 
   const signatureRef = useRef('');
-  const sig = `${pattern.measures}|${pattern.items.map((i) => `${i.id}:${i.start}:${i.length}:${i.syncToStart ?? ''}`).join(',')}`;
+  const sig = `${pattern.measures}|${pattern.tripletFeel === true ? '1' : '0'}|${pattern.items.map((i) => `${i.id}:${i.start}:${i.length}:${i.syncToStart ?? ''}`).join(',')}`;
   useEffect(() => {
     if (signatureRef.current === sig) return;
     signatureRef.current = sig;

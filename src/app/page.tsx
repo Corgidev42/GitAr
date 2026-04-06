@@ -25,6 +25,7 @@ import {
   WalkingBassMenuCard,
   WalkingBassPatternEditor,
 } from '@/components/GammePatternEditor';
+import { SwingTripletEquationSvg } from '@/components/SwingTripletEquation';
 
 const KB_GLOBAL_PROGRESSIONS = '__kb_global__';
 
@@ -87,7 +88,7 @@ const STEPS_PER_MEASURE = 8; // 8 croches par mesure en 4/4
 
 type RhythmFigureId = 'whole' | 'half' | 'quarter' | 'eighth' | 'rest_half' | 'rest_quarter' | 'rest_eighth';
 type RhythmItem = { id: string; start: number; length: number; symbol: string; isRest: boolean; syncToStart?: number; syncopated?: boolean };
-type RhythmPatternV2 = { v: 2; name: string; measures: number; items: RhythmItem[] };
+type RhythmPatternV2 = { v: 2; name: string; measures: number; items: RhythmItem[]; tripletFeel?: boolean };
 
 const RHYTHM_FIGURES: Array<{ id: RhythmFigureId; label: string; symbol: string; length: number; isRest: boolean }> = [
   { id: 'whole', label: 'Ronde', symbol: '𝅝', length: 8, isRest: false },
@@ -126,7 +127,14 @@ function parseRhythmPattern(raw: string): RhythmPatternV2 | null {
         syncopated: !!it.syncopated,
       }))
       .sort((a, b) => a.start - b.start);
-    return { v: 2, name: parsed.name, measures: parsed.measures, items: validItems };
+    const tripletFeel = parsed.tripletFeel === true;
+    return {
+      v: 2,
+      name: parsed.name,
+      measures: parsed.measures,
+      items: validItems,
+      ...(tripletFeel ? { tripletFeel: true } : {}),
+    };
   } catch {
     return null;
   }
@@ -143,7 +151,8 @@ function rhythmDisplayName(value: string): string {
 
 function formatRhythmMeta(pattern: RhythmPatternV2): string {
   const syncCount = getSyncopePairs(pattern.items).length;
-  return `${pattern.measures} mesure${pattern.measures > 1 ? 's' : ''} · 4/4 · ${pattern.items.length} figure${pattern.items.length > 1 ? 's' : ''} · ${syncCount} syncope${syncCount > 1 ? 's' : ''}`;
+  const swing = pattern.tripletFeel === true ? ' · swing/triolet' : '';
+  return `${pattern.measures} mesure${pattern.measures > 1 ? 's' : ''} · 4/4 · ${pattern.items.length} figure${pattern.items.length > 1 ? 's' : ''} · ${syncCount} syncope${syncCount > 1 ? 's' : ''}${swing}`;
 }
 
 function overlaps(aStart: number, aLength: number, bStart: number, bLength: number): boolean {
@@ -587,9 +596,11 @@ function RhythmPatternEditor({
       return;
     }
     const clean: RhythmPatternV2 = {
-      ...pattern,
+      v: 2,
       name: trimmed,
+      measures: pattern.measures,
       items: [...pattern.items].sort((a, b) => a.start - b.start),
+      ...(pattern.tripletFeel === true ? { tripletFeel: true } : {}),
     };
     onSave({ encoded: serializeRhythmPattern(clean), source });
     setSelectedItemId(null);
@@ -625,6 +636,32 @@ function RhythmPatternEditor({
           </select>
         </div>
       </div>
+
+      <label className="flex items-start gap-2 text-xs text-[var(--muted)] cursor-pointer select-none max-w-xl mb-3">
+        <input
+          type="checkbox"
+          checked={pattern.tripletFeel === true}
+          onChange={(e) =>
+            setPattern((p) =>
+              e.target.checked
+                ? { ...p, tripletFeel: true }
+                : (() => {
+                    const { tripletFeel: _t, ...rest } = p;
+                    return rest;
+                  })(),
+            )
+          }
+          className="mt-0.5 shrink-0"
+        />
+        <span>
+          Swing / triolet : lecture long–court sur la grille en croches (comme sur les tabs).
+        </span>
+      </label>
+      {pattern.tripletFeel === true ? (
+        <div className="pl-0.5 overflow-x-auto mb-3">
+          <SwingTripletEquationSvg className="text-[var(--foreground)] opacity-90 max-w-full h-auto" />
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {RHYTHM_FIGURES.map((f) => (

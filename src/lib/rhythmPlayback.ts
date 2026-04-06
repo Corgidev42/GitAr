@@ -3,6 +3,10 @@
  * Les notes « fantômes » (cible d'une syncope) ne produisent pas d'attaque.
  */
 
+import { tabGridStepStartSec } from '@/lib/tabGridTiming';
+
+const RHYTHM_STEPS_PER_MEASURE = 8;
+
 export type RhythmPlaybackItem = {
   id: string;
   start: number;
@@ -67,10 +71,14 @@ export function scheduleRhythmClicks(
   attacks: number[],
   bpm: number,
   startAtAudioTime: number,
+  measures: number,
+  tripletFeel: boolean,
 ): void {
-  const sec = rhythmStepDurationSec(bpm);
   for (const step of attacks) {
     const strong = step % 2 === 0;
-    scheduleOneClick(ctx, destination, startAtAudioTime + step * sec, strong);
+    const when =
+      startAtAudioTime +
+      tabGridStepStartSec(step, measures, RHYTHM_STEPS_PER_MEASURE, bpm, tripletFeel);
+    scheduleOneClick(ctx, destination, when, strong);
   }
 }
