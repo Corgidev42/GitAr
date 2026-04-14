@@ -771,6 +771,61 @@
       "progressions": [],
       "isSong": true,
       "favorite": false
+    },
+    {
+      "id": "D112",
+      "title": "Blues Acoustique",
+      "level": "debutant",
+      "knowledge": {
+        "chords": [
+          "E5",
+          "A5",
+          "B7",
+          "A7"
+        ],
+        "techniques": [
+          "blues en 12 mesures"
+        ],
+        "rhythms": [
+          "croche",
+          "triolet"
+        ],
+        "strums": [],
+        "arpeggios": [],
+        "gammes": [],
+        "walkingBass": [],
+        "riffs": []
+      },
+      "assets": {
+        "backingTracks": [
+          {
+            "bpm": 60,
+            "path": "/assets/audio/D112/PAC_D112_-_Le_blues_acoustique_-_60bpm.mp3"
+          },
+          {
+            "bpm": 70,
+            "path": "/assets/audio/D112/PAC_D112_-_Le_blues_acoustique_-_70bpm.mp3"
+          }
+        ],
+        "tabs": [
+          {
+            "name": "Tablature",
+            "path": "/assets/tabs/D112_PAC_D112_-_Le_blues_acoustique.pdf"
+          }
+        ]
+      },
+      "progressions": [
+        {
+          "chords": [
+            "E5",
+            "A5",
+            "B7",
+            "A7"
+          ]
+        }
+      ],
+      "isSong": false,
+      "favorite": false
     }
   ],
   "globalKnowledge": {
@@ -794,7 +849,10 @@
       "F",
       "E5",
       "G classic",
-      "C classic"
+      "C classic",
+      "A5",
+      "B7",
+      "A7"
     ],
     "techniques": [
       "embellissement autour du D",
@@ -804,7 +862,8 @@
       "changement d’accord sur le contre temps",
       "gamme C",
       "Walking Bass de Jimi Hendrix",
-      "rythme shuffle"
+      "rythme shuffle",
+      "blues en 12 mesures"
     ],
     "rhythms": [
       "croche",
@@ -912,6 +971,10 @@
       "title": "rythme shuffle - Triolet",
       "summary": "Le principe du rythme shuffle est le suivant : au lieu de faire deux croches normales (ayant la\nmême durée et divisant le temps en 2 parties égales), vous allez répartir 2/3 du temps sur la\npremière croche, et 1/3 sur la deuxième.\nLe rythme shuffle est noté comme ceci :",
       "image": "/assets/techniques/rythme_shuffle_1775307059179.png"
+    },
+    "blues en 12 mesures": {
+      "summary": "",
+      "image": "/assets/techniques/blues_en_12_mesures_1776155369136.png"
     }
   },
   "chordDiagrams": {
@@ -972,6 +1035,16 @@
         null,
         1,
         4
+      ]
+    },
+    "A7": {
+      "frets": [
+        -1,
+        0,
+        2,
+        2,
+        2,
+        3
       ]
     }
   },
