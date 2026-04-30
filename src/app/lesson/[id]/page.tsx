@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { GuitarLesson, TabAsset, BackingTrack } from '@/types';
+import type { GuitarLesson, TabAsset, BackingTrack, Database } from '@/types';
 import { parseGammePattern } from '@/lib/gammeCodec';
 import { parseWalkingBassPattern } from '@/lib/walkingBassCodec';
 import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
@@ -327,16 +327,19 @@ function LessonRhythmCard({ value }: { value: string }) {
 
 function AssociatedRhythms({
   rhythms,
-  onAdd,
+  availableRhythms,
+  onAddMany,
   onDelete,
   editMode,
 }: {
   rhythms: string[];
-  onAdd: (value: string) => void;
+  availableRhythms: string[];
+  onAddMany: (values: string[]) => void;
   onDelete: (idx: number) => void;
   editMode?: boolean;
 }) {
-  const [input, setInput] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const options = availableRhythms.filter((v) => !rhythms.includes(v));
 
   return (
     <div className="bg-[var(--surface)] rounded-xl p-4">
@@ -367,23 +370,49 @@ function AssociatedRhythms({
         </div>
       )}
       {editMode && (
-        <div className="flex flex-col gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Colle une rythmique (RHYTHM_V2:...) ou un nom"
-            className="w-full px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm"
-          />
+        <div className="space-y-2">
+          <details className="rounded-lg border border-[var(--surface-light)] bg-[var(--surface-light)]/40">
+            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
+              Sélectionner une ou plusieurs rythmiques
+            </summary>
+            <div className="px-3 pb-3 pt-1">
+              {options.length === 0 ? (
+                <div className="text-xs text-[var(--muted)]">Toutes les rythmiques existantes sont déjà associées.</div>
+              ) : (
+                <div className="max-h-48 overflow-auto space-y-1.5 pr-1">
+                  {options.map((value) => {
+                    const parsed = parseLessonRhythm(value);
+                    const label = parsed?.name || value;
+                    return (
+                      <label key={value} className="flex items-start gap-2 text-xs text-[var(--foreground)] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(value)}
+                          onChange={(e) => {
+                            setSelected((prev) =>
+                              e.target.checked ? [...prev, value] : prev.filter((v) => v !== value),
+                            );
+                          }}
+                          className="mt-0.5"
+                        />
+                        <span className="leading-snug">{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </details>
           <button
             onClick={() => {
-              const v = input.trim();
-              if (!v) return;
-              onAdd(v);
-              setInput('');
+              if (selected.length === 0) return;
+              onAddMany(selected);
+              setSelected([]);
             }}
-            className="self-start px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm"
+            disabled={selected.length === 0}
+            className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Associer
+            Associer la sélection ({selected.length})
           </button>
         </div>
       )}
@@ -402,6 +431,7 @@ export default function LessonPage() {
   const [editMode, setEditMode] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftKnowledge, setDraftKnowledge] = useState<GuitarLesson['knowledge'] | null>(null);
+  const [availableStrums, setAvailableStrums] = useState<string[]>([]);
   const [addCat, setAddCat] = useState<'chords' | 'techniques' | 'rhythms' | 'strums' | 'gammes' | 'walkingBass'>('chords');
   const [addValue, setAddValue] = useState('');
   const lastReloadAt = useRef(0);
@@ -423,6 +453,16 @@ export default function LessonPage() {
   }, [lessonId]);
 
   useEffect(() => { loadLesson(); }, [loadLesson]);
+
+  useEffect(() => {
+    fetch('/api/database', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((db: Database | null) => {
+        if (!db) return;
+        setAvailableStrums(Array.isArray(db.globalKnowledge?.strums) ? db.globalKnowledge.strums : []);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onFocus = () => loadLesson();
@@ -657,7 +697,10 @@ export default function LessonPage() {
         ))}
         {(editMode ? draftKnowledge?.strums || [] : lesson.knowledge.strums || []).map((s) => (
           <span key={`strum-${s}`} className="text-xs px-2 py-1 rounded-lg bg-teal-900/50 text-teal-300">
-            <span className="inline-flex items-center gap-1.5"><IconRhythm className="w-3.5 h-3.5" />{s}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <IconRhythm className="w-3.5 h-3.5" />
+              {parseLessonRhythm(s)?.name ?? s}
+            </span>
             {editMode && draftKnowledge && (
               <button onClick={() => setDraftKnowledge({ ...draftKnowledge, strums: (draftKnowledge.strums || []).filter((x) => x !== s) })} className="ml-2 text-teal-200/70 hover:text-white" title="Retirer">×</button>
             )}
@@ -723,11 +766,13 @@ export default function LessonPage() {
           />
           <AssociatedRhythms
             rhythms={lesson.knowledge?.strums || []}
+            availableRhythms={availableStrums}
             editMode={editMode}
-            onAdd={async (value) => {
+            onAddMany={async (values) => {
               const current = lesson.knowledge?.strums || [];
-              if (current.includes(value)) return;
-              const nextKnowledge = { ...lesson.knowledge, strums: [...current, value] };
+              const uniqueToAdd = values.filter((v, i) => values.indexOf(v) === i).filter((v) => !current.includes(v));
+              if (uniqueToAdd.length === 0) return;
+              const nextKnowledge = { ...lesson.knowledge, strums: [...current, ...uniqueToAdd] };
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
