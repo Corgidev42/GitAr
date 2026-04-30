@@ -369,53 +369,52 @@ function AssociatedRhythms({
           ))}
         </div>
       )}
-      {editMode && (
-        <div className="space-y-2">
-          <details className="rounded-lg border border-[var(--surface-light)] bg-[var(--surface-light)]/40">
-            <summary className="cursor-pointer select-none px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
-              Sélectionner une ou plusieurs rythmiques
-            </summary>
-            <div className="px-3 pb-3 pt-1">
-              {options.length === 0 ? (
-                <div className="text-xs text-[var(--muted)]">Toutes les rythmiques existantes sont déjà associées.</div>
-              ) : (
-                <div className="max-h-48 overflow-auto space-y-1.5 pr-1">
-                  {options.map((value) => {
-                    const parsed = parseLessonRhythm(value);
-                    const label = parsed?.name || value;
-                    return (
-                      <label key={value} className="flex items-start gap-2 text-xs text-[var(--foreground)] cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selected.includes(value)}
-                          onChange={(e) => {
-                            setSelected((prev) =>
-                              e.target.checked ? [...prev, value] : prev.filter((v) => v !== value),
-                            );
-                          }}
-                          className="mt-0.5"
-                        />
-                        <span className="leading-snug">{label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </details>
-          <button
-            onClick={() => {
-              if (selected.length === 0) return;
-              onAddMany(selected);
-              setSelected([]);
-            }}
-            disabled={selected.length === 0}
-            className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Associer la sélection ({selected.length})
-          </button>
-        </div>
-      )}
+      <div className="space-y-2 border-t border-[var(--surface-light)] pt-3 mt-1">
+        <details className="rounded-lg border border-[var(--surface-light)] bg-[var(--surface-light)]/40">
+          <summary className="cursor-pointer select-none px-3 py-2 text-sm text-[var(--muted)] hover:text-[var(--foreground)]">
+            Sélectionner une ou plusieurs rythmiques
+          </summary>
+          <div className="px-3 pb-3 pt-1">
+            {options.length === 0 ? (
+              <div className="text-xs text-[var(--muted)]">Toutes les rythmiques existantes sont déjà associées.</div>
+            ) : (
+              <div className="max-h-48 overflow-auto space-y-1.5 pr-1">
+                {options.map((value) => {
+                  const parsed = parseLessonRhythm(value);
+                  const label = parsed?.name || value;
+                  return (
+                    <label key={value} className="flex items-start gap-2 text-xs text-[var(--foreground)] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(value)}
+                        onChange={(e) => {
+                          setSelected((prev) =>
+                            e.target.checked ? [...prev, value] : prev.filter((v) => v !== value),
+                          );
+                        }}
+                        className="mt-0.5"
+                      />
+                      <span className="leading-snug">{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </details>
+        <button
+          type="button"
+          onClick={() => {
+            if (selected.length === 0) return;
+            onAddMany(selected);
+            setSelected([]);
+          }}
+          disabled={selected.length === 0}
+          className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Associer la sélection ({selected.length})
+        </button>
+      </div>
     </div>
   );
 }
