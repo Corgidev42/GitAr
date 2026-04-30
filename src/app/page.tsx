@@ -86,7 +86,7 @@ function mergeTechniqueForDisplay(name: string, dbDetails?: Database['techniqueD
 const RHYTHM_V2_PREFIX = 'RHYTHM_V2:';
 const STEPS_PER_MEASURE = 8; // 8 croches par mesure en 4/4
 
-type RhythmFigureId = 'whole' | 'half' | 'quarter' | 'eighth' | 'rest_half' | 'rest_quarter' | 'rest_eighth';
+type RhythmFigureId = 'whole' | 'half' | 'quarter' | 'eighth' | 'rest_whole' | 'rest_half' | 'rest_quarter' | 'rest_eighth';
 type RhythmItem = { id: string; start: number; length: number; symbol: string; isRest: boolean; syncToStart?: number; syncopated?: boolean };
 type RhythmPatternV2 = { v: 2; name: string; measures: number; items: RhythmItem[]; tripletFeel?: boolean };
 
@@ -95,6 +95,7 @@ const RHYTHM_FIGURES: Array<{ id: RhythmFigureId; label: string; symbol: string;
   { id: 'half', label: 'Blanche', symbol: '𝅗𝅥', length: 4, isRest: false },
   { id: 'quarter', label: 'Noire', symbol: '♩', length: 2, isRest: false },
   { id: 'eighth', label: 'Croche', symbol: '♪', length: 1, isRest: false },
+  { id: 'rest_whole', label: 'Silence ronde', symbol: '𝄻', length: 8, isRest: true },
   { id: 'rest_half', label: 'Silence blanche', symbol: '𝄼', length: 4, isRest: true },
   { id: 'rest_quarter', label: 'Silence noire', symbol: '𝄽', length: 2, isRest: true },
   { id: 'rest_eighth', label: 'Silence croche', symbol: '𝄾', length: 1, isRest: true },
@@ -185,6 +186,69 @@ function rhythmFigureKind(length: number): 'whole' | 'half' | 'quarter' | 'eight
   if (length >= 4) return 'half';
   if (length >= 2) return 'quarter';
   return 'eighth';
+}
+
+function restFigureKind(length: number): 'rest_whole' | 'rest_half' | 'rest_quarter' | 'rest_eighth' {
+  if (length >= 8) return 'rest_whole';
+  if (length >= 4) return 'rest_half';
+  if (length >= 2) return 'rest_quarter';
+  return 'rest_eighth';
+}
+
+function RhythmRestGlyph({
+  kind,
+  x,
+  y,
+  color = 'var(--warning)',
+}: {
+  kind: 'rest_whole' | 'rest_half' | 'rest_quarter' | 'rest_eighth';
+  x: number;
+  y: number;
+  color?: string;
+}) {
+  if (kind === 'rest_whole') {
+    return <rect x={x - 10} y={y - 5} width="20" height="8" rx="1.5" fill={color} />;
+  }
+  if (kind === 'rest_half') {
+    return <rect x={x - 10} y={y - 12} width="20" height="8" rx="1.5" fill={color} />;
+  }
+  if (kind === 'rest_eighth') {
+    return (
+      <path
+        d={`M ${x - 4} ${y - 14} q 4 -6 10 -2 q -5 5 -5 10 q 0 5 -4 8 q -3 2 -2 6 q 1 3 4 5`}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    );
+  }
+  return (
+    <path
+      d={`M ${x - 4} ${y - 16} q 6 4 2 10 q -5 6 1 11 q -7 2 -4 8 q 2 4 -3 9 q 8 -3 8 -9 q 0 -4 5 -6 q -6 -4 -3 -10 q 2 -6 -6 -13`}
+      fill={color}
+      opacity="0.95"
+    />
+  );
+}
+
+function RhythmFigureBadge({ figure }: { figure: (typeof RHYTHM_FIGURES)[number] }) {
+  const restKind = figure.isRest ? restFigureKind(figure.length) : null;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="inline-flex h-5 w-6 items-center justify-center">
+        {restKind ? (
+          <svg viewBox="0 0 24 24" className="h-4 w-5">
+            <RhythmRestGlyph kind={restKind} x={12} y={14} color="currentColor" />
+          </svg>
+        ) : (
+          <span>{figure.symbol}</span>
+        )}
+      </span>
+      <span>{figure.label}</span>
+    </span>
+  );
 }
 
 function RhythmMeasureSvg({
@@ -280,6 +344,8 @@ function RhythmMeasureSvg({
         const selected = selectedItemId === it.id;
 
         if (it.isRest) {
+          const restKind = restFigureKind(it.length);
+          const restY = restKind === 'rest_whole' ? lineYs[2] : restKind === 'rest_half' ? lineYs[3] : headY + 2;
           return (
             <g key={it.id} onClick={() => onItemClick?.(it.id)} className={onItemClick ? 'cursor-pointer' : undefined}>
               <rect
@@ -292,9 +358,7 @@ function RhythmMeasureSvg({
                 stroke={selected ? 'var(--accent-light)' : 'transparent'}
                 strokeWidth="1.5"
               />
-              <text x={xRestCenter} y={headY + 2} textAnchor="middle" fontSize={compact ? 12 : 14} fill="var(--warning)">
-                {it.symbol}
-              </text>
+              <RhythmRestGlyph kind={restKind} x={xRestCenter} y={restY} />
             </g>
           );
         }
@@ -671,7 +735,7 @@ function RhythmPatternEditor({
             onClick={() => setSelectedFigureId(f.id)}
             className={`px-3 py-1.5 rounded-lg border text-xs ${selectedFigureId === f.id ? 'bg-[var(--accent)]/20 text-[var(--accent-light)] border-[var(--accent)]/60' : 'bg-[var(--background)] text-[var(--muted)] border-[var(--surface-light)] hover:text-[var(--foreground)]'}`}
           >
-            {f.symbol} {f.label}
+            <RhythmFigureBadge figure={f} />
           </button>
         ))}
       </div>

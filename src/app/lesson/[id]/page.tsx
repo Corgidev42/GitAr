@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { GuitarLesson, TabAsset, BackingTrack } from '@/types';
 import { parseGammePattern } from '@/lib/gammeCodec';
 import { parseWalkingBassPattern } from '@/lib/walkingBassCodec';
+import { useRhythmPlayback } from '@/hooks/useRhythmPlayback';
 import {
   IconDocument, IconGamme, IconHeart, IconLink, IconMusic, IconPause,
   IconPencil, IconPlay, IconRefresh, IconRhythm, IconTarget, IconWalkingBass,
@@ -233,6 +234,159 @@ function Progressions({ progressions, onAdd, onEdit, onDelete, editMode }: {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const RHYTHM_V2_PREFIX = 'RHYTHM_V2:';
+
+type LessonRhythmItem = {
+  id: string;
+  start: number;
+  length: number;
+  isRest: boolean;
+  syncToStart?: number;
+  syncopated?: boolean;
+};
+
+type LessonRhythmPattern = {
+  v: 2;
+  name: string;
+  measures: number;
+  items: LessonRhythmItem[];
+  tripletFeel?: boolean;
+};
+
+function parseLessonRhythm(value: string): LessonRhythmPattern | null {
+  if (!value.startsWith(RHYTHM_V2_PREFIX)) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(value.slice(RHYTHM_V2_PREFIX.length))) as LessonRhythmPattern;
+    if (parsed.v !== 2 || !parsed.name || !Array.isArray(parsed.items) || !Number.isInteger(parsed.measures) || parsed.measures < 1 || parsed.measures > 16) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function LessonRhythmCard({ value }: { value: string }) {
+  const pattern = parseLessonRhythm(value);
+  const [audioErr, setAudioErr] = useState('');
+  const pb = useRhythmPlayback(
+    pattern
+      ? { measures: pattern.measures, items: pattern.items, tripletFeel: pattern.tripletFeel === true }
+      : { measures: 1, items: [] },
+    { onAudioError: setAudioErr },
+  );
+
+  if (!pattern) {
+    return (
+      <div className="p-2 rounded-lg border border-[var(--surface-light)]">
+        <div className="text-sm">{value}</div>
+        <div className="text-xs text-[var(--muted)] mt-1">Format non audio (texte simple)</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-2 rounded-lg border border-[var(--surface-light)]">
+      <div className="text-sm font-medium">{pattern.name}</div>
+      <div className="text-xs text-[var(--muted)] mt-1">
+        {pattern.measures} mesure{pattern.measures > 1 ? 's' : ''} · {pattern.items.length} figure{pattern.items.length > 1 ? 's' : ''}
+        {pattern.tripletFeel ? ' · swing/triolet' : ''}
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <input
+          type="number"
+          min={40}
+          max={220}
+          value={pb.bpm}
+          disabled={pb.playing}
+          onChange={(e) => {
+            const n = parseInt(e.target.value, 10);
+            pb.setBpm(Number.isFinite(n) ? Math.min(220, Math.max(40, n)) : 96);
+          }}
+          className="w-16 px-2 py-1 rounded-md bg-[var(--surface-light)] text-xs"
+        />
+        <span className="text-xs text-[var(--muted)]">BPM</span>
+        {!pb.playing ? (
+          <button onClick={() => void pb.start()} className="px-2.5 py-1 rounded-md bg-[var(--accent)] text-white text-xs inline-flex items-center gap-1">
+            <IconPlay className="w-3 h-3" />Écouter
+          </button>
+        ) : (
+          <button onClick={pb.stop} className="px-2.5 py-1 rounded-md bg-[var(--surface-light)] text-[var(--foreground)] text-xs inline-flex items-center gap-1">
+            <IconPause className="w-3 h-3" />Stop
+          </button>
+        )}
+      </div>
+      {audioErr ? <p className="text-[10px] text-red-400 mt-1">{audioErr}</p> : null}
+    </div>
+  );
+}
+
+function AssociatedRhythms({
+  rhythms,
+  onAdd,
+  onDelete,
+  editMode,
+}: {
+  rhythms: string[];
+  onAdd: (value: string) => void;
+  onDelete: (idx: number) => void;
+  editMode?: boolean;
+}) {
+  const [input, setInput] = useState('');
+
+  return (
+    <div className="bg-[var(--surface)] rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-[var(--accent-light)] inline-flex items-center gap-2">
+          <IconRhythm className="w-4 h-4" />Rythmiques associées au morceau
+        </h3>
+        <span className="text-xs text-[var(--muted)]">{rhythms.length}</span>
+      </div>
+      {rhythms.length === 0 ? (
+        <div className="text-sm text-[var(--muted)] mb-3">Aucune rythmique associée</div>
+      ) : (
+        <div className="space-y-2 mb-3">
+          {rhythms.map((r, i) => (
+            <div key={`${r}-${i}`} className="relative">
+              <LessonRhythmCard value={r} />
+              {editMode && (
+                <button
+                  onClick={() => onDelete(i)}
+                  className="absolute top-2 right-2 text-[var(--muted)] hover:text-red-400"
+                  title="Supprimer"
+                >
+                  <IconTrash className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {editMode && (
+        <div className="flex flex-col gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Colle une rythmique (RHYTHM_V2:...) ou un nom"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--surface-light)] text-sm"
+          />
+          <button
+            onClick={() => {
+              const v = input.trim();
+              if (!v) return;
+              onAdd(v);
+              setInput('');
+            }}
+            className="self-start px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm"
+          >
+            Associer
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -564,6 +718,33 @@ export default function LessonPage() {
             onDelete={async (idx) => {
               const next = (lesson.progressions || []).filter((_, i) => i !== idx);
               const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progressions: next }) });
+              if (res.ok) setLesson(normalizeLesson(await res.json()));
+            }}
+          />
+          <AssociatedRhythms
+            rhythms={lesson.knowledge?.strums || []}
+            editMode={editMode}
+            onAdd={async (value) => {
+              const current = lesson.knowledge?.strums || [];
+              if (current.includes(value)) return;
+              const nextKnowledge = { ...lesson.knowledge, strums: [...current, value] };
+              const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ knowledge: nextKnowledge }),
+              });
+              if (res.ok) setLesson(normalizeLesson(await res.json()));
+            }}
+            onDelete={async (idx) => {
+              const nextKnowledge = {
+                ...lesson.knowledge,
+                strums: (lesson.knowledge?.strums || []).filter((_, i) => i !== idx),
+              };
+              const res = await fetch(`/api/lessons/${encodeURIComponent(lesson.id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ knowledge: nextKnowledge }),
+              });
               if (res.ok) setLesson(normalizeLesson(await res.json()));
             }}
           />
